@@ -8,10 +8,8 @@ WORKDIR /opt/app
 COPY requirements.txt .
 RUN pip install -r requirements.txt
 COPY file_reader file_reader
-COPY information_extraction information_extraction
 COPY layout_extraction layout_extraction
-COPY utils utils
-COPY models models
-COPY app.py .env ./
+COPY post_process post_process
+COPY app.py ./
 
 CMD ['python', 'app.py']
