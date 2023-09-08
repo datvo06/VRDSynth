@@ -1,0 +1,15 @@
+version: "2"
+
+services:
+  doc-equity:
+    image: doc-equity:1.0
+    container_name: doc_equity
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "9000:9000"
+    command: [ "uvicorn", "app:app", "--host", "0.0.0.0", "--port", "9000" ]
+    volumes:
+      - ./models:/opt/app/models
+      - ./upload:/opt/app/upload
