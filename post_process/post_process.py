@@ -83,7 +83,8 @@ class PostProcess:
             for key in keys:
                 if key.get("value"):
                     continue
-            above_keys = [key for key in keys if not key.get("value") and _y1(key) < _y0(value)]
+            above_keys = [key for key in keys if
+                          not key.get("value") and _y1(key) < _y0(value) and is_same_col(key, value)]
             if above_keys:
                 key = max(above_keys, key=_y0)
                 value["key"] = key
