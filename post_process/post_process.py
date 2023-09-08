@@ -100,7 +100,7 @@ class PostProcess:
 
         for key in keys:
             if not key.get("value") and not key.get("values"):
-                others.append(key)
+                pairs.append({"key": key["text"], "value": ""})
 
         content = self.merge_text(others)
         return {
