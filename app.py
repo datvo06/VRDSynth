@@ -15,7 +15,7 @@ os.makedirs(upload_path, exist_ok=True)
 
 
 @app.post("/inference")
-async def inference(file: UploadFile, from_page: int = Form(1), to_page: int = Form(10)):
+async def inference(file: UploadFile, from_page: int = Form(1), to_page: int = Form(5)):
     """
     Extract information from document.
     """
