@@ -121,7 +121,7 @@ class PostProcess:
         for group in groups:
             if group["title"]:
                 result.append({
-                    "title": self.merge_text(group["title"]),
+                    "header": self.merge_text(group["title"]),
                     "sections": [self.process_section(section) for section in group["content"]]
                 })
         return result
