@@ -146,3 +146,22 @@ def low_performing_categories(y_true, y_pred, categories, threshold=0.5, metric=
             low_categories.append(c)
 
     return low_categories
+
+
+def collect_wrong_samples_for_category(dataset: Dataset, preds, category: int):
+    """
+    Collects all wrong samples from the dataset that belong to the given category
+
+    Args:
+    - dataset (Dataset): Dataset to collect samples from
+    - category (int): Category to collect samples for
+
+    Returns:
+    - list: List of samples
+    """
+    wrong_samples = []
+    for i, pred in enumerate(preds):
+        if pred != category:
+            wrong_samples.append(dataset[i])
+
+    return wrong_samples
