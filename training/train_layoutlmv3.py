@@ -10,6 +10,7 @@ from transformers import LayoutLMv3ForTokenClassification, TrainingArguments, Tr
     LayoutLMv3Config
 from transformers.data.data_collator import default_data_collator
 from collections import defaultdict
+from training.utils import LayoutLMv3DataHandler, load_data, k_fold_split, low_performing_categories
 
 metric = load_metric("seqeval")
 return_entity_level_metrics = False
@@ -19,8 +20,7 @@ def compute_metrics(p):
     predictions, labels = p
     predictions = np.argmax(predictions, axis=2)
     print(predictions)
-    # Remove ignored index (special tokens)
-    true_predictions = [
+    # Remove ignored index (special tokens) true_predictions = [
         [label_list[p] if p < len(label_list) else 0 for (p, l) in zip(prediction, label) if l != -100]
         for prediction, label in zip(predictions, labels)
     ]
@@ -70,18 +70,6 @@ def prepare_examples(examples):
     return encoding
 
 
-def load_data(json_path, image_path):
-    json_data = json.load(open(json_path, encoding="utf-8"))
-    words = [t["text"] for t in json_data]
-    boxes = [[t["x0"], t["y0"], t["x1"], t["y1"]] for t in json_data]
-    label = [t["label"] if t["label"] else "O" for t in json_data]
-    label = [label2id[l] for l in label]
-    return {
-        "image_path": image_path,
-        "words": words,
-        "boxes": boxes,
-        "label": label
-    }
 
 
 if __name__ == '__main__':
@@ -103,34 +91,19 @@ if __name__ == '__main__':
 
     # label2id = {label: i for i, label in enumerate(label_list)}
 
-    label2id = defaultdict()
-    label2id.default_factory = label2id.__len__
-    label2id['O'] = 0
+
     # id2label = {i: label for i, label in enumerate(label_list)}
     pretrained = "nielsr/layoutlmv3-finetuned-funsd"
 
     processor = LayoutLMv3Processor.from_pretrained(pretrained, apply_ocr=False)
-    config = LayoutLMv3Config.from_pretrained(pretrained)
-    id2label = config.id2label
-    for id, label in id2label.items():
-        label2id[label] = id
 
-    features = Features({
-        'pixel_values': Array3D(dtype="float32", shape=(3, 224, 224)),
-        'input_ids': Sequence(feature=Value(dtype='int64')),
-        'attention_mask': Sequence(Value(dtype='int64')),
-        'bbox': Array2D(dtype="int64", shape=(512, 4)),
-        'labels': Sequence(feature=Value(dtype='int64')),
-    })
-    data = []
-    for file in glob.glob(f"{args.data}/training_0921/*.json"):
-        data.append(load_data(file, file[:-4] + "jpg"))
 
-    data_test = []
-    for file in glob.glob(f"{args.data}/testing/*.json"):
-        data_test.append(load_data(file, file[:-4] + "jpg"))
+    train_data_dir = f"{args.data}/training_0921"
+    data = [load_data(fp, f"{fp[:-4]}.jpg") for fp in glob.glob(f"{train_data_dir}/*.json")]
 
-    label_list = {v: k for k, v in label2id.items()}
+    test_data_dir = f"{args.data}/testing"
+    data_test = [load_data(fp, f"{fp[:-4]}.jpg") for fp in glob.glob(f"{test_data_dir}/*.json")]
+
     table = pyarrow.Table.from_pylist(data)
     train = Dataset(table)
     table_test = pyarrow.Table.from_pylist(data_test)
@@ -140,17 +113,15 @@ if __name__ == '__main__':
         prepare_examples,
         batched=True,
         remove_columns=table.column_names,
-        features=features,
+        features=LayoutLMv3DataHandler().features,
     )
     eval_dataset = test.map(
         prepare_examples,
         batched=True,
         remove_columns=table.column_names,
-        features=features,
+        features=LayoutLMv3DataHandler().features,
     )
-    config = LayoutLMv3Config.from_pretrained(pretrained)
-    # config.num_labels = len(label_list)
-    model = LayoutLMv3ForTokenClassification.from_pretrained(pretrained, config=config)
+    model = LayoutLMv3ForTokenClassification.from_pretrained(pretrained, config=LayoutLMv3DataHandler().config)
 
     training_args = TrainingArguments(output_dir=args.output,
                                       max_steps=args.steps,
