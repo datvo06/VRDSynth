@@ -3,7 +3,9 @@ from transformers import LayoutLMv3Processor, LayoutLMv3Config
 from collections import defaultdict
 from typing import Tuple
 from sklearn.model_selection import KFold, train_test_split
+from sklearn.metrics import classification_report, accuracy_score, f1_score, precision_score, recall_score
 import json
+import numpy as np
 
 PRETRAINED_SOURCE = "nielsr/layoutlmv3-finetuned-funsd"
 
@@ -115,13 +117,32 @@ def k_fold_split(dataset, k=5, train_val_test_ratio: Tuple[float, float, float]=
 
 
 
-def low_performing_categories(y_true, y_pred, categories, threshold=0.5):
+def low_performing_categories(y_true, y_pred, categories, threshold=0.5, metric="f1"):
     """
-    Returns a list of categories that have a precision or recall below the threshold
+    Identify categories with performance below the given threshold
+
+    Args:
+    - y_true (list): true labels
+    - y_pred (list): List of predicted labels
+    - threshold (float): threshold for performance
+    - metric (str): Either 'f1' or 'accuracy'
+
+    Returns:
+    -list: List of categories with low performance
     """
-    results = classification_report(y_true, y_pred, output_dict=True)
-    low_performing = []
-    for category in categories:
-        if results[category]["precision"] < threshold or results[category]["recall"] < threshold:
-            low_performing.append(category)
-    return low_performing
+    assert metric in ["f1", "accuracy"], "metric must be either 'f1' or 'accuracy'"
+
+    low_categories = []
+    y_true = np.array(y_true)
+    y_pred = np.array(y_pred)
+    for c in categories:
+        c_true = y_true == c
+        c_pred = y_pred == c
+        if metric == "f1":
+            score = f1_score(c_true, c_pred)
+        else:
+            score = accuracy_score(c_true, c_pred)
+        if score < threshold:
+            low_categories.append(c)
+
+    return low_categories
