@@ -156,3 +156,15 @@ def collect_wrong_samples_for_category(dataset: Dataset, preds, category: int):
             wrong_samples.append(dataset[i])
 
     return wrong_samples
+
+
+def test_load_data():
+    """
+    Test load_data function
+    """
+    json_path = "assets/test.json"
+    image_path = "assets/test.png"
+    data = load_data(json_path, image_path)
+    assert data["words"] == ["Hello", "World", "!"]
+    assert data["boxes"] == [[0, 0, 100, 100], [120, 0, 220, 100], [240, 0, 280, 100]]
+    assert data["label"] == [0, 1, 0]
