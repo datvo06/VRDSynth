@@ -107,15 +107,6 @@ def k_fold_split(dataset, k=5, train_val_test_ratio: Tuple[float, float, float]=
             })
         }
 
-    fold_size = len(dataset) // k
-    folds = []
-    for i in range(k):
-        start = i * fold_size
-        end = (i + 1) * fold_size
-        folds.append(dataset[start:end])
-    return folds
-
-
 
 def low_performing_categories(y_true, y_pred, categories, threshold=0.5, metric="f1"):
     """
