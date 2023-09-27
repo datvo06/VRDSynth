@@ -1,11 +1,14 @@
 from datasets import Dataset, Features, Sequence, Value, Array2D, Array3D
 from transformers import LayoutLMv3Processor, LayoutLMv3Config
 from collections import defaultdict
-from typing import Tuple
+from typing import Tuple, Dict, List
 from sklearn.model_selection import KFold, train_test_split
 from sklearn.metrics import classification_report, accuracy_score, f1_score, precision_score, recall_score
 import json
+import itertools
 import numpy as np
+import random
+from PIL import Image, ImageDraw, ImageFont
 
 PRETRAINED_SOURCE = "nielsr/layoutlmv3-finetuned-funsd"
 
@@ -22,7 +25,6 @@ def init_datahandler_instance(_instance):
     for id, label in _instance.id2label.items():
         label2id[label] = id
     _instance.label2id = label2id
-    print(_instance.label2id)
     _instance.features = Features({
         'pixel_values': Array3D(dtype="float32", shape=(3, 224, 224)),
         'input_ids': Sequence(feature=Value(dtype='int64')),
@@ -43,12 +45,7 @@ class LayoutLMv3DataHandler:
         return LayoutLMv3DataHandler._instance
 
 
-  
-        
-
-
-
-def load_data(json_path, image_path):
+def load_data(json_path, image_path) -> Dict[str, List]:
     json_data = json.load(open(json_path, encoding="utf-8"))
     words = [t["text"] for t in json_data]
     boxes = [[t["x0"], t["y0"], t["x1"], t["y1"]] for t in json_data]
@@ -164,6 +161,55 @@ def collect_wrong_samples_for_category(dataset: Dataset, preds, category: int):
 
     return wrong_samples
 
+def visualize_data(data: Dict[str, List]):
+    """
+    Visualizes the data
+
+    Args:
+    - data (Dict[str, List]): Data to visualize
+    """
+    try:
+        img = Image.open(data["image_path"])
+    except FileNotFoundError:
+        # Create empty while image by considering all x0, y0, x1, y1 of all boxes
+        all_box_coords = itertools.chain.from_iterable(data["boxes"])
+        # reshape box to (n_boxes, 4)
+        all_box_coords = np.array(list(all_box_coords)).reshape(-1, 4)
+        # get min and max of all box coordinates
+        min_x, min_y = np.min(all_box_coords[:, 0]), np.min(all_box_coords[:, 1])
+        max_x, max_y = np.max(all_box_coords[:, 2]), np.max(all_box_coords[:, 3])
+        # create empty image
+        img = Image.new("RGB", (max_x - min_x, max_y - min_y), color="white")
+    # find the suitable font size for the image based on some box
+    font_size, found_font_size = 1, False
+    # sampling 3 box
+    for i, box in enumerate(data["boxes"][:3]):
+        # get the width and height of the box
+        width = box[2] - box[0]
+        height = box[3] - box[1]
+        if width == 0 or height == 0:
+            continue
+        # increase font size util the text fits into the boxes
+        while True:
+            font = ImageFont.truetype("assets/arial.ttf", font_size)
+            text_bbox = font.getbbox(data["words"][i])
+            bbox_width = text_bbox[2] - text_bbox[0]
+            bbox_height = text_bbox[3] - text_bbox[1]
+            if bbox_width >= width or bbox_height >= height:
+                found_font_size = True
+                break
+            font_size += 1
+        if found_font_size:
+            break
+    draw = ImageDraw.Draw(img)
+    # Initialize the font with the found font size and black color
+    font = ImageFont.truetype("assets/arial.ttf", font_size)
+    for word, box in zip(data["words"], data["boxes"]):
+        draw.rectangle(box, outline="red")
+        draw.text((box[0], box[1]), word, fill="red", font=font)
+    img.show()
+
+
 
 def test_load_data():
     """
@@ -174,9 +220,19 @@ def test_load_data():
     data = load_data(json_path, image_path)
     assert data["words"] == ["Hello", "World", "!"]
     assert data["boxes"] == [[0, 0, 100, 100], [120, 0, 220, 100], [240, 0, 280, 100]]
-    print(data["label"])
     assert data["label"] == [1, 5, 0]
+
+
+def test_visualize_data():
+    """
+    Test visualize_data function
+    """
+    json_path = "assets/test.json"
+    image_path = "assets/test.png"
+    data = load_data(json_path, image_path)
+    visualize_data(data)
 
 
 if __name__ == '__main__':
     test_load_data()
+    test_visualize_data()
