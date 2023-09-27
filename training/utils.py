@@ -9,6 +9,28 @@ import numpy as np
 
 PRETRAINED_SOURCE = "nielsr/layoutlmv3-finetuned-funsd"
 
+def init_datahandler_instance(_instance):
+    pretrained = PRETRAINED_SOURCE
+    _instance.pretrained = PRETRAINED_SOURCE
+    _instance.processor = LayoutLMv3Processor.from_pretrained(pretrained, apply_ocr=False)
+    _instance.config = LayoutLMv3Config.from_pretrained(pretrained)
+    _instance.id2label = _instance.config.id2label
+    assert _instance.id2label is not None, "id2label is None"
+    label2id = defaultdict()
+    label2id.default_factory = label2id.__len__
+    label2id['O'] = 0
+    for id, label in _instance.id2label.items():
+        label2id[label] = id
+    _instance.label2id = label2id
+    print(_instance.label2id)
+    _instance.features = Features({
+        'pixel_values': Array3D(dtype="float32", shape=(3, 224, 224)),
+        'input_ids': Sequence(feature=Value(dtype='int64')),
+        'attention_mask': Sequence(Value(dtype='int64')),
+        'bbox': Array2D(dtype="int64", shape=(512, 4)),
+        'labels': Sequence(feature=Value(dtype='int64')),
+    })
+
 class LayoutLMv3DataHandler:
     '''Singleton to store layoutLMv3 metadata'''
     _instance = None
@@ -16,27 +38,12 @@ class LayoutLMv3DataHandler:
     def __new__(cls, *args, **kwargs):
         if not LayoutLMv3DataHandler._instance:
             LayoutLMv3DataHandler._instance = super(LayoutLMv3DataHandler, cls).__new__(cls, *args, **kwargs)
+            init_datahandler_instance(LayoutLMv3DataHandler._instance)
+
         return LayoutLMv3DataHandler._instance
 
-    def __init__(self, pretrained=PRETRAINED_SOURCE):
-        self.pretrained = pretrained
-        self.processor = LayoutLMv3Processor.from_pretrained(pretrained, apply_ocr=False)
-        self.config = LayoutLMv3Config.from_pretrained(pretrained)
-        self.id2label = self.config.id2label
-        assert self.id2label is not None, "id2label is None"
-        label2id = defaultdict()
-        label2id.default_factory = label2id.__len__
-        label2id['O'] = 0
-        for id, label in self.id2label.items():
-            label2id[label] = id
-        self.label2id = label2id
-        self.features = Features({
-        'pixel_values': Array3D(dtype="float32", shape=(3, 224, 224)),
-        'input_ids': Sequence(feature=Value(dtype='int64')),
-        'attention_mask': Sequence(Value(dtype='int64')),
-        'bbox': Array2D(dtype="int64", shape=(512, 4)),
-        'labels': Sequence(feature=Value(dtype='int64')),
-    })
+
+  
         
 
 
@@ -167,4 +174,9 @@ def test_load_data():
     data = load_data(json_path, image_path)
     assert data["words"] == ["Hello", "World", "!"]
     assert data["boxes"] == [[0, 0, 100, 100], [120, 0, 220, 100], [240, 0, 280, 100]]
-    assert data["label"] == [0, 1, 0]
+    print(data["label"])
+    assert data["label"] == [1, 5, 0]
+
+
+if __name__ == '__main__':
+    test_load_data()
