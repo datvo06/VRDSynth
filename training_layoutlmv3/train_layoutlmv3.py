@@ -11,42 +11,7 @@ from transformers import LayoutLMv3ForTokenClassification, TrainingArguments, Tr
 from transformers.data.data_collator import default_data_collator
 from collections import defaultdict
 from training_layoutlmv3.utils import LayoutLMv3DataHandler, load_data, k_fold_split, low_performing_categories
-
-metric = load_metric("seqeval")
-return_entity_level_metrics = False
-
-
-def compute_metrics(p):
-    predictions, labels = p
-    predictions = np.argmax(predictions, axis=2)
-    print(predictions)
-    # Remove ignored index (special tokens) true_predictions = [
-        [label_list[p] if p < len(label_list) else 0 for (p, l) in zip(prediction, label) if l != -100]
-        for prediction, label in zip(predictions, labels)
-    ]
-    true_labels = [
-        [label_list[l] if l < len(label_list) else 0 for (p, l) in zip(prediction, label) if l != -100]
-        for prediction, label in zip(predictions, labels)
-    ]
-
-    results = metric.compute(predictions=true_predictions, references=true_labels)
-    if return_entity_level_metrics:
-        # Unpack nested dictionaries
-        final_results = {}
-        for key, value in results.items():
-            if isinstance(value, dict):
-                for n, v in value.items():
-                    final_results[f"{key}_{n}"] = v
-            else:
-                final_results[key] = value
-        return final_results
-    else:
-        return {
-            "precision": results["overall_precision"],
-            "recall": results["overall_recall"],
-            "f1": results["overall_f1"],
-            "accuracy": results["overall_accuracy"],
-        }
+from training_layoutlmv3.eval import metrics, return_entity_level_metrics
 
 
 # we'll use the Auto API here - it will load LayoutLMv3Processor behind the scenes,
@@ -68,8 +33,6 @@ def prepare_examples(examples):
     encoding = processor(images, words, boxes=boxes, word_labels=word_labels, truncation=True, padding="max_length")
 
     return encoding
-
-
 
 
 if __name__ == '__main__':
@@ -147,3 +110,4 @@ if __name__ == '__main__':
     trainer.train()
     print(trainer.evaluate())
     trainer.save_model(args.output)
+    preds = trainer.predict(eval_dataset)

@@ -1,5 +1,5 @@
 from datasets import Dataset, Features, Sequence, Value, Array2D, Array3D
-from transformers import LayoutLMv3Processor, LayoutLMv3Config
+rom transformers import LayoutLMv3Processor, LayoutLMv3Config
 from collections import defaultdict
 from typing import Tuple, Dict, List
 from sklearn.model_selection import KFold, train_test_split
@@ -22,6 +22,7 @@ def init_datahandler_instance(_instance):
     label2id = defaultdict()
     label2id.default_factory = label2id.__len__
     label2id['O'] = 0
+    _instance.label_list = list(_instance.id2label.values())
     for id, label in _instance.id2label.items():
         label2id[label] = id
     _instance.label2id = label2id
