@@ -10,7 +10,7 @@ from transformers import LayoutLMv3ForTokenClassification, TrainingArguments, Tr
     LayoutLMv3Config
 from transformers.data.data_collator import default_data_collator
 from collections import defaultdict
-from training.utils import LayoutLMv3DataHandler, load_data, k_fold_split, low_performing_categories
+from training_layoutlmv3.utils import LayoutLMv3DataHandler, load_data, k_fold_split, low_performing_categories
 
 metric = load_metric("seqeval")
 return_entity_level_metrics = False
