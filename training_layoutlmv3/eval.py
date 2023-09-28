@@ -1,6 +1,13 @@
 from datasets import load_metric
-from training_layoutlmv3.utils import LayoutLMv3DataHandler
+from training_layoutlmv3.utils import LayoutLMv3DataHandler, load_data, prepare_examples
+from transformers import LayoutLMv3ForTokenClassification, Trainer
+from transformers.data.data_collator import default_data_collator
+from datasets import Dataset
+import torch
+import pyarrow
 import argparse
+import glob
+import numpy as np
 
 metric = load_metric("seqeval")
 return_entity_level_metrics = False
@@ -40,8 +47,6 @@ def compute_metrics(p):
         }
 
 
-
-
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--data', metavar='data', type=str, default="data/preprocessed",
@@ -49,4 +54,27 @@ if __name__ == '__main__':
     parser.add_argument('--checkpoint', metavar='checkpoint', type=str, required=False,
                         default="outputs/checkpoints/layoutlmv3",
                         help='folder save checkpoints')
-    pretrained = "nielsr/layoutlmv3-finetuned-funsd"
+    args = parser.parse_args()
+    pretrained = "models/finetuned"
+    test_data_dir = f"{args.data}/testing"
+    data_test = [load_data(fp, f"{fp[:-5]}.jpg") for fp in glob.glob(f"{test_data_dir}/*.json")]
+    print(list(data_test[0].keys()))
+    table_test = pyarrow.Table.from_pylist(data_test)
+    test = Dataset(table_test)
+    eval_dataset = test.map(
+        prepare_examples,
+        batched=True,
+        remove_columns=table_test.column_names,
+        features=LayoutLMv3DataHandler().features,
+    )
+    model = LayoutLMv3ForTokenClassification.from_pretrained(pretrained, config=LayoutLMv3DataHandler().config)
+    # Initialize our Trainer
+    trainer = Trainer(
+        model=model,
+        eval_dataset=eval_dataset,
+        tokenizer=LayoutLMv3DataHandler().processor,
+        data_collator=default_data_collator,
+        compute_metrics=compute_metrics,
+    )
+    print(trainer.evaluate())
+

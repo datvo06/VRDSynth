@@ -10,29 +10,13 @@ from transformers import LayoutLMv3ForTokenClassification, TrainingArguments, Tr
     LayoutLMv3Config
 from transformers.data.data_collator import default_data_collator
 from collections import defaultdict
-from training_layoutlmv3.utils import LayoutLMv3DataHandler, load_data, k_fold_split, low_performing_categories
-from training_layoutlmv3.eval import metrics, return_entity_level_metrics
+from training_layoutlmv3.utils import LayoutLMv3DataHandler, load_data, k_fold_split, low_performing_categories, prepare_examples
+from training_layoutlmv3.eval import compute_metrics
 
 
 # we'll use the Auto API here - it will load LayoutLMv3Processor behind the scenes,
 # based on the checkpoint we provide from the hub
 
-
-def prepare_examples(examples):
-    # print(examples)
-    image = examples['image_path']
-    # print(image)
-    if isinstance(image, str):
-        images = cv2.imread(image)
-    else:
-        images = [cv2.imread(img_path) for img_path in image]
-    words = examples['words']
-    boxes = examples['boxes']
-    word_labels = examples['label']
-
-    encoding = processor(images, words, boxes=boxes, word_labels=word_labels, truncation=True, padding="max_length")
-
-    return encoding
 
 
 if __name__ == '__main__':
@@ -62,10 +46,10 @@ if __name__ == '__main__':
 
 
     train_data_dir = f"{args.data}/training_0921"
-    data = [load_data(fp, f"{fp[:-4]}.jpg") for fp in glob.glob(f"{train_data_dir}/*.json")]
+    data = [load_data(fp, f"{fp[:-5]}.jpg") for fp in glob.glob(f"{train_data_dir}/*.json")]
 
     test_data_dir = f"{args.data}/testing"
-    data_test = [load_data(fp, f"{fp[:-4]}.jpg") for fp in glob.glob(f"{test_data_dir}/*.json")]
+    data_test = [load_data(fp, f"{fp[:-5]}.jpg") for fp in glob.glob(f"{test_data_dir}/*.json")]
 
     table = pyarrow.Table.from_pylist(data)
     train = Dataset(table)

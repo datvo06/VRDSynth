@@ -1,5 +1,5 @@
 from datasets import Dataset, Features, Sequence, Value, Array2D, Array3D
-rom transformers import LayoutLMv3Processor, LayoutLMv3Config
+from transformers import LayoutLMv3Processor, LayoutLMv3Config
 from collections import defaultdict
 from typing import Tuple, Dict, List
 from sklearn.model_selection import KFold, train_test_split
@@ -9,6 +9,7 @@ import itertools
 import numpy as np
 import random
 from PIL import Image, ImageDraw, ImageFont
+import cv2
 
 PRETRAINED_SOURCE = "nielsr/layoutlmv3-finetuned-funsd"
 
@@ -58,6 +59,25 @@ def load_data(json_path, image_path) -> Dict[str, List]:
         "boxes": boxes,
         "label": label
     }
+
+
+def prepare_examples(examples):
+    # print(examples)
+    image = examples['image_path']
+    # print(image)
+    if isinstance(image, str):
+        images = cv2.imread(image)
+    else:
+        images = [cv2.imread(img_path) for img_path in image]
+    words = examples['words']
+    boxes = examples['boxes']
+    word_labels = examples['label']
+
+    encoding = LayoutLMv3DataHandler().processor(images, words, boxes=boxes, word_labels=word_labels, truncation=True, padding="max_length")
+
+    return encoding
+
+
 
 
 def k_fold_split(dataset, k=5, train_val_test_ratio: Tuple[float, float, float]=(0.7, 0.15, 0.15)):
