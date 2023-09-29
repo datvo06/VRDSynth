@@ -89,7 +89,7 @@ def k_fold_split(dataset, k=5, train_val_test_ratio: Tuple[float, float, float]=
     boxes = dataset["boxes"]
     labels = dataset["label"]
     kf = KFold(n_splits=k, shuffle=True, random_state=42)   # again, the meaning of life.
-    for train_index, test_index in kf.split(zip(img_fps, words, boxes, labels)):
+    for train_index, test_index in kf.split(list(zip(img_fps, words, boxes, labels))):
         train_val_ratio = normed[0] / sum(normed[0:2])
         train_index, val_index = train_test_split(train_index, train_size=train_val_ratio, random_state=42)
         train_img_fps, train_words, train_boxes, train_labels = zip(*[(
