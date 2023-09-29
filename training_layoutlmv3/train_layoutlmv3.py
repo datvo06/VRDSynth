@@ -49,12 +49,7 @@ if __name__ == '__main__':
 
     table = pyarrow.Table.from_pylist(data)
     full_dataset = Dataset(table)
-    full_dataset = full_dataset.map(
-        prepare_examples,
-        batched=True,
-        remove_columns=table.column_names,
-        features=LayoutLMv3DataHandler().features,
-    )
+    
 
     training_args = TrainingArguments(output_dir=args.output,
                                       max_steps=args.steps,
@@ -69,6 +64,24 @@ if __name__ == '__main__':
 
     all_results = []
     for i, (train_data, val_data, test_data) in enumerate(k_fold_split(full_dataset, 5)):
+        train_data = train_data.map(
+                prepare_examples,
+                batched=True,
+                remove_columns=table.column_names,
+                features=LayoutLMv3DataHandler().features,
+        )
+        val_data = val_data.map(
+                prepare_examples,
+                batched=True,
+                remove_columns=table.column_names,
+                features=LayoutLMv3DataHandler().features,
+        )
+        test_data = test_data.map(
+                prepare_examples,
+                batched=True,
+                remove_columns=table.column_names,
+                features=LayoutLMv3DataHandler().features,
+        )
         # Initialize our Trainer
         model = LayoutLMv3ForTokenClassification.from_pretrained(pretrained, config=LayoutLMv3DataHandler().config)
         trainer = Trainer(
