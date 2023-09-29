@@ -151,11 +151,17 @@ def low_performing_categories(y_true, y_pred, categories, threshold=0.5, metric=
     low_categories = []
     y_true = np.array(y_true)
     y_pred = np.array(y_pred)
+    id2label = LayoutLMv3DataHandler().id2label
     for c in categories:
         c_true = y_true == c
         c_pred = y_pred == c
+        if np.sum(c_true) == 0:
+            print(f"Category {id2label[c]} has no true labels")
+            low_categories.append(c)
+            continue
         if metric == "f1":
             score = f1_score(c_true, c_pred)
+            print(f"Category {id2label[c]} has f1 score {score}")
         else:
             score = accuracy_score(c_true, c_pred)
         if score < threshold:

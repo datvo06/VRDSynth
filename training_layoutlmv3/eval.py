@@ -1,5 +1,5 @@
 from datasets import load_metric
-from training_layoutlmv3.utils import LayoutLMv3DataHandler, load_data, prepare_examples
+from training_layoutlmv3.utils import LayoutLMv3DataHandler, load_data, prepare_examples, low_performing_categories
 from transformers import LayoutLMv3ForTokenClassification, Trainer
 from transformers.data.data_collator import default_data_collator
 from datasets import Dataset
@@ -8,6 +8,7 @@ import pyarrow
 import argparse
 import glob
 import numpy as np
+import itertools
 
 metric = load_metric("seqeval")
 return_entity_level_metrics = False
@@ -18,6 +19,14 @@ def compute_metrics(p):
     print(predictions)
     label_list = LayoutLMv3DataHandler().label_list
     # Remove ignored index (special tokens)
+    y_pred = list(itertools.chain.from_iterable(
+           [[p if p < len(label_list) else 0 for (p, l) in zip(prediction, label) if l != -100] 
+        for prediction, label in zip(predictions, labels)]
+    ))
+    y_true = list(itertools.chain.from_iterable(
+            [[l if l < len(label_list) else 0 for (p, l) in zip(prediction, label) if l != -100] 
+        for prediction, label in zip(predictions, labels)]
+    ))
     true_predictions = [
         [label_list[p] if p < len(label_list) else 0 for (p, l) in zip(prediction, label) if l != -100]
         for prediction, label in zip(predictions, labels)
@@ -28,6 +37,7 @@ def compute_metrics(p):
     ]
 
     results = metric.compute(predictions=true_predictions, references=true_labels)
+    low_categories = low_performing_categories(y_true=y_true, y_pred=y_pred, categories=list(LayoutLMv3DataHandler().id2label.keys()), threshold=0.7, metric='f1')
     if return_entity_level_metrics:
         # Unpack nested dictionaries
         final_results = {}
@@ -44,6 +54,7 @@ def compute_metrics(p):
             "recall": results["overall_recall"],
             "f1": results["overall_f1"],
             "accuracy": results["overall_accuracy"],
+            "low_categories": low_categories
         }
 
 
