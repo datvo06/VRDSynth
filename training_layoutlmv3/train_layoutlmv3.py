@@ -33,7 +33,7 @@ if __name__ == '__main__':
                         default="outputs/finetuned",
                         help='output model path')
     parser.add_argument('--steps', metavar='steps', type=int, required=False,
-                        default=20,
+                        default=300,
                         help='Number training steps')
     args = parser.parse_args()
 
