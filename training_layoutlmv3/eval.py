@@ -1,5 +1,5 @@
 from datasets import load_metric
-from training_layoutlmv3.utils import LayoutLMv3DataHandler, load_data, prepare_examples, low_performing_categories
+from training_layoutlmv3.utils import LayoutLMv3DataHandler, load_data, prepare_examples, low_performing_categories, confusion_matrix, visualize_confusion_matrix
 from transformers import LayoutLMv3ForTokenClassification, Trainer
 from transformers.data.data_collator import default_data_collator
 from datasets import Dataset
@@ -16,7 +16,6 @@ return_entity_level_metrics = False
 def compute_metrics(p):
     predictions, labels = p
     predictions = np.argmax(predictions, axis=2)
-    print(predictions)
     label_list = LayoutLMv3DataHandler().label_list
     # Remove ignored index (special tokens)
     y_pred = list(itertools.chain.from_iterable(
@@ -37,7 +36,11 @@ def compute_metrics(p):
     ]
 
     results = metric.compute(predictions=true_predictions, references=true_labels)
-    low_categories = low_performing_categories(y_true=y_true, y_pred=y_pred, categories=list(LayoutLMv3DataHandler().id2label.keys()), threshold=0.7, metric='f1')
+    low_categories = low_performing_categories(y_true=y_true, y_pred=y_pred, categories=list(LayoutLMv3DataHandler().id2label.keys()), threshold=0.8, metric='f1')
+    cm = confusion_matrix(y_true=y_true, y_pred=y_pred, categories=list(LayoutLMv3DataHandler().id2label.keys()))
+    # visualize cm by plotting to file
+    print(cm)
+    visualize_confusion_matrix(cm, LayoutLMv3DataHandler().id2label.values(), 'cm.png')
     if return_entity_level_metrics:
         # Unpack nested dictionaries
         final_results = {}
@@ -54,7 +57,8 @@ def compute_metrics(p):
             "recall": results["overall_recall"],
             "f1": results["overall_f1"],
             "accuracy": results["overall_accuracy"],
-            "low_categories": low_categories
+            "low_categories": low_categories,
+            "cm": cm
         }
 
 

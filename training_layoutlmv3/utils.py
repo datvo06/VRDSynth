@@ -9,6 +9,7 @@ import itertools
 import numpy as np
 import random
 from PIL import Image, ImageDraw, ImageFont
+from matplotlib import pyplot as plt
 import cv2
 
 PRETRAINED_SOURCE = "nielsr/layoutlmv3-finetuned-funsd"
@@ -76,8 +77,6 @@ def prepare_examples(examples):
     encoding = LayoutLMv3DataHandler().processor(images, words, boxes=boxes, word_labels=word_labels, truncation=True, padding="max_length")
 
     return encoding
-
-
 
 
 def k_fold_split(dataset, k=5, train_val_test_ratio: Tuple[float, float, float]=(0.7, 0.15, 0.15)):
@@ -168,6 +167,59 @@ def low_performing_categories(y_true, y_pred, categories, threshold=0.5, metric=
             low_categories.append(c)
 
     return low_categories
+
+
+def confusion_matrix(y_true, y_pred, categories):
+    """
+    Compute the confusion matrix for the given categories
+
+    Args:
+    - y_true (list): true labels
+    - y_pred (list): List of predicted labels
+    - categories (list): List of categories
+
+    Returns:
+    - np.array: Confusion matrix
+    """
+    y_true = np.array(y_true)
+    y_pred = np.array(y_pred)
+    cm = np.zeros((len(categories), len(categories)))
+    for i, c_true in enumerate(categories):
+        for j, c_pred in enumerate(categories):
+            cm[i, j] = np.sum((y_true == c_true) & (y_pred == c_pred))
+
+    return cm
+
+
+def visualize_confusion_matrix(cm, category_name, save_path=None):
+    """
+    Visualize the confusion matrix
+
+    Args:
+    - cm (np.array): Confusion matrix
+    - category_name (list): List of category names
+    - save_path (str): Path to save the confusion matrix
+    """
+    plt.figure(figsize=(12, 12))
+    plt.imshow(cm, interpolation='nearest', cmap=plt.cm.Blues)
+    plt.title("Confusion matrix")
+    plt.colorbar()
+    tick_marks = np.arange(len(category_name))
+    plt.xticks(tick_marks, category_name, rotation=45)
+    plt.yticks(tick_marks, category_name)
+    # Also add number on each title
+    thresh = cm.max() / 2.
+    for i, j in itertools.product(range(cm.shape[0]), range(cm.shape[1])):
+        plt.text(j, i, format(cm[i, j], '.2f'),
+                 horizontalalignment="center",
+                 color="white" if cm[i, j] > thresh else "black")
+    plt.tight_layout()
+    plt.ylabel('True label')
+    plt.xlabel('Predicted label')
+    if save_path:
+        plt.savefig(save_path)
+    plt.show()
+
 
 
 def collect_wrong_samples_for_category(dataset: Dataset, preds, category: int):
