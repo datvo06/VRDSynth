@@ -110,26 +110,26 @@ def k_fold_split(dataset, k=5, train_val_test_ratio: Tuple[float, float, float]=
             boxes[i],
             labels[i]
         ) for i in test_index])
-        yield {
-            "train": Dataset.from_dict({
+        yield (
+            Dataset.from_dict({
                 "image_path": train_img_fps,
                 "words": train_words,
                 "boxes": train_boxes,
                 "label": train_labels
             }),
-            "val": Dataset.from_dict({
+            Dataset.from_dict({
                 "image_path": val_img_fps,
                 "words": val_words,
                 "boxes": val_boxes,
                 "label": val_labels
             }),
-            "test": Dataset.from_dict({
+            Dataset.from_dict({
                 "image_path": test_img_fps,
                 "words": test_words,
                 "boxes": test_boxes,
                 "label": test_labels
             })
-        }
+        )
 
 
 def low_performing_categories(y_true, y_pred, categories, threshold=0.5, metric="f1"):
