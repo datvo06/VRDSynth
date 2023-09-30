@@ -39,10 +39,10 @@ def compute_metrics(p):
     low_categories = low_performing_categories(y_true=y_true, y_pred=y_pred, categories=list(LayoutLMv3DataHandler().id2label.keys()), threshold=0.8, metric='f1')
     cm = confusion_matrix(y_true=y_true, y_pred=y_pred, categories=list(LayoutLMv3DataHandler().id2label.keys()))
     # convert cm from nd array to list of list
-    cm = cm.tolist()
     # visualize cm by plotting to file
-    print(cm)
     visualize_confusion_matrix(cm, LayoutLMv3DataHandler().id2label.values(), 'cm.png')
+    cm = cm.tolist()
+    print(cm)
     if return_entity_level_metrics:
         # Unpack nested dictionaries
         final_results = {}
