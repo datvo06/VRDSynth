@@ -96,5 +96,6 @@ if __name__ == '__main__':
         trainer.train()
         all_results.append(trainer.evaluate())
         print("Result for fold ", i, ": ", all_results[-1])
+        json.dump(all_results[-1], open(f"{args.output}/fold_{i}_results.json", "w"))
         trainer.save_model(f"{args.output}/fold_{i}")
     pkl.dump(all_results, open(f"{args.output}/all_results.pkl", "wb"))
