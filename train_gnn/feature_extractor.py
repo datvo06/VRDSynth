@@ -181,5 +181,5 @@ if __name__ == '__main__':
     args = parser.parse_args()
     train_data_dir = f"{args.data}/"
     dataset = [load_data(fp, f"{fp[:-5]}.jpg") for fp in glob.glob(f"{train_data_dir}/*.json")]
-    relation_set = calculate_relation_set(data, k=10, clusters=8)
+    relation_set = calculate_relation_set(dataset, k=10, clusters=8)
     visualize_relation(dataset, relation_set, 'relation_vis/')
