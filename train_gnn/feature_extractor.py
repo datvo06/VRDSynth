@@ -180,6 +180,6 @@ if __name__ == '__main__':
                         help='folder of training data consisting of .json and .jpg files')
     args = parser.parse_args()
     train_data_dir = f"{args.data}/"
-    data = [load_data(fp, f"{fp[:-5]}.jpg") for fp in glob.glob(f"{train_data_dir}/*.json")]
+    dataset = [load_data(fp, f"{fp[:-5]}.jpg") for fp in glob.glob(f"{train_data_dir}/*.json")]
     relation_set = calculate_relation_set(data, k=10, clusters=8)
-    visualize_relation(data, relation_set, 'relation_vis/')
+    visualize_relation(dataset, relation_set, 'relation_vis/')
