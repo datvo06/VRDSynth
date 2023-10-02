@@ -11,7 +11,7 @@ from sklearn.cluster import KMeans
 from sklearn.metrics import pairwise_distances_argmin
 
 
-BoxRel = namedtuple('BoxRel', [i, j, mag, projs])
+BoxRel = namedtuple('BoxRel', ['i', 'j', 'mag', 'projs'])
 
 
 EDGE_COLOR_SET = ['red', 'green', 'blue', 'black', 'gray']

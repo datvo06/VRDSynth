@@ -53,32 +53,61 @@ class LayoutLMv3DataHandler:
 
     @property
     def id2label(self) -> Dict[int, str]:
-        return self.id2label
+        return self._id2label
+
+    @id2label.setter
+    def id2label(self, val: Dict[int, str]):
+        self._id2label =val 
 
     @property
     def label2id(self) -> Dict[str, int]:
-        return self.label2id
+        return self._label2id
+
+    @label2id.setter
+    def label2id(self, val: Dict[str, int]):
+        self._label2id =val 
 
     @property
     def label_list(self) -> List[str]:
-        return self.label_list
+        return self._label_list
+
+    @label_list.setter
+    def label_list(self, val: List[str]):
+        self._label_list = val
 
     @property
     def features(self) -> Features:
-        return self.features
+        return self._features
+
+    @features.setter
+    def features(self, val: Features):
+        self._features = val
 
     @property
     def processor(self) -> LayoutLMv3Processor:
-        return self.processor
+        return self._processor
+
+    @processor.setter
+    def processor(self, val: LayoutLMv3Processor):
+        self._processor = val 
 
     @property
     def config(self) -> LayoutLMv3Config:
-        return self.config
+        return self._config
+
+    @config.setter
+    def config(self, cfg: LayoutLMv3Config):
+        self._config = cfg
 
     @property
     def pretrained(self) -> str:
-        return self.pretrained
+        return self._pretrained
 
+    @pretrained.setter
+    def pretrained(self, val: str):
+        self._pretrained = val 
+
+ 
 
 def load_data(json_path, image_path) -> Dict[str, List]:
     json_data = json.load(open(json_path, encoding="utf-8"))
