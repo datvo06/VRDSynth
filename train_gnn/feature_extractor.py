@@ -71,7 +71,8 @@ def calculate_relation_set(dataset: Dataset, k: int, clusters: int) -> List[Tupl
         # Second, calculate the distance between each center
         dists = cdist(centers, centers)
         # Third, find the k nearest neighbors
-        knn = NearestNeighbors(n_neighbors=k, metric='precomputed')
+        local_k = min(k, len(centers) - 1)
+        knn = NearestNeighbors(n_neighbors=local_k, metric='precomputed')
         knn.fit(dists)
         knn_rels.append(knn.kneighbors_graph().toarray())
     # translate all these relations to direction
