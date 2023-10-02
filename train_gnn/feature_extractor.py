@@ -22,7 +22,6 @@ def dummy_calculate_relation_set(dataset: Dataset, k: int, clusters: int):
     return [(0, 1), (0, -1), (-1, 0), (1, 0)]
 
 
-
 def angle_dist(a, b):
     # define a function to calculate the distance between angles
     return np.arccos(np.cos(a - b))
@@ -172,7 +171,6 @@ def visualize_relation(dataset: Dataset, relation_set: List[Tuple[float, float]]
 
 
 if __name__ == '__main__':
-    dataset = Dataset('data/train')
-    relation_set = calculate_relation_set(dataset, 10, 4)
-    os.makedirs('data/vis', exist_ok=True)
-    visualize_relation(dataset, relation_set, 'data/train_vis/')
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--data', metavar='data', type=str, default="data/preprocessed",
+                        help='folder of training data consisting of .json and .jpg files')
