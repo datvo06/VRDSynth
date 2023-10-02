@@ -9,6 +9,7 @@ from scipy.spatial.distance import cdist
 from sklearn.neighbors import NearestNeighbors
 from sklearn.cluster import KMeans
 from sklearn.metrics import pairwise_distances_argmin
+import tqdm
 
 
 BoxRel = namedtuple('BoxRel', ['i', 'j', 'mag', 'projs'])
@@ -63,47 +64,31 @@ def calculate_relation_set(dataset: Dataset, k: int, clusters: int) -> List[Tupl
     """ Calculate the relation set using all samples in the dataset """
     # First, use knn to find the k nearest neighbors
     knn_rels = []
-    for data in dataset:
+    bar = tqdm.tqdm(total=len(dataset))
+    bar.set_description("Collecting all relations")
+    all_relations = []
+    for data in bar:
         # First, calculate the center of each box
-        centers = []
-        for box in data['boxes']:
-            centers.append([(box[0] + box[2]) / 2, (box[1] + box[3]) / 2])
-        # Second, calculate the distance between each center
-        dists = cdist(centers, centers)
-        # Third, find the k nearest neighbors
-        local_k = min(k, len(centers) - 1)
-        knn = NearestNeighbors(n_neighbors=local_k, metric='precomputed')
-        knn.fit(dists)
-        knn_rels.append(knn.kneighbors_graph().toarray())
-    # translate all these relations to direction
-    all_relation = []
-    for i, data in enumerate(dataset):
-        data_relations = []
-        for j, box in enumerate(data['boxes']):
-            for k, other_box in enumerate(data['boxes']):
-                if j == k:
-                    continue
-                relation = np.array([other_box[0] - box[0], other_box[1] - box[1]])
-                mag = np.linalg.norm(relation)
-                dir_normed = relation / np.linalg.norm(mag)
-                data_relations.append(dir_normed)
-        all_relation.append(data_relations)
-    # convert these relations to radians
-    all_relation = np.array(all_relation)
-    all_relation = np.arctan2(all_relation[:, :, 1], all_relation[:, :, 0])
-    # use kmeans to cluster these relations
-    # customized kmeans to use angle distance
-    kmeans = AngleKMeans(n_clusters=clusters, random_state=0).fit(all_relation.reshape(-1, 1))
-    # get the centers
-    centers = kmeans.centers_.reshape(-1)
-    # get the relations
-    final_rels = []
-    for i in range(len(centers)):
-        # calculate vector from angle
-        centers[i] = np.array([np.cos(centers[i]), np.sin(centers[i])])
-        final_rels.append(centers[i])
-    return final_rels
+        centers = np.array([(box[0] + box[2]) / 2, (box[1] + box[3]) / 2] for box in data['boxes'])
+        nbrs = NearestNeighbors(n_neighbors=min(k + 1, len(centers)))
+        nbrs.fit(centers)
+        distances, indices = nbrs.kneighbors(centers)
+        for i, idx_row in enumerate(indices):
+            for idx in idx_row:
+                if idx != i:  # Exclude self relations
+                    relation = centers[idx] - centers[i]
+                    dir_normed = relation / np.linalg.norm(relation)
+                    all_relations.append(dir_normed)
 
+     # Convert relations to angles
+    angles = np.arctan2(all_relations[:, 1], all_relations[:, 0]).reshape(-1, 1)
+
+    # 3. KMeans on Filtered Relations
+    kmeans = AngleKMeans(n_clusters=clusters, random_state=0).fit(angles)
+    centers = kmeans.centers_.squeeze()
+    final_rels = np.column_stack([np.cos(centers), np.sin(centers)])
+    
+    return final_rels
 
 def filter_relation(data_relation: List[BoxRel], thres=0.9):
     ''' If two relations are close enough in terms of cosine simiarlity, then we keep only the one that has smaller distance
