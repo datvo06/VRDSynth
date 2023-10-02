@@ -153,7 +153,8 @@ def calculate_relation(dataset: Dataset, relation_set: List[Tuple[float, float]]
 def visualize_relation(dataset: Dataset, relation_set: List[Tuple[float, float]], output_path: str):
     """ Visualize the relation between samples in the dataset """
     all_relation = calculate_relation(dataset, relation_set)
-    for i, data, data_relation in enumerate(zip(dataset, all_relation)):
+    os.makedirs(output_path, exist_ok=True)
+    for i, (data, data_relation) in enumerate(zip(dataset, all_relation)):
         # open the image path
         img_fp = data['image_path']
         img = cv2.imread(img_fp)
@@ -171,6 +172,14 @@ def visualize_relation(dataset: Dataset, relation_set: List[Tuple[float, float]]
 
 
 if __name__ == '__main__':
+    import argparse
+    import glob
+    from training_layoutlmv3.utils import load_data
     parser = argparse.ArgumentParser()
     parser.add_argument('--data', metavar='data', type=str, default="data/preprocessed",
                         help='folder of training data consisting of .json and .jpg files')
+    args = parser.parse_args()
+    train_data_dir = f"{args.data}/"
+    data = [load_data(fp, f"{fp[:-5]}.jpg") for fp in glob.glob(f"{train_data_dir}/*.json")]
+    relation_set = calculate_relation_set(data, k=10, clusters=8)
+    visualize_relation(data, relation_set, 'relation_vis/')
