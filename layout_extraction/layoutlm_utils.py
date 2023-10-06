@@ -24,7 +24,7 @@ class FeatureExtraction:
         for paragraph in paragraphs:
             p_words = []
             for t in paragraph.textlines:
-                words = t.split(r"\W+", min_distance=0.1)
+                words = t.split(r"\s+", min_distance=0.1)
                 previous_label = None
                 for ibox, word in enumerate(words):
                     word_labels = [span.label for span in word.spans if span.label]

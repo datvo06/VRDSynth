@@ -144,3 +144,8 @@ ocr_storage/
 /models
 scripts
 upload
+
+
+# zip
+*.zip
+*.pdf
