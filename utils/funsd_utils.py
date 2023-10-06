@@ -86,10 +86,11 @@ def load_data(json_fp, img_fp):
     entities_mapping = set()
     with open(json_fp, 'r') as f:
         json_dict = json.load(f)
+        entities = [[] for _ in range(len(json_dict['form']))]
         for block in json_dict['form']:
             block_words_and_bbox = block['words']
             block_labels = [block['labels']] * len(block_words_and_bbox)
-            entities.append(list(range(len(words), len(words) + len(block_words_and_bbox))))
+            entities[block['id']] = list(range(len(words), len(words) + len(block_words_and_bbox)))
             for pair in block['linking']:
                 entities_mapping.add(tuple(pair))
             for w, bbox in zip(block_words_and_bbox, block['bbox']):
