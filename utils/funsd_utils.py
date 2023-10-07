@@ -4,7 +4,7 @@ from typing import List, Tuple
 
 Bbox = namedtuple('Bbox', ['x0', 'y0', 'x1', 'y1'])
 
-class DataSample(dict):
+class DataSample:
 
     def __init__(self,
                  words: List[str],
@@ -74,8 +74,11 @@ class DataSample(dict):
     def boxes(self, boxes: List[Bbox]):
         self._boxes = boxes
 
-    def __getattr__(self, name):
-        return self._dict[name]
+    def __getitem__(self, key):
+        return self._dict[key]
+
+    def to_json(self):
+        return json.dumps(self._dict)
 
 
 def load_data(json_fp, img_fp):

@@ -1,5 +1,11 @@
 import numpy as np
 from sklearn.metrics import pairwise_distances_argmin
+from collections import namedtuple
+from typing import List, Tuple
+from datasets import Dataset
+
+from sklearn.neighbors import NearestNeighbors
+BoxRel = namedtuple('BoxRel', ['i', 'j', 'mag', 'projs'])
 
 EDGE_COLOR_SET = ['red', 'green', 'blue', 'black', 'gray', 'yellow', 'pink', 'orange']
 MAP_COLOR_TO_CV2_TUPLE = {
