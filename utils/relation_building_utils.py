@@ -3,8 +3,10 @@ from sklearn.metrics import pairwise_distances_argmin
 from collections import namedtuple
 from typing import List, Tuple
 from datasets import Dataset
-
 from sklearn.neighbors import NearestNeighbors
+import numpy as np
+from networkx.algorithms import isomorphism
+
 BoxRel = namedtuple('BoxRel', ['i', 'j', 'mag', 'projs'])
 
 EDGE_COLOR_SET = ['red', 'green', 'blue', 'black', 'gray', 'yellow', 'pink', 'orange']
@@ -173,3 +175,42 @@ def filter_relation_med_dist(data_relation: List[BoxRel], coeff=1.3):
     # filter
     filtered_data_relation = [rel for rel in data_relation if rel.mag < coeff * med_dist]
     return filtered_data_relation
+
+
+
+def calculate_relation(dataset: Dataset, relation_set: List[Tuple[float, float]]) -> List[List[BoxRel]]:
+    """ Calculate the relation between samples in the dataset """
+    all_relation = []
+
+    relation_set = np.array(relation_set)
+
+    for i, data in enumerate(dataset):
+        boxes = np.array(list(data['boxes']))
+        centers = np.column_stack([(boxes[:, 0] + boxes[:, 2]) / 2, (boxes[:, 1] + boxes[:, 3]) / 2])
+
+        # Using broadcasting to compute pairwise differences
+        differences = centers[None, :, :] - centers[:, None, :]
+        magnitudes = np.linalg.norm(differences, axis=2)
+
+        # Mask to remove relations of a box with itself
+        mask = np.eye(len(centers), dtype=bool)
+        
+        # Normalizing the differences
+        with np.errstate(divide='ignore', invalid='ignore'):
+            dir_normed = differences / magnitudes[..., None]
+            dir_normed[mask] = 0
+
+        # Projecting the relations onto the relation_set
+        relation_projections = np.einsum('ijk,kl->ijl', dir_normed, relation_set.T)
+        
+        data_relations = []
+        for j in range(len(centers)):
+            for k in range(len(centers)):
+                if j != k:
+                    data_relations.append(BoxRel(j, k, magnitudes[j, k], relation_projections[j, k]))
+        
+        filtered_data_relation = data_relations
+        filtered_data_relation = filter_relation(data_relations, relation_set)
+        all_relation.append(filtered_data_relation)
+
+    return all_relation

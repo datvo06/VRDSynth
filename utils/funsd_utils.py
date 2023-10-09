@@ -1,6 +1,7 @@
 import json
 from collections import namedtuple
 from typing import List, Tuple 
+import glob
 
 Bbox = namedtuple('Bbox', ['x0', 'y0', 'x1', 'y1'])
 
@@ -102,3 +103,11 @@ def load_data(json_fp, img_fp):
             labels.extend(block_labels)
     entities_mapping = list(entities_mapping)
     return DataSample(words, labels, entities, entities_mapping, bboxs, img_fp)
+
+
+def load_dataset(annotation_dir, img_dir):
+    dataset = []
+    for json_fp in glob.glob(annotation_dir + '/*.json'):
+        img_fp = img_dir + '/' + json_fp.split('/')[-1].split('.')[0] + '.jpg'
+        dataset.append(load_data(json_fp, img_fp))
+    return dataset
