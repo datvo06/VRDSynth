@@ -43,9 +43,6 @@ class SpecIterator:
             self._index_inner += 1
             return spec[0], entity, spec[1]
 
-    def __len__(self):
-        return self.len
-
 
 
 class Program:
@@ -496,7 +493,7 @@ class RelationLabelProperty(RelationLabelValue):
         return 'RelationLabelValue'
 
     def evaluate(self, word_binding, relation_binding, nx_g_data):
-        return nx_g_data.edges[relation_binding[self.relation_variable]][0]['label']
+        return nx_g_data.edges[relation_binding[self.relation_variable]][0]['lbl']
 
 
 
@@ -732,6 +729,6 @@ LiteralReplacement = {
         'LabelConstant': [LabelConstant('header'), LabelConstant('key'), LabelConstant('value')],
         'BoxConstantValue': [BoxConstantValue('x0'), BoxConstantValue('y0'), BoxConstantValue('x1'), BoxConstantValue('y1')],
         'RelationPropertyConstant': [RelationPropertyConstant('mag'), *[RelationPropertyConstant(f'proj{i}') for i in range(8)]],
-        'RelationLabelValue': [RelationLabelConstant(f'rt{i}') for i in range(10)]
+        'RelationLabelValue': [RelationLabelConstant(i) for i in range(4)]
 }
 

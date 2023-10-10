@@ -22,6 +22,7 @@ class DataSample:
         self._dict = {
             'words': self._words,
             'labels': self._labels,
+            'boxes': self._boxes,
             'entities': self._entities,
             'entities_map': self._entities_map,
             'img_fp': img_fp
@@ -93,13 +94,13 @@ def load_data(json_fp, img_fp):
         entities = [[] for _ in range(len(json_dict['form']))]
         for block in json_dict['form']:
             block_words_and_bbox = block['words']
-            block_labels = [block['labels']] * len(block_words_and_bbox)
+            block_labels = [block['label']] * len(block_words_and_bbox)
             entities[block['id']] = list(range(len(words), len(words) + len(block_words_and_bbox)))
             for pair in block['linking']:
                 entities_mapping.add(tuple(pair))
-            for w, bbox in zip(block_words_and_bbox, block['bbox']):
-                words.append(w)
-                bboxs.append(Bbox(*bbox))
+            for w_bbox in block_words_and_bbox:
+                words.append(w_bbox['text'])
+                bboxs.append(Bbox(*w_bbox['box']))
             labels.extend(block_labels)
     entities_mapping = list(entities_mapping)
     return DataSample(words, labels, entities, entities_mapping, bboxs, img_fp)
