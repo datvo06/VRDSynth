@@ -5,7 +5,6 @@ from typing import List, Tuple
 from datasets import Dataset
 from sklearn.neighbors import NearestNeighbors
 import numpy as np
-from networkx.algorithms import isomorphism
 
 BoxRel = namedtuple('BoxRel', ['i', 'j', 'mag', 'projs'])
 

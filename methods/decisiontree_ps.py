@@ -8,11 +8,12 @@ import itertools
 import functools
 from collections import defaultdict, namedtuple
 from networkx.algorithms import isomorphism
-from utils.ps_utils import Program, EmptyProgram, GrammarReplacement, FindProgram, RelationLabelConstant, RelationLabelProperty, WordLabelProperty, WordVariable, RelationVariable, RelationConstraint, LabelEqualConstraint, RelationLabelEqualConstraint, construct_entity_merging_specs, SpecIterator, LabelConstant, AndConstraint
+from utils.ps_utils import Program, EmptyProgram, GrammarReplacement, FindProgram, RelationLabelConstant, RelationLabelProperty, WordLabelProperty, WordVariable, RelationVariable, RelationConstraint, LabelEqualConstraint, RelationLabelEqualConstraint, construct_entity_merging_specs, SpecIterator, LabelConstant, AndConstraint, LiteralSet
 import json
 import pickle as pkl
 import os
 import tqdm
+import copy
 
 
 def build_nx_g(datasample: DataSample, relation_set: Set[Tuple[str, str, str]]) -> nx.MultiDiGraph:
@@ -122,10 +123,9 @@ class Hole:
 
 
 class VersionSpace:
-    def __init__(self):
-        self.matching_hypotheses = []
-        self.non_matching_hypotheses = []
-        self.programs = []
+    def __init__(self, tt, tf, ft, programs):
+        self.tt, self.tf, self.ft = tt, tf, ft
+        self.programs = programs
 
 
 def dfs_code_based_backtrack(curr_codes):
@@ -144,14 +144,49 @@ def bottom_up_version_space_based():
     pass
 
 
+def extend_find_program(find_program):
+    # The find program extension can only be in 2 ways: structural extension and constraint extension.
+    # each time, we only extend one way.
+
+    extended_programs = []
+    # structural extension
+    # structural extension can only happen in 2 ways:
+    # 1. adding new word to the path and link back
+    # 2. adding new relation constraint within the path.
+    # temporary just leave it for now.
+
+
+    # Put a hole in the program
+
+
+def extend_program_general(program):
+    # just backtracking...., return list of new programs
+    if program.get_typename() in LiteralSet:
+        return []
+    out_new_program = []
+    for i, (arg_type, arg) in enumerate(zip(program.get_arg_type(), program.get_args())):
+        # cannot extend literal
+        if arg_type in LiteralSet:
+            continue
+        new_arg = copy.deepcopy(arg)
+        extended_args = extend_program_general(new_arg)
+        # put them backin
+        for new_arg in extended_args:
+            raise NotImplementedError
+
+
+
+
 def construct_initial_program_set(all_positive_paths):
     print("Constructing initial program set")
     programs = []
     for path, count in all_positive_paths:
-        word_labels = [LabelConstant(x) for x in path[::2]]
+        # split path in to ((w0, r0, w1), (w1, r1, w2), ...)
+        path = [tuple(path[i:i+3]) for i in range(0, len(path), 3)]
+        word_labels = [LabelConstant(x[0]) for x in path] + [LabelConstant(path[-1][2])]
+        rel_labels = [RelationLabelConstant(x[1]) for x in path]
         if word_labels[0] == LabelConstant('other'):
             continue
-        rel_labels = [RelationLabelConstant(x) for x in path[1::2]]
         word_vars = list([WordVariable(f"w{i}") for i in range(len(word_labels))])
         rel_vars = list([RelationVariable(f"r{i}") for i in range(len(rel_labels))])
         relation_constraints = [RelationConstraint(word_vars[i], word_vars[i+1], rel_vars[i]) for i in range(len(word_vars)-1)]
@@ -230,6 +265,7 @@ def three_stages_bottom_up_version_space_based(all_positive_paths, dataset, spec
                 for w in e:
                     w2entities[w] = e
             out_mappingss = batch_find_program_executor(nx_g, programs)
+            assert len(out_mappingss) == len(programs), len(out_mappingss)
             for j, (res, program) in enumerate(zip(out_mappingss, programs)):
                 w2otherwords = defaultdict(set)
                 return_vars = program.return_variables
@@ -249,21 +285,28 @@ def three_stages_bottom_up_version_space_based(all_positive_paths, dataset, spec
                     for w2 in rem:
                         vs_io_ft[(i, w, w2)].append(j)
                         p_io_ft[j].append((i, w, w2))
-        io_to_program = {}
+        io_to_program = defaultdict(list)
         if cache_dir is not None:
             with open(os.path.join(cache_dir, "stage2.pkl"), "wb") as f:
                 pkl.dump([vs_io_tt, vs_io_tf, vs_io_ft, vs_io_neg, p_io_tt, p_io_tf, p_io_ft, io_to_program], f)
 
-    for j, (p_io_tt_j, p_io_tf_j, p_io_ft_j) in enumerate(zip(p_io_tt, p_io_tf, p_io_ft)):
-        print("Program ", j, " has ", len(p_io_tt_j), " tt, ", len(p_io_tf_j), " tf, ", len(p_io_ft_j), " ft")
-        io_to_program[tuple(p_io_tt_j), tuple(p_io_tf_j), tuple(p_io_ft_j)] = j
+    print(len(programs), len(p_io_ft))
+    io_to_program = defaultdict(list)
+
+    for j, (p_io_tt_j, p_io_tf_j, p_io_ft_j) in enumerate(zip(p_io_tt.values(), p_io_tf.values(), p_io_ft.values())):
+        io_to_program[tuple(p_io_tt_j), tuple(p_io_tf_j), tuple(p_io_ft_j)].append(j)
         # Calculate precision, recall, f1
         p = len(p_io_tt_j) / (len(p_io_tt_j) + len(p_io_tf_j))
         r = len(p_io_tt_j) / (len(p_io_tt_j) + len(p_io_ft_j))
         f1 = 2 * p * r / (p + r)
+        print(programs[j])
         print(f"Program {j} - Precision: {p}, Recall: {r}, F1: {f1}")
+
     # STAGE 3: Build version space
-    # STAGE 3: Extend each program with either Version space, complement version space, adding relation, additional condition
+    vss = [VersionSpace(*k, v) for k, v in io_to_program.items()]
+    print("Number of version spaces: ", len(vss))
+
+
     return programs
 
 

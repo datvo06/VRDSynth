@@ -4,6 +4,7 @@ from collections import namedtuple, defaultdict
 import itertools
 import networkx as nx
 from networkx import isomorphism
+import copy
 
 
 def construct_entity_merging_specs(dataset: List[DataSample]):
@@ -64,6 +65,10 @@ class Program:
     def get_arg_type():
         raise NotImplementedError
 
+
+    def get_args(self):
+        raise NotImplementedError
+
     @staticmethod
     def type_name():
         return 'Program'
@@ -85,6 +90,9 @@ class EmptyProgram(Program):
 
     @staticmethod
     def get_arg_type():
+        return []
+
+    def get_args(self):
         return []
 
     def evaluate(self, nx_g_data) -> List[int]:
@@ -128,6 +136,9 @@ class ExcludeProgram(Program):
     @staticmethod
     def get_arg_type():
         return [List[Program]]
+
+    def get_args(self):
+        return [self.programs]
 
     @staticmethod
     def type_name():
@@ -225,6 +236,7 @@ class RelationConstraint:
     def __eq__(self, other):
         return self.w1 == other.w1 and self.w2 == other.w2 and self.r == other.r
 
+    
 
 class FindProgram(Program):
     def __init__(self, word_variables, relation_variables, relation_constraints, constraint, return_variables):
@@ -285,8 +297,7 @@ class FindProgram(Program):
         return self.constraint.evaluate(word_binding, relation_binding, nx_g_data)
 
     def __str__(self):
-        return f'find({", ".join([str(w) for w in self.word_variables])}, {", ".join([str(r) for r in self.relation_variables])}, {", ".join([str(c) for c in self.relation_constraint])}, {str(self.constraint)}, {", ".join([str(w) for w in self.return_variables])})'
-
+        return f'find(({", ".join([str(w) for w in self.word_variables])}), ({", ".join([str(r) for r in self.relation_variables])}), ({", ".join([str(c) for c in self.relation_constraint])}, {str(self.constraint)}, {", ".join([str(w) for w in self.return_variables])})'
 
 
 class StringValue:
@@ -610,7 +621,6 @@ class WordTargetProperty(Constraint):
         return bool(nx_g_data.nodes[word_binding[self.word_variable]].get('target', 0))
 
 
-
 class BooleanEqualConstraint(Constraint):
     def __init__(self, lhs, rhs):
         assert isinstance(lhs, BoolValue)
@@ -670,6 +680,12 @@ class StringContainsConstraint(Constraint):
     def evaluate(self, *values):
         return self.rhs.evaluate(*values) in self.lhs.evaluate(*values)
 
+    def __eq__(self, other):
+        return isinstance(other, StringContainsConstraint) and self.lhs == other.lhs and self.rhs == other.rhs
+
+    def __str__(self):
+        return f'contains({self.lhs}, {self.rhs})'
+
 
 class LabelEqualConstraint(Constraint):
     def __init__(self, lhs: LabelValue, rhs: LabelValue):
@@ -685,6 +701,9 @@ class LabelEqualConstraint(Constraint):
     @staticmethod
     def type_name():
         return 'LabelEqualConstraint'
+
+    def __str__(self):
+        return f'{self.lhs} == {self.rhs}'
 
     def evaluate(self, *values):
         lhs_eval = self.lhs.evaluate(*values) if not isinstance(self.lhs, LabelConstant) else self.lhs.evaluate()
@@ -714,8 +733,6 @@ class RelationLabelEqualConstraint(Constraint):
     def __str__(self):
         return f'{self.lhs} == {self.rhs}'
 
-    def __repr__(self):
-        return f'{self.lhs} == {self.rhs}'
 
 class FloatEqualConstraint(Constraint):
     def __init__(self, lhs, rhs):
@@ -734,6 +751,9 @@ class FloatEqualConstraint(Constraint):
 
     def evaluate(self, values):
         return self.lhs.evaluate(*values) == self.rhs.evaluate(*values)
+
+    def __str__(self):
+        return f'{self.lhs} == {self.rhs}'
 
 
 class FloatGreaterConstraint(Constraint):
