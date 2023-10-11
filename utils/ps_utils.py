@@ -94,6 +94,10 @@ class EmptyProgram(Program):
         return '{}'
 
 
+    def __eq__(self, other):
+        return isinstance(other, EmptyProgram)
+
+
 class UnionProgram(Program):
     def __init__(self, programs: List[Program]):
         self.programs = programs
@@ -111,6 +115,10 @@ class UnionProgram(Program):
 
     def __str__(self):
         return '{' + ' | '.join([str(p) for p in self.programs]) + '}'
+
+    def __eq__(self, other):
+        # compare list of programs
+        return set(self.programs) == set(other.programs)
 
 
 class ExcludeProgram(Program):
@@ -131,6 +139,9 @@ class ExcludeProgram(Program):
     def __str__(self):
         return '{' + ' - '.join([str(p) for p in self.programs]) + '}'
 
+    def __eq__(self, other):
+        # compare list of programs
+        return set(self.programs) == set(other.programs)
 
 class WordVariable:
     def __init__(self, name):
@@ -153,6 +164,9 @@ class WordVariable:
     def __hash__(self):
         return hash(self.name)
 
+    def __eq__(self, other):
+        return self.name == other.name
+
 
 class RelationVariable:
     def __init__(self, name):
@@ -174,6 +188,9 @@ class RelationVariable:
 
     def __hash__(self):
         return hash(self.name)
+
+    def __eq__(self, other):
+        return self.name == other.name
 
 
 class RelationConstraint:
@@ -201,6 +218,12 @@ class RelationConstraint:
 
     def __getitem__(self, item):
         return [self.w1, self.w2, self.r][item]
+
+    def __hash__(self):
+        return hash((self.w1, self.w2, self.r))
+
+    def __eq__(self, other):
+        return self.w1 == other.w1 and self.w2 == other.w2 and self.r == other.r
 
 
 class FindProgram(Program):
@@ -249,8 +272,17 @@ class FindProgram(Program):
             relation_binding = {r: (subgraph[w1], subgraph[w2], 0) for w1, w2, r in self.relation_constraint}
             # check if the binding satisfies the constraints
             if self.constraint.evaluate(word_binding, relation_binding, nx_g_data):
-                out_words.append([word_binding[w] for w in self.return_variables])
-        return itertools.chain.from_iterable(out_words)
+                if self.return_variables:
+                    out_words.append([word_binding[w] for w in self.return_variables])
+                else:
+                    out_words.append(word_binding)
+        if self.return_variables:
+            return itertools.chain.from_iterable(out_words)
+        else:
+            return out_words
+
+    def evaluate_binding(self, word_binding, relation_binding, nx_g_data):
+        return self.constraint.evaluate(word_binding, relation_binding, nx_g_data)
 
     def __str__(self):
         return f'find({", ".join([str(w) for w in self.word_variables])}, {", ".join([str(r) for r in self.relation_variables])}, {", ".join([str(c) for c in self.relation_constraint])}, {str(self.constraint)}, {", ".join([str(w) for w in self.return_variables])})'
@@ -402,6 +434,9 @@ class LabelConstant(LabelValue):
 
     def __repr__(self):
         return f'"L_{self.value}"'
+
+    def __eq__(self, other):
+        return self.value == other.value
 
 
 class WordLabelProperty(LabelValue):
