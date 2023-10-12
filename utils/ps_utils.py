@@ -55,6 +55,10 @@ class SpecIterator:
     def __len__(self):
         return self.len
 
+class Hole:
+    def __init__(self, cls):
+        self.cls = cls
+
 
 
 class Program:
@@ -106,13 +110,14 @@ class EmptyProgram(Program):
         return isinstance(other, EmptyProgram)
 
 
+
 class UnionProgram(Program):
     def __init__(self, programs: List[Program]):
         self.programs = programs
 
     @staticmethod
     def get_arg_type():
-        return [List[Program]]
+        return [[Program]]
 
     @staticmethod
     def type_name():
@@ -135,7 +140,7 @@ class ExcludeProgram(Program):
 
     @staticmethod
     def get_arg_type():
-        return [List[Program]]
+        return [[Program]]
 
     def get_args(self):
         return [self.programs]
@@ -258,7 +263,7 @@ class FindProgram(Program):
 
     @staticmethod
     def get_arg_type():
-        return [List[WordVariable], List[RelationVariable], List[RelationConstraint], Constraint, List[WordVariable]]
+        return [[WordVariable], [RelationVariable], [RelationConstraint], Constraint, [WordVariable]]
 
     @staticmethod
     def type_name():
@@ -623,8 +628,8 @@ class WordTargetProperty(Constraint):
 
 class BooleanEqualConstraint(Constraint):
     def __init__(self, lhs, rhs):
-        assert isinstance(lhs, BoolValue)
-        assert isinstance(rhs, BoolValue)
+        assert isinstance(lhs, BoolValue) or (isinstance(lhs, Hole) and issubclass(lhs.cls, BoolValue))
+        assert isinstance(rhs, BoolValue) or (isinstance(rhs, Hole) and issubclass(rhs.cls, BoolValue))
         self.lhs = lhs
         self.rhs = rhs
 
@@ -637,6 +642,8 @@ class BooleanEqualConstraint(Constraint):
         return 'BooleanEqualConstraint'
 
     def evaluate(self, values):
+        assert not isinstance(self.lhs, Hole), "Incomplete constraint"
+        assert not isinstance(self.rhs, Hole), "Incomplete constraint"
         return self.lhs.evaluate(*values) == self.rhs.evaluate(*values)
 
     def __str__(self):
