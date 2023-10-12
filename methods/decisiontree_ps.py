@@ -8,11 +8,12 @@ import itertools
 import functools
 from collections import defaultdict, namedtuple
 from networkx.algorithms import isomorphism
-from utils.ps_utils import Program, EmptyProgram, GrammarReplacement, FindProgram, RelationLabelConstant, RelationLabelProperty, WordLabelProperty, WordVariable, RelationVariable, RelationConstraint, LabelEqualConstraint, RelationLabelEqualConstraint, construct_entity_merging_specs, SpecIterator, LabelConstant, AndConstraint
+from utils.ps_utils import LiteralReplacement, Program, EmptyProgram, GrammarReplacement, FindProgram, RelationLabelConstant, RelationLabelProperty, WordLabelProperty, WordVariable, RelationVariable, RelationConstraint, LabelEqualConstraint, RelationLabelEqualConstraint, construct_entity_merging_specs, SpecIterator, LabelConstant, AndConstraint, LiteralSet, Constraint, GrammarReplacement, Hole
 import json
 import pickle as pkl
 import os
 import tqdm
+import copy
 
 
 def build_nx_g(datasample: DataSample, relation_set: Set[Tuple[str, str, str]]) -> nx.MultiDiGraph:
@@ -116,16 +117,11 @@ def get_parser():
     parser.add_argument('--output', type=str, default='data/funsd/decisiontree_ps', help='output directory')
     return parser
 
-class Hole:
-    def __init__(self, cls):
-        self.cls = cls
-
 
 class VersionSpace:
-    def __init__(self):
-        self.matching_hypotheses = []
-        self.non_matching_hypotheses = []
-        self.programs = []
+    def __init__(self, tt, tf, ft, programs):
+        self.tt, self.tf, self.ft = tt, tf, ft
+        self.programs = programs
 
 
 def dfs_code_based_backtrack(curr_codes):
@@ -144,12 +140,135 @@ def bottom_up_version_space_based():
     pass
 
 
+def extend_find_program(find_program):
+    # The find program extension can only be in 2 ways: structural extension and constraint extension.
+    # each time, we only extend one way.
+
+    extended_programs = []
+    # structural extension
+    # structural extension can only happen in 2 ways:
+    # 1. adding new word to the path and link back
+    # 2. adding new relation constraint within the path.
+    # temporary just leave it for now.
+
+
+    # Put a hole in the program
+    pass
+
+def gather_all_constraint(c: Constraint):
+        if not isinstance(c, AndConstraint):
+            return [c]
+        all_constraints = []
+        left_constraint = gather_all_constraint(c.lhs)
+        right_constraint = gather_all_constraint(c.rhs)
+        return left_constraint + right_constraint
+
+def find_holes(program, ptype: str):
+    # use a stack to represent the hole position
+    if isinstance(program, Hole):
+        return [((), program, ptype)]
+    for i, arg in program.get_args():
+        if isinstance(arg, list):
+            for j, a in enumerate(arg):
+                if isinstance(a, Hole):
+                    yield [((i, (j, )), a, ptype)]
+                else:
+                    # Travel deeper to find holes
+                    for hole in find_holes(a, ptype):
+                        yield [((i, (j, hole[0])), hole[1], hole[2])]
+        else:
+            holes = find_holes(arg, ptype)
+            for hole in holes:
+                yield [((i, hole[0]), hole[1], hole[2])]
+
+
+def replace_hole(program, path, filling):
+    if not path:
+        return filling
+    if len(path) == 1:
+        if isinstance(program, list):
+            program[path[0]] = filling
+        else:
+            args = program.get_args()
+            args[path[0]] = filling
+            program = program.__class__(*args)
+    else:
+        if isinstance(program, list):
+            program = replace_hole(program[path[0]], path[1:], filling)
+        else:
+            args = program.get_args()
+            args[path[0]] = replace_hole(args[path[0]], path[1:], filling)
+            program = program.__class__(*args)
+    return program
+
+
+def fill_hole(program, ptype, max_depth=3) -> list:
+    # 1. find all holes in the program
+    holes = list(find_holes(program, ptype))
+    # 2. for each hole, find all possible programs that can fill the hole
+    possible_mapping_for_holes = defaultdict(list)
+    for i, (path, hole, ptype) in enumerate(holes):
+        if ptype in LiteralSet:
+            for literal in LiteralReplacement[ptype]:
+                possible_mapping_for_holes[i].append(literal)
+        else:
+            if isinstance(ptype, list):
+                if max_depth == 1:
+                    return []
+                real_ptype = ptype[0]
+                possible_filling = fill_hole(Hole(real_ptype), real_ptype, max_depth=max_depth-1)
+                for p in possible_filling:
+                    possible_mapping_for_holes[i].append((i, [p]))
+            else:
+                possible_filling = fill_hole(hole, ptype, max_depth=max_depth-1)
+                for p in possible_filling:
+                    possible_mapping_for_holes[i].append((i, p))
+
+    # 3. for each possible program, fill the hole and check if the program is valid
+    # 4. if the program is valid, return the program, otherwise, continue
+    current_program_set = [program]
+    for i, (path, hole, ptype) in enumerate(holes):
+        last_program_set = current_program_set
+        next_program_set = []
+        for program in last_program_set:
+            for filling in possible_mapping_for_holes[i]:
+                new_program = copy.deepcopy(program)
+                new_program = replace_hole(new_program, path, filling)
+                next_program_set.append(new_program)
+        current_program_set = next_program_set
+    return current_program_set
+
+
+def extend_program_general(version_space: VersionSpace, program: FindProgram):
+    # just backtracking...., return list of new programs
+    if program.type_name() in LiteralSet:
+        return []
+    out_new_program = []
+    program_args = program.get_args()
+    for i, (arg_type, arg) in enumerate(zip(program.get_arg_type(), program.get_args())):
+        # cannot rewrite literal
+        if arg_type in LiteralSet:
+            continue
+        # Currently, only one rewriting rule: Constraint -> And(Constraint, Hole)
+        if arg_type == 'Constraint':
+            new_arg = AndConstraint(arg, Hole)
+            args = [program_args[j] if j != i else new_arg for j in range(len(program_args))]
+            new_program = program.__class__(*args)
+            new_programs = fill_hole(version_space, new_program)
+
+
+
+
 def construct_initial_program_set(all_positive_paths):
     print("Constructing initial program set")
     programs = []
     for path, count in all_positive_paths:
-        word_labels = [LabelConstant(x) for x in path[::2]]
-        rel_labels = [RelationLabelConstant(x) for x in path[1::2]]
+        # split path in to ((w0, r0, w1), (w1, r1, w2), ...)
+        path = [tuple(path[i:i+3]) for i in range(0, len(path), 3)]
+        word_labels = [LabelConstant(x[0]) for x in path] + [LabelConstant(path[-1][2])]
+        rel_labels = [RelationLabelConstant(x[1]) for x in path]
+        if word_labels[0] == LabelConstant('other'):
+            continue
         word_vars = list([WordVariable(f"w{i}") for i in range(len(word_labels))])
         rel_vars = list([RelationVariable(f"r{i}") for i in range(len(rel_labels))])
         relation_constraints = [RelationConstraint(word_vars[i], word_vars[i+1], rel_vars[i]) for i in range(len(word_vars)-1)]
@@ -165,6 +284,38 @@ def construct_initial_program_set(all_positive_paths):
     return programs
 
 
+def batch_find_program_executor(nx_g, find_programs: List[FindProgram]):
+    # strategy to speed up program executor:
+    # find all program that have same set of path (excluding label)
+    # iterate through all binding
+    # and then test. In this way, we do not have to perform isomorphism multiple times
+    assert all(isinstance(f, FindProgram) for f in find_programs), "All programs must be FindProgram"
+    # First, group programs by their path
+    path_to_programs = defaultdict(list)
+    for i, f in enumerate(find_programs):
+        path_to_programs[tuple(f.relation_constraint)].append((i, f))
+
+    out_words = [[] for _ in range(len(find_programs))]
+    for path in path_to_programs:
+        nx_graph_query = nx.MultiDiGraph()
+        word_vars = path_to_programs[path][0][1].word_variables
+        for w in word_vars:
+            nx_graph_query.add_node(w)
+        for w1, w2, r in path:
+            nx_graph_query.add_edge(w1, w2)
+        gm = isomorphism.MultiDiGraphMatcher(nx_g, nx_graph_query)
+        for subgraph in gm.subgraph_isomorphisms_iter():
+            subgraph = {v: k for k, v in subgraph.items()}
+            # get the corresponding binding for word_variables and relation_variables
+            word_binding = {w: subgraph[w] for w in word_vars}
+            relation_binding = {r: (subgraph[w1], subgraph[w2], 0) for w1, w2, r in path}
+            for i, f in path_to_programs[path]:
+                if f.evaluate_binding(word_binding, relation_binding, nx_g):
+                    out_words[i].append(word_binding)
+    return out_words
+
+
+
 def three_stages_bottom_up_version_space_based(all_positive_paths, dataset, specs, data_sample_set_relation_cache, cache_dir=None):
     # STAGE 1: Build base relation spaces
     if cache_dir is not None and os.path.exists(os.path.join(cache_dir, 'stage1.pkl')):
@@ -175,6 +326,8 @@ def three_stages_bottom_up_version_space_based(all_positive_paths, dataset, spec
         if cache_dir is not None:
             with open(os.path.join(cache_dir, "stage1.pkl"), "wb") as f:
                 pkl.dump(programs, f)
+
+    print("Number of programs in stage 1: ", len(programs))
     # STAGE 2: Build version space
     # Start by getting the output of each program
     # Load the following: vs_io, vs_io_neg, p_io, p_io_neg, io_to_program
@@ -183,38 +336,59 @@ def three_stages_bottom_up_version_space_based(all_positive_paths, dataset, spec
             vs_io_tt, vs_io_tf, vs_io_ft, vs_io_neg, p_io_tt, p_io_tf, p_io_ft, io_to_program = pkl.load(f)
     else:
         vs_io_tt, vs_io_tf, vs_io_ft, vs_io_neg, p_io_tt, p_io_tf, p_io_ft, io_to_program = [defaultdict(list) for _ in range(8)]
-        bar = tqdm.tqdm(SpecIterator(specs))
+        # bar = tqdm.tqdm(SpecIterator(specs))
+        bar = tqdm.tqdm(specs)
         bar.set_description("Stage 2 - Getting Program Output")
-        for i, w, word_spec in bar:
+        for i, entities in bar:
             nx_g = data_sample_set_relation_cache[i]
-            nx_g.nodes[w]['target'] = 1
-            for j, program in enumerate(programs):
-                res = program.evaluate(nx_g)
-                for w2 in res:
-                    if w2 in word_spec:
-                        vs_io_tt[(i, w, w2)].append(j)
-                        p_io_tt[j].append((i, w, w2))
-                    else:
-                        vs_io_tf[(i, w, w2)].append(j)
-                        p_io_tf[j].append((i, w, w2))
-                rem = set(word_spec) - set(res)
-                for w2 in rem:
-                    vs_io_ft[(i, w, w2)].append(j)
-                    p_io_ft[j].append((i, w, w2))
-            nx_g.nodes[w].pop('target')
-        io_to_program = {}
-        for j, (p_io_tt_j, p_io_tf_j, p_io_ft_j) in enumerate(zip(p_io_tt, p_io_tf, p_io_ft)):
-            io_to_program[tuple(p_io_tt_j), tuple(p_io_tf_j), tuple(p_io_ft_j)] = j
-            # Calculate precision, recall, f1
-            p = len(p_io_tt_j) / (len(p_io_tt_j) + len(p_io_tf_j))
-            r = len(p_io_tt_j) / (len(p_io_tt_j) + len(p_io_ft_j))
-            f1 = 2 * p * r / (p + r)
-            print(f"Program {j} - Precision: {p}, Recall: {r}, F1: {f1}")
+            entities = [set(e) for e in entities]
+            w2entities = {}
+            for e in entities:
+                for w in e:
+                    w2entities[w] = e
+            out_mappingss = batch_find_program_executor(nx_g, programs)
+            assert len(out_mappingss) == len(programs), len(out_mappingss)
+            for j, (res, program) in enumerate(zip(out_mappingss, programs)):
+                w2otherwords = defaultdict(set)
+                return_vars = program.return_variables
+                # Turn off return var to return every mapping
+                for word_binding in res:
+                    w2otherwords[word_binding[WordVariable("w0")]].add(word_binding[return_vars[0]])
+                for w in w2otherwords:
+                    e = w2entities[w]
+                    for w2 in w2otherwords[w]:
+                        if w2 in e:
+                            vs_io_tt[(i, w, w2)].append(j)
+                            p_io_tt[j].append((i, w, w2))
+                        else:
+                            vs_io_tf[(i, w, w2)].append(j)
+                            p_io_tf[j].append((i, w, w2))
+                    rem = e - w2otherwords[w] - set([w])
+                    for w2 in rem:
+                        vs_io_ft[(i, w, w2)].append(j)
+                        p_io_ft[j].append((i, w, w2))
+        io_to_program = defaultdict(list)
         if cache_dir is not None:
             with open(os.path.join(cache_dir, "stage2.pkl"), "wb") as f:
                 pkl.dump([vs_io_tt, vs_io_tf, vs_io_ft, vs_io_neg, p_io_tt, p_io_tf, p_io_ft, io_to_program], f)
+
+    print(len(programs), len(p_io_ft))
+    io_to_program = defaultdict(list)
+
+    for j, (p_io_tt_j, p_io_tf_j, p_io_ft_j) in enumerate(zip(p_io_tt.values(), p_io_tf.values(), p_io_ft.values())):
+        io_to_program[tuple(p_io_tt_j), tuple(p_io_tf_j), tuple(p_io_ft_j)].append(j)
+        # Calculate precision, recall, f1
+        p = len(p_io_tt_j) / (len(p_io_tt_j) + len(p_io_tf_j))
+        r = len(p_io_tt_j) / (len(p_io_tt_j) + len(p_io_ft_j))
+        f1 = 2 * p * r / (p + r)
+        print(programs[j])
+        print(f"Program {j} - Precision: {p}, Recall: {r}, F1: {f1}")
+
     # STAGE 3: Build version space
-    # STAGE 3: Extend each program with either Version space, complement version space, adding relation, additional condition
+    vss = [VersionSpace(*k, v) for k, v in io_to_program.items()]
+    print("Number of version spaces: ", len(vss))
+
+
     return programs
 
 
