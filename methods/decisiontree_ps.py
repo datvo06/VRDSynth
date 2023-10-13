@@ -8,7 +8,7 @@ import itertools
 import functools
 from collections import defaultdict, namedtuple
 from networkx.algorithms import isomorphism
-from utils.ps_utils import LiteralReplacement, Program, EmptyProgram, GrammarReplacement, FindProgram, RelationLabelConstant, RelationLabelProperty, WordLabelProperty, WordVariable, RelationVariable, RelationConstraint, LabelEqualConstraint, RelationLabelEqualConstraint, construct_entity_merging_specs, SpecIterator, LabelConstant, AndConstraint, LiteralSet, Constraint, GrammarReplacement, Hole
+from utils.ps_utils import LiteralReplacement, Program, EmptyProgram, GrammarReplacement, FindProgram, RelationLabelConstant, RelationLabelProperty, WordLabelProperty, WordVariable, RelationVariable, RelationConstraint, LabelEqualConstraint, RelationLabelEqualConstraint, construct_entity_merging_specs, SpecIterator, LabelConstant, AndConstraint, LiteralSet, Constraint, GrammarReplacement, Hole, replace_hole
 import json
 import pickle as pkl
 import os
@@ -182,26 +182,6 @@ def find_holes(program, ptype: str):
                 yield [((i, hole[0]), hole[1], hole[2])]
 
 
-def replace_hole(program, path, filling):
-    if not path:
-        return filling
-    if len(path) == 1:
-        if isinstance(program, list):
-            program[path[0]] = filling
-        else:
-            args = program.get_args()
-            args[path[0]] = filling
-            program = program.__class__(*args)
-    else:
-        if isinstance(program, list):
-            program = replace_hole(program[path[0]], path[1:], filling)
-        else:
-            args = program.get_args()
-            args[path[0]] = replace_hole(args[path[0]], path[1:], filling)
-            program = program.__class__(*args)
-    return program
-
-
 def fill_hole(program, ptype, max_depth=3) -> list:
     # 1. find all holes in the program
     holes = list(find_holes(program, ptype))
@@ -220,12 +200,12 @@ def fill_hole(program, ptype, max_depth=3) -> list:
                 for p in possible_filling:
                     possible_mapping_for_holes[i].append((i, [p]))
             else:
+                ptype_args = ptype.get_arg_type()
                 possible_filling = fill_hole(hole, ptype, max_depth=max_depth-1)
                 for p in possible_filling:
                     possible_mapping_for_holes[i].append((i, p))
 
     # 3. for each possible program, fill the hole and check if the program is valid
-    # 4. if the program is valid, return the program, otherwise, continue
     current_program_set = [program]
     for i, (path, hole, ptype) in enumerate(holes):
         last_program_set = current_program_set
@@ -236,7 +216,15 @@ def fill_hole(program, ptype, max_depth=3) -> list:
                 new_program = replace_hole(new_program, path, filling)
                 next_program_set.append(new_program)
         current_program_set = next_program_set
+    # 4. if the program is valid, return the program, otherwise, continue
+    # Todo: implement this
     return current_program_set
+
+
+def test_fill_hole():
+    program = Hole(Program)
+    program = fill_hole(program, Program)
+    print(program)
 
 
 def extend_program_general(version_space: VersionSpace, program: FindProgram):
@@ -251,7 +239,7 @@ def extend_program_general(version_space: VersionSpace, program: FindProgram):
             continue
         # Currently, only one rewriting rule: Constraint -> And(Constraint, Hole)
         if arg_type == 'Constraint':
-            new_arg = AndConstraint(arg, Hole)
+            new_arg = AndConstraint(arg, Hole(Constraint))
             args = [program_args[j] if j != i else new_arg for j in range(len(program_args))]
             new_program = program.__class__(*args)
             new_programs = fill_hole(version_space, new_program)
