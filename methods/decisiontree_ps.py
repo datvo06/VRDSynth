@@ -8,7 +8,7 @@ import itertools
 import functools
 from collections import defaultdict, namedtuple
 from networkx.algorithms import isomorphism
-from utils.ps_utils import LiteralReplacement, Program, EmptyProgram, GrammarReplacement, FindProgram, RelationLabelConstant, RelationLabelProperty, WordLabelProperty, WordVariable, RelationVariable, RelationConstraint, LabelEqualConstraint, RelationLabelEqualConstraint, construct_entity_merging_specs, SpecIterator, LabelConstant, AndConstraint, LiteralSet, Constraint, GrammarReplacement, Hole, replace_hole
+from utils.ps_utils import LiteralReplacement, Program, EmptyProgram, GrammarReplacement, FindProgram, RelationLabelConstant, RelationLabelProperty, WordLabelProperty, WordVariable, RelationVariable, RelationConstraint, LabelEqualConstraint, RelationLabelEqualConstraint, construct_entity_merging_specs, SpecIterator, LabelConstant, AndConstraint, LiteralSet, Constraint, GrammarReplacement, Hole, replace_hole, find_holes, SymbolicList
 import json
 import pickle as pkl
 import os
@@ -163,51 +163,45 @@ def gather_all_constraint(c: Constraint):
         right_constraint = gather_all_constraint(c.rhs)
         return left_constraint + right_constraint
 
-def find_holes(program, ptype: str):
-    # use a stack to represent the hole position
-    if isinstance(program, Hole):
-        return [((), program, ptype)]
-    for i, arg in program.get_args():
-        if isinstance(arg, list):
-            for j, a in enumerate(arg):
-                if isinstance(a, Hole):
-                    yield [((i, (j, )), a, ptype)]
-                else:
-                    # Travel deeper to find holes
-                    for hole in find_holes(a, ptype):
-                        yield [((i, (j, hole[0])), hole[1], hole[2])]
-        else:
-            holes = find_holes(arg, ptype)
-            for hole in holes:
-                yield [((i, hole[0]), hole[1], hole[2])]
 
 
-def fill_hole(program, ptype, max_depth=3) -> list:
+def fill_hole(program, max_depth=3) -> list:
     # 1. find all holes in the program
-    holes = list(find_holes(program, ptype))
+    holes = list(find_holes(program))
     # 2. for each hole, find all possible programs that can fill the hole
     possible_mapping_for_holes = defaultdict(list)
-    for i, (path, hole, ptype) in enumerate(holes):
-        if ptype in LiteralSet:
-            for literal in LiteralReplacement[ptype]:
+    for i, (path, hole) in enumerate(holes):
+        if hole.cls.type_name() in LiteralSet:
+            for literal in LiteralReplacement[hole.cls.type_name()]:
                 possible_mapping_for_holes[i].append(literal)
         else:
-            if isinstance(ptype, list):
+            if isinstance(hole.cls, SymbolicList):
+                real_cls = hole.cls.cls
                 if max_depth == 1:
                     return []
-                real_ptype = ptype[0]
-                possible_filling = fill_hole(Hole(real_ptype), real_ptype, max_depth=max_depth-1)
-                for p in possible_filling:
-                    possible_mapping_for_holes[i].append((i, [p]))
+                # Add the base case
+                possible_mapping_for_holes[i].append([])
+                # Then add the recursive case
+                fill_head = fill_hole(real_cls, max_depth-1)
+                fill_tail = fill_hole(SymbolicList(real_cls), max_depth-1)
+                for head in fill_head:
+                    for tail in fill_tail:
+                        possible_mapping_for_holes[i].append([head] + tail[:])
             else:
-                ptype_args = ptype.get_arg_type()
-                possible_filling = fill_hole(hole, ptype, max_depth=max_depth-1)
-                for p in possible_filling:
-                    possible_mapping_for_holes[i].append((i, p))
+                ptype_args = hole.cls.get_arg_type()
+                list_possible_fillings = []
+                for ptype_arg in ptype_args:
+                    if isinstance(ptype_arg, list):
+                        list_possible_fillings.append(fill_hole(Hole(SymbolicList(ptype_arg[0])), max_depth-1))
+                    else:
+                        list_possible_fillings.append(fill_hole(Hole(ptype_arg), max_depth-1))
+                # Add combinations of all possible fillings
+                for fillings in itertools.product(*list_possible_fillings):
+                    possible_mapping_for_holes[i].append(hole.cls(*fillings))
 
     # 3. for each possible program, fill the hole and check if the program is valid
     current_program_set = [program]
-    for i, (path, hole, ptype) in enumerate(holes):
+    for i, (path, hole) in enumerate(holes):
         last_program_set = current_program_set
         next_program_set = []
         for program in last_program_set:

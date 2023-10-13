@@ -55,6 +55,21 @@ class SpecIterator:
     def __len__(self):
         return self.len
 
+
+class SymbolicList:
+    def __init__(self, cls):
+        self.cls = cls
+
+    def __str__(self):
+        return f"Symbolic List of class {self.cls.type_name()}"
+
+    def type_name(self):
+        return self.cls.type_name()
+
+    def __repr__(self):
+        return self.__str__()
+
+
 class Hole:
     def __init__(self, cls):
         self.cls = cls
@@ -64,6 +79,7 @@ class Hole:
 
     def __repr__(self):
         return self.__str__()
+
 
 
 class Expression:
@@ -81,6 +97,7 @@ class Expression:
 
     def __repr__(self):
         return self.__str__()
+
 
 class Program(Expression):
     def __init__(self):
