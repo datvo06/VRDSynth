@@ -892,6 +892,27 @@ LiteralReplacement = {
 }
 
 
+def find_holes(program):
+    # use a stack to represent the hole position
+    print("Input to find holes: ", program)
+    if isinstance(program, Hole):
+        return [((), program)]
+    all_holes = []
+    for i, arg in enumerate(program.get_args()):
+        if isinstance(arg, list):
+            for j, a in enumerate(arg):
+                if isinstance(a, Hole):
+                    all_holes.append(((i, (j, )), a))
+                else:
+                    # Travel deeper to find holes
+                    for hole in find_holes(a):
+                        all_holes.append(((i, (j, hole[0]) if hole[0] != () else (j, )), hole[1]))
+        else:
+            holes = find_holes(arg)
+            for hole in holes:
+                all_holes.append(((i, hole[0]) if hole[0] != () else (i, ), hole[1]))
+    return all_holes
+
 
 def replace_hole(program, path, filling):
     if not path:
@@ -918,6 +939,12 @@ def replace_hole(program, path, filling):
     return program
 
 
+def test_find_hole():
+    program = UnionProgram([EmptyProgram(), ExcludeProgram([EmptyProgram(), Hole(Program)])])
+    holes = list(find_holes(program))
+    print("List holes: ", holes)
+
+
 def test_replace_hole():
     program = UnionProgram([EmptyProgram(), ExcludeProgram([EmptyProgram(), Hole(Program)])])
     print(program)
@@ -925,4 +952,5 @@ def test_replace_hole():
 
 
 if __name__ == '__main__':
+    test_find_hole()
     test_replace_hole()
