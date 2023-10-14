@@ -5,6 +5,7 @@ import itertools
 import networkx as nx
 from networkx import isomorphism
 import copy
+from functools import lru_cache
 
 
 def construct_entity_merging_specs(dataset: List[DataSample]):
@@ -56,15 +57,16 @@ class SpecIterator:
         return self.len
 
 
-class SymbolicList:
+class SymbolicList(list):
     def __init__(self, cls):
+        super()
         self.cls = cls
 
     def __str__(self):
         return f"Symbolic List of class {self.cls.type_name()}"
 
     def type_name(self):
-        return self.cls.type_name()
+        return f"List({self.cls.type_name()})"
 
     def __repr__(self):
         return self.__str__()
@@ -79,6 +81,9 @@ class Hole:
 
     def __repr__(self):
         return self.__str__()
+
+    def __hash__(self):
+        return hash(self.__str__())
 
 
 
@@ -204,8 +209,10 @@ class Literal(Expression):
         return []
 
 class WordVariable(Literal):
+
     def __init__(self, name):
         self.name = name
+        assert isinstance(self.name, str), f"Name of WordVariable must be a string, but got {self.name}"
 
     @staticmethod
     def type_name():
@@ -213,9 +220,6 @@ class WordVariable(Literal):
 
     def __str__(self):
         return self.name
-
-    def __repr__(self):
-        return self.__str__()
 
     def __hash__(self):
         return hash(self.name)
@@ -233,6 +237,7 @@ class RelationVariable(Literal):
         return 'RelationVariable'
 
     def __str__(self):
+        assert isinstance(self.name, str)
         return self.name
 
     def __hash__(self):
@@ -242,7 +247,7 @@ class RelationVariable(Literal):
         return self.name == other.name
 
 
-class RelationConstraint:
+class RelationConstraint(Expression):
     def __init__(self, w1, w2, r):
         self.w1 = w1
         self.w2 = w2
@@ -251,6 +256,9 @@ class RelationConstraint:
     @staticmethod
     def get_arg_type():
         return [WordVariable, WordVariable, RelationVariable]
+
+    def get_args(self):
+        return [self.w1, self.w2, self.r]
 
     @staticmethod
     def type_name():
@@ -399,9 +407,6 @@ class FloatConstant(FloatValue, Literal):
     def __str__(self):
         return str(self.value)
 
-    def __repr__(self):
-        return self.__str__()
-
 
 class FalseValue(BoolValue, Literal):
     def evaluate(self, word_binding, relation_binding, nx_g_data):
@@ -411,6 +416,8 @@ class FalseValue(BoolValue, Literal):
     def type_name():
         return 'FalseValue'
 
+    def __str__(self): return "False"
+
 class TrueValue(BoolValue, Literal):
     def evaluate(self, word_binding, relation_binding, nx_g_data):
         return True
@@ -419,16 +426,25 @@ class TrueValue(BoolValue, Literal):
     def type_name():
         return 'TrueValue'
 
+    def __str__(self): return "True"
+
 
 class WordTextProperty(StringValue):
     def __init__(self, word_variable):
         self.word_variable = word_variable
 
-    def get_arg_type(self):
+    @staticmethod
+    def get_arg_type():
         return [WordVariable]
+
+    @staticmethod
+    def type_name():
+        return 'WordTextProperty'
 
     def evaluate(self, word_binding, relation_binding, nx_g_data):
         return nx_g_data.nodes[word_binding[self.word_variable]]['text']
+
+    def __str__(self): return f'{self.word_variable}.text'
 
 
 class LabelValue(Expression):
@@ -498,6 +514,10 @@ class BoxConstantValue(Literal):
     def type_name():
         return 'BoxConstantValue'
 
+
+    def __str__(self):
+        return f'{self.value}'
+
 class WordBoxProperty(FloatValue):
     def __init__(self, word_var, prop):
         self.prop = prop
@@ -515,6 +535,9 @@ class WordBoxProperty(FloatValue):
         prop = self.prop.evaluate()
         return nx_g_data.nodes[word_binding[self.word_var]][prop]
 
+    def __str__(self):
+        return f'{self.word_var}.{self.prop}'
+
 
 class RelationPropertyConstant(Literal):
     def __init__(self, prop):
@@ -526,6 +549,9 @@ class RelationPropertyConstant(Literal):
     @staticmethod
     def type_name():
         return 'RelationPropertyConstant'
+
+    def __str__(self):
+        return f'"{self.prop}"'
 
 
 class RelationProperty(FloatValue):
@@ -547,6 +573,9 @@ class RelationProperty(FloatValue):
     def evaluate(self, word_binding, relation_binding, nx_g_data):
         self.prop = self.prop.evaluate()
         return nx_g_data.edges[relation_binding[self.relation_variable]][0][self.prop]
+
+    def __str__(self):
+        return f'{self.relation_variable}.{self.prop}'
 
 
 class RelationLabelValue(Expression):
@@ -571,6 +600,7 @@ class RelationLabelConstant(RelationLabelValue, Literal):
 
     def __str__(self):
         return f'"L_{self.label}"'
+
 
 
 class RelationLabelProperty(RelationLabelValue):
@@ -605,7 +635,8 @@ class WordTargetProperty(Constraint):
     def __init__(self, word_variable):
         self.word_variable = word_variable
 
-    def get_arg_type(self):
+    @staticmethod
+    def get_arg_type():
         return [WordVariable]
 
     def get_args(self) -> list:
@@ -613,6 +644,13 @@ class WordTargetProperty(Constraint):
 
     def evaluate(self, word_binding, relation_binding, nx_g_data):
         return bool(nx_g_data.nodes[word_binding[self.word_variable]].get('target', 0))
+
+    @staticmethod
+    def type_name():
+        return 'WordTargetProperty'
+
+    def __str__(self):
+        return f'{self.word_variable}.is_target'
 
 
 class BooleanEqualConstraint(Constraint):
@@ -641,6 +679,9 @@ class BooleanEqualConstraint(Constraint):
     def __str__(self):
         return f'{self.lhs} == {self.rhs}'
 
+    def __eq__(self, other):
+        return self.lhs == other.lhs and self.rhs == other.rhs
+
 
 class StringEqualConstraint(Constraint):
     def __init__(self, lhs: StringValue, rhs: StringValue):
@@ -659,6 +700,12 @@ class StringEqualConstraint(Constraint):
 
     def evaluate(self, values):
         return self.lhs.evaluate(*values) == self.rhs.evaluate(*values)
+
+    def get_args(self) -> list:
+        return [self.lhs, self.rhs]
+
+    def __str__(self):
+        return f'{self.lhs} == {self.rhs}'
 
 
 class StringContainsConstraint(Constraint):
@@ -840,8 +887,16 @@ class AndConstraint(Constraint):
         self.lhs = lhs
         self.rhs = rhs
 
-    def get_arg_type(self):
+    @staticmethod
+    def get_arg_type():
         return [Constraint, Constraint]
+
+    @staticmethod
+    def type_name():
+        return 'AndConstraint'
+
+    def get_args(self) -> list:
+        return [self.lhs, self.rhs]
 
     def evaluate(self, *values):
         assert isinstance(self.lhs, Constraint)
@@ -859,8 +914,16 @@ class OrConstraint(Constraint):
         self.lhs = lhs
         self.rhs = rhs
 
-    def get_arg_type(self):
+    @staticmethod
+    def get_arg_type():
         return [Constraint, Constraint]
+
+    @staticmethod
+    def type_name():
+        return 'OrConstraint'
+
+    def get_args(self) -> list:
+        return super().get_args()
 
     def evaluate(self, *values):
         assert isinstance(self.lhs, Constraint)
@@ -876,27 +939,38 @@ class NotConstraint(Constraint):
         assert isinstance(constraint, Constraint)
         self.constraint = constraint
 
-    def get_arg_type(self):
+    @staticmethod
+    def get_arg_type():
         return [Constraint]
+
+    @staticmethod
+    def type_name():
+        return 'NotConstraint'
+
+    def get_args(self) -> list:
+        return [self.constraint]
 
     def evaluate(self, values):
         return not self.constraint.evaluate(values)
 
+    def __str__(self):
+        return f'not ({self.constraint})'
+
 
 GrammarReplacement = {
     Program.type_name(): [UnionProgram, ExcludeProgram, EmptyProgram, FindProgram],
-    StringValue.type_name(): [StringConstant, WordTextProperty, LabelConstant],
+    StringValue.type_name(): [StringConstant, WordTextProperty],
     FloatValue.type_name(): [FloatConstant],
     BoolValue.type_name(): [TrueValue, FalseValue],
     LabelValue.type_name(): [LabelConstant, WordLabelProperty],
     RelationLabelValue.type_name(): [RelationLabelConstant, RelationLabelProperty],
-    Constraint.type_name(): [BooleanEqualConstraint, StringEqualConstraint, OrConstraint, NotConstraint, RelationConstraint, LabelEqualConstraint, RelationLabelEqualConstraint]
+    Constraint.type_name(): [BooleanEqualConstraint, StringEqualConstraint, OrConstraint, NotConstraint, LabelEqualConstraint, RelationLabelEqualConstraint]
 }
 
-LiteralSet = set(['WordVariable', 'EmptyProgram', "TrueValue", "FalseValue", "StringConstant", "FloatConstant", "LabelConstant", "BoxConstantValue", "RelationPropertyConstant", "RelationLabelValue"])
+LiteralSet = set(['WordVariable', 'RelationVariable', 'EmptyProgram', "TrueValue", "FalseValue", "StringConstant", "FloatConstant", "LabelConstant", "BoxConstantValue", "RelationPropertyConstant", "RelationLabelValue"])
 LiteralReplacement = {
-        'WordVariable': [WordVariable(f'w{i}' for i in range(10))],
-        'RelationVariable': [RelationVariable(f'r{i}' for i in range(10))],
+        'WordVariable': [WordVariable(f'w{i}') for i in range(10)],
+        'RelationVariable': [RelationVariable(f'r{i}') for i in range(10)],
         'EmptyProgram': [EmptyProgram()],
         'TrueValue': [TrueValue()],
         'FalseValue': [FalseValue()],
@@ -956,6 +1030,60 @@ def replace_hole(program, path, filling):
     return program
 
 
+@lru_cache(maxsize=100000)
+def fill_list_hole(hole, max_depth=3) -> list:
+    all_programs_set = set()
+    real_cls = hole.cls.cls
+    if max_depth == 0:
+        return [[]]
+    fill_head = fill_hole(Hole(real_cls), max_depth-1)
+    fill_tail = fill_hole(Hole(SymbolicList(real_cls)), max_depth-1)
+    for head in fill_head:
+        # Tail with head and tail without head
+        for tail in fill_tail:
+            all_programs_set.add(tuple([head] + list(tail)))
+    for tail in fill_tail:
+        all_programs_set.add(tuple(tail))
+    return list(list(p) for p in all_programs_set)
+
+@lru_cache(maxsize=100000)
+def fill_hole(hole, max_depth=3) -> list:
+    # TODO: specific version that add context to filter candidates
+    all_programs = []
+    if hole.cls.type_name() in LiteralSet:
+        for literal in LiteralReplacement[hole.cls.type_name()]:
+            all_programs.append(literal)
+    elif isinstance(hole.cls, SymbolicList):
+        all_programs = fill_list_hole(hole, max_depth)
+    elif hole.cls.type_name() in GrammarReplacement:
+        if max_depth == 0:
+            return []
+        for cls in GrammarReplacement[hole.cls.type_name()]:
+            all_hole_program = fill_hole(Hole(cls), max_depth - 1)
+            for hole_program in all_hole_program:
+                all_programs.append(hole_program)
+    else:
+        if max_depth == 0:
+            return []
+        # Fill the concrete program
+        ptype_args = hole.cls.get_arg_type()
+        list_possible_fillings = []
+        for ptype_arg in ptype_args:
+            if isinstance(ptype_arg, list):
+                list_possible_fillings.append(fill_hole(Hole(SymbolicList(ptype_arg[0])), max_depth-1))
+            else:
+                list_possible_fillings.append(fill_hole(Hole(ptype_arg), max_depth-1))
+            if list_possible_fillings[-1] == []:
+                return []
+        # Add combinations of all possible fillings
+        for fillings in itertools.product(*list_possible_fillings):
+            try:
+                all_programs.append(hole.cls(*fillings))
+            except: # Invalid program
+                pass
+    return all_programs
+
+
 def test_find_hole():
     program = UnionProgram([EmptyProgram(), ExcludeProgram([EmptyProgram(), Hole(Program)])])
     holes = list(find_holes(program))
@@ -967,7 +1095,72 @@ def test_replace_hole():
     print(program)
     print(replace_hole(program, (0, (1, (0, (1, )))), EmptyProgram()))
 
+def test_fill_hole1():
+    program = Hole(StringValue)
+    program = fill_hole(program, max_depth=5)
+    print(program)
+
+
+def test_fill_hole2():
+    program = Hole(SymbolicList(WordVariable))
+    program = fill_hole(program, max_depth=5)
+    print(program)
+
+
+def test_fill_hole3():
+    program = Hole(WordTextProperty)
+    program = fill_hole(program, max_depth=5)
+    print(program)
+
+
+def test_fill_hole4():
+    program = Hole(RelationConstraint)
+    programs = fill_hole(program, max_depth=4)
+    print(programs)
+
+
+
+def test_fill_hole5():
+    program = Hole(SymbolicList(RelationConstraint))
+    programs = fill_hole(program, max_depth=3)
+    print(programs)
+
+
+
+def test_fill_hole7():
+    program = Hole(Constraint)
+    programs = fill_hole(program, max_depth=3)
+    print(programs)
+
+
+
+def test_fill_hole6():
+    program = Hole(FindProgram)
+    programs = fill_hole(program, max_depth=3)
+    print(programs)
+
+
 
 if __name__ == '__main__':
+    print("Test find hole: ")
     test_find_hole()
-    test_replace_hole()
+    # print("Test replace hole")
+    # test_replace_hole()
+    # print("Test fill hole 1:")
+    # test_fill_hole1()
+    # input()
+    # print("Test fill hole 2:")
+    # test_fill_hole2()
+    # input()
+    # print("Test fill hole 3:")
+    # test_fill_hole3()
+    # input()
+    # print("Test fill hole 4:")
+    # test_fill_hole4()
+    # input()
+    # print("Test fill hole 5:")
+    # test_fill_hole5()
+    # input()
+    print("Test fill hole 6:")
+    test_fill_hole6()
+

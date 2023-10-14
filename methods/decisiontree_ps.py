@@ -9,6 +9,7 @@ import functools
 from collections import defaultdict, namedtuple
 from networkx.algorithms import isomorphism
 from utils.ps_utils import LiteralReplacement, Program, EmptyProgram, GrammarReplacement, FindProgram, RelationLabelConstant, RelationLabelProperty, WordLabelProperty, WordVariable, RelationVariable, RelationConstraint, LabelEqualConstraint, RelationLabelEqualConstraint, construct_entity_merging_specs, SpecIterator, LabelConstant, AndConstraint, LiteralSet, Constraint, GrammarReplacement, Hole, replace_hole, find_holes, SymbolicList
+from utils.visualization_script import visualize_program_with_support
 import json
 import pickle as pkl
 import os
@@ -156,69 +157,19 @@ def extend_find_program(find_program):
     pass
 
 def gather_all_constraint(c: Constraint):
-        if not isinstance(c, AndConstraint):
-            return [c]
-        all_constraints = []
-        left_constraint = gather_all_constraint(c.lhs)
-        right_constraint = gather_all_constraint(c.rhs)
-        return left_constraint + right_constraint
+    if not isinstance(c, AndConstraint):
+        return [c]
+    all_constraints = []
+    left_constraint = gather_all_constraint(c.lhs)
+    right_constraint = gather_all_constraint(c.rhs)
+    return left_constraint + right_constraint
 
 
 
-def fill_hole(program, max_depth=3) -> list:
-    # 1. find all holes in the program
-    holes = list(find_holes(program))
-    # 2. for each hole, find all possible programs that can fill the hole
-    possible_mapping_for_holes = defaultdict(list)
-    for i, (path, hole) in enumerate(holes):
-        if hole.cls.type_name() in LiteralSet:
-            for literal in LiteralReplacement[hole.cls.type_name()]:
-                possible_mapping_for_holes[i].append(literal)
-        else:
-            if isinstance(hole.cls, SymbolicList):
-                real_cls = hole.cls.cls
-                if max_depth == 1:
-                    return []
-                # Add the base case
-                possible_mapping_for_holes[i].append([])
-                # Then add the recursive case
-                fill_head = fill_hole(real_cls, max_depth-1)
-                fill_tail = fill_hole(SymbolicList(real_cls), max_depth-1)
-                for head in fill_head:
-                    for tail in fill_tail:
-                        possible_mapping_for_holes[i].append([head] + tail[:])
-            else:
-                ptype_args = hole.cls.get_arg_type()
-                list_possible_fillings = []
-                for ptype_arg in ptype_args:
-                    if isinstance(ptype_arg, list):
-                        list_possible_fillings.append(fill_hole(Hole(SymbolicList(ptype_arg[0])), max_depth-1))
-                    else:
-                        list_possible_fillings.append(fill_hole(Hole(ptype_arg), max_depth-1))
-                # Add combinations of all possible fillings
-                for fillings in itertools.product(*list_possible_fillings):
-                    possible_mapping_for_holes[i].append(hole.cls(*fillings))
 
-    # 3. for each possible program, fill the hole and check if the program is valid
-    current_program_set = [program]
-    for i, (path, hole) in enumerate(holes):
-        last_program_set = current_program_set
-        next_program_set = []
-        for program in last_program_set:
-            for filling in possible_mapping_for_holes[i]:
-                new_program = copy.deepcopy(program)
-                new_program = replace_hole(new_program, path, filling)
-                next_program_set.append(new_program)
-        current_program_set = next_program_set
-    # 4. if the program is valid, return the program, otherwise, continue
-    # Todo: implement this
-    return current_program_set
+def fill_multi_hole(path, holes, max_depth=3):
+    pass
 
-
-def test_fill_hole():
-    program = Hole(Program)
-    program = fill_hole(program, Program)
-    print(program)
 
 
 def extend_program_general(version_space: VersionSpace, program: FindProgram):
@@ -365,6 +316,7 @@ def three_stages_bottom_up_version_space_based(all_positive_paths, dataset, spec
         f1 = 2 * p * r / (p + r)
         print(programs[j])
         print(f"Program {j} - Precision: {p}, Recall: {r}, F1: {f1}")
+        visualize_program_with_support(dataset, p_io_tt_j, p_io_tf_j, p_io_ft_j, f"program_{j}")
 
     # STAGE 3: Build version space
     vss = [VersionSpace(*k, v) for k, v in io_to_program.items()]
