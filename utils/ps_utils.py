@@ -1127,19 +1127,19 @@ def test_fill_hole5():
 
 
 
-def test_fill_hole7():
+def test_fill_hole6():
     program = Hole(Constraint)
     programs = fill_hole(program, max_depth=3)
     print(programs)
 
 
 
-def test_fill_hole6():
+def test_fill_hole7():
     program = Hole(FindProgram)
     programs = fill_hole(program, max_depth=3)
     print(programs)
 
-
+[BooleanEqualConstraint, StringEqualConstraint, OrConstraint, NotConstraint, LabelEqualConstraint, RelationLabelEqualConstraint]
 
 if __name__ == '__main__':
     print("Test find hole: ")
