@@ -8,13 +8,14 @@ import itertools
 import functools
 from collections import defaultdict, namedtuple
 from networkx.algorithms import isomorphism
-from utils.ps_utils import LiteralReplacement, Program, EmptyProgram, GrammarReplacement, FindProgram, RelationLabelConstant, RelationLabelProperty, WordLabelProperty, WordVariable, RelationVariable, RelationConstraint, LabelEqualConstraint, RelationLabelEqualConstraint, construct_entity_merging_specs, SpecIterator, LabelConstant, AndConstraint, LiteralSet, Constraint, GrammarReplacement, Hole, replace_hole, find_holes, SymbolicList
+from utils.ps_utils import LiteralReplacement, Program, EmptyProgram, GrammarReplacement, FindProgram, RelationLabelConstant, RelationLabelProperty, WordLabelProperty, WordVariable, RelationVariable, RelationConstraint, LabelEqualConstraint, RelationLabelEqualConstraint, construct_entity_merging_specs, SpecIterator, LabelConstant, AndConstraint, LiteralSet, Constraint, GrammarReplacement, Hole, replace_hole, find_holes, SymbolicList, FilterStrategy, fill_hole
 from utils.visualization_script import visualize_program_with_support
 import json
 import pickle as pkl
 import os
 import tqdm
 import copy
+from functools import partial
 
 
 def build_nx_g(datasample: DataSample, relation_set: Set[Tuple[str, str, str]]) -> nx.MultiDiGraph:
@@ -89,6 +90,7 @@ def get_all_negative_relation(dataset, specs: List[Tuple[int, List[List[int]]]],
     for path_type, count in path_set_counter.items():
         yield path_type, count
 
+
 def get_path_specs(dataset, specs: List[Tuple[int, List[List[int]]]], relation_set, hops=2, sampling_rate=0.2, data_sample_set_relation_cache=None, cache_dir=None):
     data_sample_set_relation = {} if data_sample_set_relation_cache is None else data_sample_set_relation_cache
     assert data_sample_set_relation_cache is not None
@@ -156,41 +158,89 @@ def extend_find_program(find_program):
     # Put a hole in the program
     pass
 
-def gather_all_constraint(c: Constraint):
-    if not isinstance(c, AndConstraint):
-        return [c]
-    all_constraints = []
-    left_constraint = gather_all_constraint(c.lhs)
-    right_constraint = gather_all_constraint(c.rhs)
-    return left_constraint + right_constraint
-
-
-
 
 def fill_multi_hole(path, holes, max_depth=3):
     pass
 
 
 
+class WordInBoundFilter(FilterStrategy):
+    def __init__(self, find_program):
+        self.word_set = find_program.word_variables
+        self.rel_set = find_program.relation_variables
+    
+    def check_valid(self, program):
+        if isinstance(program, WordVariable):
+            return program in self.word_set
+        if isinstance(program, RelationVariable):
+            return program in self.rel_set
+        return True
+
+    def __hash__(self) -> int:
+        return hash((self.word_set, self.rel_set))
+
+    def __eq__(self, o: object) -> bool:
+        if not isinstance(o, WordInBoundFilter):
+            return False
+        return self.word_set == o.word_set and self.rel_set == o.rel_set
+
+
+class NoDuplicateConstraintFilter(FilterStrategy):
+    def __init__(self, constraint):
+        self.constraint_set = set(self.gather_all_constraint(constraint))
+
+    def gather_all_constraint(self, constraint):
+        if isinstance(constraint, AndConstraint):
+            lhs_constraints = self.gather_all_constraint(constraint.lhs)
+            rhs_constraints = self.gather_all_constraint(constraint.rhs)
+            return lhs_constraints + rhs_constraints
+        else:
+            return [constraint]
+
+    def check_valid(self, program):
+        if isinstance(program, Constraint):
+            return program not in self.constraint_set
+        return True
+
+    def __hash__(self) -> int:
+        return hash(self.constraint_set)
+
+    def __eq__(self, o: object) -> bool:
+        if not isinstance(o, NoDuplicateConstraintFilter):
+            return False
+        return self.constraint_set == o.constraint_set
+
+
+
+class CompositeFilter(FilterStrategy):
+    def __init__(self, filters):
+        self.filters = filters
+
+    def check_valid(self, program):
+        for filter in self.filters:
+            if not filter.check_valid(program):
+                return False
+        return True
+        
+
 def extend_program_general(version_space: VersionSpace, program: FindProgram):
-    # just backtracking...., return list of new programs
     if program.type_name() in LiteralSet:
         return []
-    out_new_program = []
-    program_args = program.get_args()
-    for i, (arg_type, arg) in enumerate(zip(program.get_arg_type(), program.get_args())):
-        # cannot rewrite literal
-        if arg_type in LiteralSet:
+    hole = Hole(Constraint)
+    filterer = CompositeFilter([WordInBoundFilter(program), NoDuplicateConstraintFilter(program.constraint)])
+    candidates = fill_hole(hole, 3, filterer)
+    args = program.get_args()
+    out_cands = []
+    for cand in candidates:
+        new_args = args[:]
+        new_args[3] = AndConstraint(args[3], cand)
+        new_program = FindProgram(*new_args)
+        if new_program in version_space.programs:
             continue
-        # Currently, only one rewriting rule: Constraint -> And(Constraint, Hole)
-        if arg_type == 'Constraint':
-            new_arg = AndConstraint(arg, Hole(Constraint))
-            args = [program_args[j] if j != i else new_arg for j in range(len(program_args))]
-            new_program = program.__class__(*args)
-            new_programs = fill_hole(version_space, new_program)
-
-
-
+        version_space.programs.append(new_program)
+        out_cands.append(new_program)
+    return out_cands
+    
 
 def construct_initial_program_set(all_positive_paths):
     print("Constructing initial program set")
