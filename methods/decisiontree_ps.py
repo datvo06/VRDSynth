@@ -1,5 +1,5 @@
 import networkx as nx
-from typing import List, Tuple, Dict, Set
+from typing import List, Tuple, Dict, Set, Optional
 from utils.funsd_utils import DataSample, load_dataset
 from utils.relation_building_utils import calculate_relation_set, dummy_calculate_relation_set, calculate_relation
 import argparse
@@ -8,14 +8,15 @@ import itertools
 import functools
 from collections import defaultdict, namedtuple
 from networkx.algorithms import isomorphism
-from utils.ps_utils import LiteralReplacement, Program, EmptyProgram, GrammarReplacement, FindProgram, RelationLabelConstant, RelationLabelProperty, WordLabelProperty, WordVariable, RelationVariable, RelationConstraint, LabelEqualConstraint, RelationLabelEqualConstraint, construct_entity_merging_specs, SpecIterator, LabelConstant, AndConstraint, LiteralSet, Constraint, GrammarReplacement, Hole, replace_hole, find_holes, SymbolicList, FilterStrategy, fill_hole
+from utils.ps_utils import FalseValue, LiteralReplacement, Program, EmptyProgram, GrammarReplacement, FindProgram, RelationLabelConstant, RelationLabelProperty, TrueValue, WordLabelProperty, WordVariable, RelationVariable, RelationConstraint, LabelEqualConstraint, RelationLabelEqualConstraint, construct_entity_merging_specs, SpecIterator, LabelConstant, AndConstraint, LiteralSet, Constraint, GrammarReplacement, Hole, replace_hole, find_holes, SymbolicList, FilterStrategy, fill_hole, Expression
 from utils.visualization_script import visualize_program_with_support
+from utils.version_space import VersionSpace
 import json
 import pickle as pkl
 import os
 import tqdm
 import copy
-from functools import partial
+from functools import lru_cache, partial
 
 
 def build_nx_g(datasample: DataSample, relation_set: Set[Tuple[str, str, str]]) -> nx.MultiDiGraph:
@@ -32,6 +33,29 @@ def build_nx_g(datasample: DataSample, relation_set: Set[Tuple[str, str, str]]) 
         nx_g.nodes[i].update({'label': label})
     for i, word in enumerate(datasample.words):
         nx_g.nodes[i].update({'word': word})
+    # Normalize the mag according to the smallest and largest mag
+    mags = [e[2]['mag'] for e in nx_g.edges(data=True)]
+    if len(mags) > 1:
+        min_mag = min(mags)
+        max_mag = max(mags)
+        for e in nx_g.edges(data=True):
+            e[2]['mag'] = (e[2]['mag'] - min_mag) / (max_mag - min_mag)
+    # Remove all the edges that has mag > 0.5
+    rm_edges = []
+    for e in nx_g.edges(data=True):
+        if e[2]['mag'] > 0.5:
+            rm_edges.append(e[:2])
+    nx_g.remove_edges_from(rm_edges)
+    # normalize the coord according to the largest coord
+    max_coord_x = max([e[1]['x1'] for e in nx_g.nodes(data=True)])
+    max_coord_y = max([e[1]['y1'] for e in nx_g.nodes(data=True)])
+    min_coord_x = min([e[1]['x0'] for e in nx_g.nodes(data=True)])
+    min_coord_y = min([e[1]['y0'] for e in nx_g.nodes(data=True)])
+    for _, n in nx_g.nodes(data=True):
+        n['x0'] = (n['x0'] - min_coord_x) / (max_coord_x - min_coord_x)
+        n['y0'] = (n['y0'] - min_coord_y) / (max_coord_y - min_coord_y)
+        n['x1'] = (n['x1'] - min_coord_x) / (max_coord_x - min_coord_x)
+        n['y1'] = (n['y1'] - min_coord_y) / (max_coord_y - min_coord_y)
     return nx_g
 
 
@@ -121,10 +145,6 @@ def get_parser():
     return parser
 
 
-class VersionSpace:
-    def __init__(self, tt, tf, ft, programs):
-        self.tt, self.tf, self.ft = tt, tf, ft
-        self.programs = programs
 
 
 def dfs_code_based_backtrack(curr_codes):
@@ -133,10 +153,6 @@ def dfs_code_based_backtrack(curr_codes):
 
 def miner_based_construction_of_structures():
     pass
-
-
-def top_down_enumerative_search(InpCls):
-    hole = Hole(InpCls)
 
 
 def bottom_up_version_space_based():
@@ -212,6 +228,51 @@ class NoDuplicateConstraintFilter(FilterStrategy):
 
 
 
+class NoDuplicateLabelConstraintFilter(FilterStrategy):
+    def __init__(self, constraint):
+        self.constraint_set = set(NoDuplicateLabelConstraintFilter.gather_all_constraint(constraint))
+        self.word_label = set()
+        for constraint in self.constraint_set:
+            if isinstance(constraint, LabelEqualConstraint):
+                if isinstance(constraint.lhs, WordLabelProperty):
+                    self.word_label.add(constraint.lhs.word_variable)
+                elif isinstance(constraint.rhs, WordLabelProperty):
+                    self.word_label.add(constraint.rhs.word_variable)
+        self.rel_label = set()
+        for constraint in self.constraint_set:
+            if isinstance(constraint, RelationLabelEqualConstraint):
+                if isinstance(constraint.lhs, RelationLabelProperty):
+                    self.rel_label.add(constraint.lhs.relation_variable)
+                elif isinstance(constraint.rhs, RelationLabelProperty):
+                    self.rel_label.add(constraint.rhs.relation_variable)
+
+    @staticmethod
+    @lru_cache(maxsize=None)
+    def gather_all_constraint(constraint):
+        if isinstance(constraint, AndConstraint):
+            lhs_constraints = NoDuplicateLabelConstraintFilter.gather_all_constraint(constraint.lhs)
+            rhs_constraints = NoDuplicateLabelConstraintFilter.gather_all_constraint(constraint.rhs)
+            return lhs_constraints + rhs_constraints
+        else:
+            return [constraint]
+
+    def check_valid(self, program):
+        if isinstance(program, WordLabelProperty):
+            return program.word_variable not in self.word_label
+        if isinstance(program, RelationLabelProperty):
+            return program.relation_variable not in self.rel_label
+        return True
+
+    def __hash__(self) -> int:
+        return hash(self.constraint_set)
+
+    def __eq__(self, o: object) -> bool:
+        if not isinstance(o, NoDuplicateConstraintFilter):
+            return False
+        return self.constraint_set == o.constraint_set
+
+
+
 class CompositeFilter(FilterStrategy):
     def __init__(self, filters):
         self.filters = filters
@@ -223,24 +284,44 @@ class CompositeFilter(FilterStrategy):
         return True
         
 
-def extend_program_general(version_space: VersionSpace, program: FindProgram):
+
+
+def get_valid_cand_find_program(version_space: VersionSpace, program: FindProgram):
     if program.type_name() in LiteralSet:
         return []
     hole = Hole(Constraint)
-    filterer = CompositeFilter([WordInBoundFilter(program), NoDuplicateConstraintFilter(program.constraint)])
-    candidates = fill_hole(hole, 3, filterer)
+    filterer = CompositeFilter([WordInBoundFilter(program), NoDuplicateConstraintFilter(program.constraint), NoDuplicateLabelConstraintFilter(program.constraint)])
+    candidates = fill_hole(hole, 4, filterer)
     args = program.get_args()
     out_cands = []
     for cand in candidates:
+        if isinstance(cand, TrueValue) or isinstance(cand, FalseValue):
+            continue
+        out_cands.append(cand)
+    return out_cands
+
+def add_constraint_to_find_program(find_program, constraint):
+    args = find_program.get_args()[:]
+    args[3] = AndConstraint(args[3], constraint)
+    return FindProgram(*args)
+
+
+
+def extend_program_general(version_space: VersionSpace, program: FindProgram):
+    all_cands = get_valid_cand_find_program(version_space, program)
+    out_cands = []
+    args = program.get_args()
+    for cand in all_cands:
         new_args = args[:]
         new_args[3] = AndConstraint(args[3], cand)
         new_program = FindProgram(*new_args)
         if new_program in version_space.programs:
             continue
-        version_space.programs.append(new_program)
         out_cands.append(new_program)
     return out_cands
-    
+
+
+
 
 def construct_initial_program_set(all_positive_paths):
     print("Constructing initial program set")
@@ -267,7 +348,7 @@ def construct_initial_program_set(all_positive_paths):
     return programs
 
 
-def batch_find_program_executor(nx_g, find_programs: List[FindProgram]):
+def batch_find_program_executor(nx_g, find_programs: List[FindProgram]) -> List[List[Tuple[Dict[WordVariable, str], Dict[RelationVariable, Tuple[WordVariable, WordVariable, int]]]]]:
     # strategy to speed up program executor:
     # find all program that have same set of path (excluding label)
     # iterate through all binding
@@ -294,10 +375,170 @@ def batch_find_program_executor(nx_g, find_programs: List[FindProgram]):
             relation_binding = {r: (subgraph[w1], subgraph[w2], 0) for w1, w2, r in path}
             for i, f in path_to_programs[path]:
                 if f.evaluate_binding(word_binding, relation_binding, nx_g):
-                    out_words[i].append(word_binding)
+                    out_words[i].append((word_binding, relation_binding))
     return out_words
 
 
+def construct_dataset_idx_2_list_prog(vss, p2vidxs):
+    idx2progs = defaultdict(set)
+    vs2idx = defaultdict(set)
+    if vss is not None:
+        for i, vs in enumerate(vss):
+            for j, _, _ in vs.tt:
+                vs2idx[i].add(j)
+            for j, _, _ in vs.ft:
+                vs2idx[i].add(j)
+            for j, _, _ in vs.tf:
+                vs2idx[i].add(j)
+    if p2vidxs is not None:
+        for p, vidxs in p2vidxs.items():
+            for vidx in vidxs:
+                for j in vs2idx[vidx]:
+                    idx2progs[j].add(p)
+    else:
+        idx2progs = None
+    return idx2progs
+
+
+def mapping2tuple(mapping):
+    word_mapping, relation_mapping = mapping
+    word_mapping = tuple((k, v) for k, v in word_mapping.items())
+    relation_mapping = tuple((k, v) for k, v in relation_mapping.items())
+    return word_mapping, relation_mapping
+
+
+def tuple2mapping(tup):
+    word_mapping, relation_mapping = tup
+    word_mapping = {k: v for k, v in word_mapping}
+    relation_mapping = {k: v for k, v in relation_mapping}
+    return word_mapping, relation_mapping
+
+
+def collect_program_execution(programs, dataset, data_sample_set_relation_cache, vss = None, vs_map: Optional[Dict]=None):
+    idx2progs = None
+    if vss is not None and vs_map is not None:
+        idx2progs = construct_dataset_idx_2_list_prog(vss, vs_map)
+
+    tt, ft, tf = defaultdict(set), defaultdict(set), defaultdict(set)
+    # TT:  True x True
+    # FT: Predicted False, but was supposed to be True
+    # TF: Predicted True, but was supposed to be False
+    bar = tqdm.tqdm(specs)
+    bar.set_description("Getting Program Output")
+    all_out_mappingss = defaultdict(set)
+    for i, entities in bar:
+        nx_g = data_sample_set_relation_cache[i]
+        w2entities = {}
+        for e in entities:
+            for w in e:
+                w2entities[w] = set(e)
+        programs = idx2progs[i] if idx2progs is not None else programs
+        out_mappingss = batch_find_program_executor(nx_g, programs)
+        word_mappingss = [[om[0] for om in oms] for oms in out_mappingss]
+        assert len(out_mappingss) == len(programs), len(out_mappingss)
+        for p, oms in zip(programs, out_mappingss):
+            for mapping in oms:
+                all_out_mappingss[p].add((i, mapping2tuple(mapping)))
+        for j, (res, program) in enumerate(zip(word_mappingss, programs)):
+            w2otherwords = defaultdict(set)
+            return_vars = program.return_variables
+            # Turn off return var to return every mapping
+            for word_binding in res:
+                w2otherwords[word_binding[WordVariable("w0")]].add(word_binding[return_vars[0]])
+            for w in w2otherwords:
+                e = w2entities[w]
+                for w2 in w2otherwords[w]:
+                    if w2 in e:
+                        tt[program].add((i, w, w2))
+                    else:
+                        tf[program].add((i, w, w2))
+                rem = e - w2otherwords[w] - set([w])
+                for w2 in rem:
+                    ft[program].add((i, w, w2))
+    return tt, ft, tf, all_out_mappingss
+
+
+def collect_constraint_execution(data_sample_set_relation_cache, valid_inputs):
+    all_out_mappingss = defaultdict(set)
+    for c, inp_set in valid_inputs:
+        for i, (word_binding, relation_binding) in inp_set.items():
+            word_binding, relation_binding = tuple2mapping((word_binding, relation_binding))
+            nx_g = data_sample_set_relation_cache[i]
+            if c.evaluate(word_binding, relation_binding, nx_g):
+                all_out_mappingss[c].add((i, mapping2tuple((word_binding, relation_binding))))
+    return all_out_mappingss
+
+
+    
+def agg_pred(p_io_tt, p_io_tf, p_io_ft, good_prec):
+    # Then, gather all prediction on each word on all good prec programs
+    vote_score = defaultdict(int)
+    t_set = set()
+    f_set = set()
+    for j, s in good_prec:
+        if s > 0.5:
+            s = s
+        else:
+            s = s - 0.5
+        for (i, w, w2) in p_io_tt[j]:
+            vote_score[(i, w, w2)] += s
+            t_set.add((i, w, w2))
+        # tf: predicted true but actually false
+        for (i, w, w2) in p_io_tf[j]:
+            vote_score[(i, w, w2)] += s
+            f_set.add((i, w, w2))
+        # ft: predicted false but actually true
+        for (i, w, w2) in p_io_ft[j]:
+            vote_score[(i, w, w2)] -= s
+            f_set.add((i, w, w2))
+    pred_true = set()
+    pred_false = set()
+    for (i, w, w2), score in vote_score.items():
+        if score > 2:
+            pred_true.add((i, w, w2))
+        else:
+            pred_false.add((i, w, w2))
+
+
+    tt = list(pred_true.intersection(t_set))
+    tf = list(pred_true.intersection(f_set))
+    ft = list(pred_false.intersection(t_set))
+    ff = list(pred_false.intersection(f_set))
+    precision = len(tt) / (len(tt) + len(tf))
+    recall = len(tt) / (len(tt) + len(ft))
+    f1 = 2 * precision * recall / (precision + recall)
+    print(f"Precision: {precision}, Recall: {recall}, F1: {f1}")
+    visualize_program_with_support(dataset, tt, tf, ft, f"program_agg")
+
+
+def get_p_r_f1(tt, tf, ft):
+    return len(tt) / (len(tt) + len(tf)), len(tt) / (len(tt) + len(ft)), 2 * len(tt) / (2 * len(tt) + len(tf) + len(ft))
+
+
+def report_metrics(programs, p_io_tt, p_io_tf, p_io_ft, io_to_program):
+    for j, (tt_j, tf_j, ft_j) in enumerate(zip(p_io_tt.values(), p_io_tf.values(), p_io_ft.values())):
+        io_to_program[tuple(tt_j), tuple(tf_j), tuple(ft_j)].append(programs[j])
+        # Calculate precision, recall, f1
+        p = len(tt_j) / (len(tt_j) + len(tf_j))
+        r = len(tt_j) / (len(tt_j) + len(ft_j))
+        f1 = 2 * p * r / (p + r)
+        print(programs[j])
+        print(f"Program {j} - Precision: {p}, Recall: {r}, F1: {f1}")
+
+def report_metrics_program(p_io_tt: Dict[Expression, set], p_io_tf: Dict[Expression, set],
+                           p_io_ft: Dict[Expression, set],
+                           io_to_program: Dict[Tuple[Tuple, Tuple, Tuple], list]):
+    out_dict = {}
+    for j, (p, tt_j, tf_j, ft_j) in enumerate(zip(p_io_tt.keys(), p_io_tt.values(), p_io_tf.values(), p_io_ft.values())):
+        io_to_program[tuple(tt_j), tuple(tf_j), tuple(ft_j)].append(p)
+        # Calculate precision, recall, f1
+        prec = len(tt_j) / (len(tt_j) + len(tf_j))
+        rec = len(tt_j) / (len(tt_j) + len(ft_j))
+        f1 = 2 * prec * rec / (prec + rec)
+        print(p)
+        print(f"Program {j} - Precision: {prec}, Recall: {rec}, F1: {f1}")
+        out_dict[p] = (prec, rec, f1)
+    return out_dict
 
 def three_stages_bottom_up_version_space_based(all_positive_paths, dataset, specs, data_sample_set_relation_cache, cache_dir=None):
     # STAGE 1: Build base relation spaces
@@ -316,62 +557,128 @@ def three_stages_bottom_up_version_space_based(all_positive_paths, dataset, spec
     # Load the following: vs_io, vs_io_neg, p_io, p_io_neg, io_to_program
     if cache_dir is not None and os.path.exists(os.path.join(cache_dir, 'stage2.pkl')):
         with open(os.path.join(cache_dir, "stage2.pkl"), "rb") as f:
-            vs_io_tt, vs_io_tf, vs_io_ft, vs_io_neg, p_io_tt, p_io_tf, p_io_ft, io_to_program = pkl.load(f)
+            p_io_tt, p_io_tf, p_io_ft, io_to_program, all_out_mappingss = pkl.load(f)
+            print(len(p_io_tt), len(p_io_tf), len(p_io_ft))
     else:
-        vs_io_tt, vs_io_tf, vs_io_ft, vs_io_neg, p_io_tt, p_io_tf, p_io_ft, io_to_program = [defaultdict(list) for _ in range(8)]
-        # bar = tqdm.tqdm(SpecIterator(specs))
         bar = tqdm.tqdm(specs)
         bar.set_description("Stage 2 - Getting Program Output")
-        for i, entities in bar:
-            nx_g = data_sample_set_relation_cache[i]
-            entities = [set(e) for e in entities]
-            w2entities = {}
-            for e in entities:
-                for w in e:
-                    w2entities[w] = e
-            out_mappingss = batch_find_program_executor(nx_g, programs)
-            assert len(out_mappingss) == len(programs), len(out_mappingss)
-            for j, (res, program) in enumerate(zip(out_mappingss, programs)):
-                w2otherwords = defaultdict(set)
-                return_vars = program.return_variables
-                # Turn off return var to return every mapping
-                for word_binding in res:
-                    w2otherwords[word_binding[WordVariable("w0")]].add(word_binding[return_vars[0]])
-                for w in w2otherwords:
-                    e = w2entities[w]
-                    for w2 in w2otherwords[w]:
-                        if w2 in e:
-                            vs_io_tt[(i, w, w2)].append(j)
-                            p_io_tt[j].append((i, w, w2))
-                        else:
-                            vs_io_tf[(i, w, w2)].append(j)
-                            p_io_tf[j].append((i, w, w2))
-                    rem = e - w2otherwords[w] - set([w])
-                    for w2 in rem:
-                        vs_io_ft[(i, w, w2)].append(j)
-                        p_io_ft[j].append((i, w, w2))
+        tt, tf, ft, all_out_mappingss = collect_program_execution(
+                programs, dataset,
+                data_sample_set_relation_cache)
+        print(len(programs), len(tt))
         io_to_program = defaultdict(list)
+        report_metrics(programs, tt, tf, ft, io_to_program)
         if cache_dir is not None:
             with open(os.path.join(cache_dir, "stage2.pkl"), "wb") as f:
-                pkl.dump([vs_io_tt, vs_io_tf, vs_io_ft, vs_io_neg, p_io_tt, p_io_tf, p_io_ft, io_to_program], f)
+                pkl.dump([tt, tf, ft, io_to_program, all_out_mappingss], f)
 
-    print(len(programs), len(p_io_ft))
-    io_to_program = defaultdict(list)
-
-    for j, (p_io_tt_j, p_io_tf_j, p_io_ft_j) in enumerate(zip(p_io_tt.values(), p_io_tf.values(), p_io_ft.values())):
-        io_to_program[tuple(p_io_tt_j), tuple(p_io_tf_j), tuple(p_io_ft_j)].append(j)
-        # Calculate precision, recall, f1
-        p = len(p_io_tt_j) / (len(p_io_tt_j) + len(p_io_tf_j))
-        r = len(p_io_tt_j) / (len(p_io_tt_j) + len(p_io_ft_j))
-        f1 = 2 * p * r / (p + r)
-        print(programs[j])
-        print(f"Program {j} - Precision: {p}, Recall: {r}, F1: {f1}")
-        visualize_program_with_support(dataset, p_io_tt_j, p_io_tf_j, p_io_ft_j, f"program_{j}")
-
+        
     # STAGE 3: Build version space
-    vss = [VersionSpace(*k, v) for k, v in io_to_program.items()]
-    print("Number of version spaces: ", len(vss))
+    vss = [VersionSpace(*k, v, all_out_mappingss[v[0]]) for k, v in io_to_program.items()]
+    for i, k in enumerate(io_to_program.keys()):
+        vss[i].mappings = all_out_mappingss[io_to_program[k][0]]
 
+    print("Number of version spaces: ", len(vss))
+    max_its = 10
+    perfect_ps = []
+    for it in range(max_its):
+        if cache_dir and os.path.exists(os.path.join(cache_dir, f"stage3_{it}.pkl")):
+            vss, extended_cands = pkl.load(open(os.path.join(cache_dir, f"stage3_{it}.pkl"), "rb"))
+        else:
+            extended_cands = defaultdict(set)
+            for i, vs in enumerate(vss):
+                for p in vs.programs:
+                    extend_cands = get_valid_cand_find_program(vs, p)
+                    for ex_cand in extend_cands:
+                        extended_cands[ex_cand].add(i)
+            # Save this for this iter
+            if cache_dir:
+                with open(os.path.join(cache_dir, f"stage3_{it}.pkl"), "wb") as f:
+                    pkl.dump([vss, extended_cands], f)
+        # Now we have extended_cands
+        # Let's create the set of valid input for each cands
+        if cache_dir and os.path.exists(os.path.join(cache_dir, f"stage3_{it}_valid_inputs.pkl")):
+            valid_inputs = pkl.load(open(os.path.join(cache_dir, f"stage3_{it}_valid_inputs.pkl"), "rb"))
+        else:
+            valid_inputs = defaultdict(set)
+            for ex_cand, vs_idxs in extended_cands.items():
+                for vs_idx in vs_idxs:
+                    valid_inputs[ex_cand].update(vss[vs_idx].mappings)
+            # Save this for this iter
+            if cache_dir:
+                with open(os.path.join(cache_dir, f"stage3_{it}_valid_inputs.pkl"), "wb") as f:
+                    pkl.dump(valid_inputs, f)
+
+
+        if cache_dir and os.path.exists(os.path.join(cache_dir, f"stage3_{it}_output.pkl")):
+            with open(os.path.join(cache_dir, f"stage3_{it}_output.pkl"), "rb") as f:
+                all_out_mappingss = pkl.load(f)
+        else:
+            programs = list(extended_cands.keys())
+            all_out_mappingss = collect_constraint_execution(data_sample_set_relation_cache, valid_inputs)
+            print(all_out_mappingss)
+            with open(os.path.join(cache_dir, f"stage3_{it}_output.pkl"), "wb") as f:
+                pkl.dump(all_out_mappingss, f)
+
+        # for each constraint, check against each of the original programs
+        if cache_dir and os.path.exists(os.path.join(cache_dir, f"stage3_{it}_new_vs.pkl")):
+            with open(os.path.join(cache_dir, f"stage3_{it}_new_vs.pkl"), "rb") as f:
+                new_vss = pkl.load(f)
+        else:
+            new_vss = []
+            new_io_to_vs = {}
+            parent = {}
+            perfect_ps = []
+            has_child = [False] * len(vss)
+            for ex_cand, vs_idxs in extended_cands.items():
+                for vs_idx in vs_idxs:
+                    # each constraint combined with each vs will lead to another vs
+                    vs_intersect_mapping = all_out_mappingss[ex_cand].intersection(vss[vs_idx].mappings)
+                    if not vs_intersect_mapping:        # There is no more candidate
+                        continue
+                    ios = set()
+                    binding_var = vss[vs_idx].programs[0].word_variables[-1]
+                    for i, (word_binding, relation_binding) in vs_intersect_mapping:
+                        word_binding, relation_binding = tuple2mapping((word_binding, relation_binding))
+                        ios.add((i, word_binding[WordVariable("w0")], word_binding[binding_var[-1]]))
+                    # Now check the tt, tf, ft
+                    new_tt = ios.intersection(vss[vs_idx].tt)
+                    new_tf = ios.intersection(vss[vs_idx].tf)
+                    # theoretically, ft should stay the same
+                    new_ft = vss[vs_idx].ft
+                    old_p, old_r, old_f1 = get_p_r_f1(vss[vs_idx].tt, vss[vs_idx].tf, vss[vs_idx].ft)
+                    new_p, new_r, new_f1 = get_p_r_f1(new_tt, new_tf, new_ft)
+                    if (old_p > 0.3 and new_p > old_p) or (old_p < 0.1 and old_r > 0.1 and new_p < old_p):
+                        new_program = add_constraint_to_find_program(vss[vs_idx].programs[0], ex_cand)
+                        if new_p > old_p: 
+                            print(f"Found new increased precision: {old_p} -> {new_p}")
+                        else:
+                            print(f"Found new decreased precision: {old_p} -> {new_p}")
+                        has_child[vs_idx] = True
+                        if new_p == 1.0:
+                            perfect_ps.append(new_program)
+                            continue
+                        if new_p == 0.0 and new_r > 0.0:
+                            perfect_ps.append(new_program)
+                        if (new_tt, new_tf, new_ft) not in new_io_to_vs:
+                            new_vs = VersionSpace(new_tt, new_tf, new_ft, [new_program], vs_intersect_mapping)
+                            new_vss.append(new_vs)
+                            new_io_to_vs[(new_tt, new_tf, new_ft)] = new_vs
+                        else:
+                            new_io_to_vs[(new_tt, new_tf, new_ft)].programs.append(new_program)
+
+
+            new_vss = list(new_io_to_vs.values())
+            if cache_dir and os.path.exists(os.path.join(cache_dir, f"stage3_{it}_new_vs.pkl")):
+                with open(os.path.join(cache_dir, f"stage3_{it}_new_vs.pkl"), "wb") as f:
+                    pkl.dump(new_vss, f)
+            perfect_ps = perfect_ps + list(itertools.chain.from_iterable(vs.programs for vs, hc in zip(vss, has_child) if not hc))
+            print("Number of non-improved programs:", len(perfect_ps))
+            if cache_dir and os.path.exists(os.path.join(cache_dir, f"stage3_{it}_perfect_ps.pkl")):
+                with open(os.path.join(cache_dir, f"stage3_{it}_perfect_ps.pkl"), "wb") as f:
+                    pkl.dump(perfect_ps, f)
+
+        vss = new_vss
 
     return programs
 
