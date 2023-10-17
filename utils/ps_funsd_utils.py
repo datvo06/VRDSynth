@@ -45,13 +45,13 @@ if __name__ == '__main__':
         label = []
         for group in uf.groups():
             # merge boxes
-            group_box = np.array(list([data['boxes'][i] for i in group]))
+            group_box = np.array(list([data['boxes'][j] for j in group]))
             boxes.append(np.array([np.min(group_box[:, 0]), np.min(group_box[:, 1]), np.max(group_box[:, 2]), np.max(group_box[:, 3])]))
             # merge words
-            group_word = sorted(list([(i, data['words'][i]) for i in group]),key=lambda x: data['boxes'][int(x[0])][0])
+            group_word = sorted(list([(j, data['words'][j]) for j in group]),key=lambda x: data['boxes'][int(x[0])][0])
             words.append(' '.join([word for _, word in group_word]))
             # merge label
-            group_label = Counter([data['labels'][i] for i in group])
+            group_label = Counter([data['labels'][j] for j in group])
             label.append(group_label.most_common(1)[0][0])
         img = cv2.imread(data['img_fp'].replace(".jpg", ".png"))
         data = DataSample(
