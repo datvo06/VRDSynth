@@ -609,6 +609,7 @@ def three_stages_bottom_up_version_space_based(all_positive_paths, dataset, spec
             new_vss = []
             new_io_to_vs = {}
             perfect_ps = []
+            perfect_ps_io_value = set()
             has_child = [False] * len(vss)
             big_bar = tqdm.tqdm(extended_cands.items())
             big_bar.set_description("Stage 3 - Creating New Version Spaces")
@@ -638,6 +639,9 @@ def three_stages_bottom_up_version_space_based(all_positive_paths, dataset, spec
                     except:
                         continue
                     if (old_p >= 0.3 and new_p > old_p) or (old_p < 0.1 and old_r > 0.1 and new_p < old_p):
+                        io_key = tuple((tuple(new_tt), tuple(new_tf), tuple(new_ft)))
+                        if io_key in new_io_to_vs:
+                            continue
                         new_program = add_constraint_to_find_program(vss[vs_idx].programs[0], ex_cand)
                         if new_p > old_p: 
                             print(f"Found new increased precision: {old_p} -> {new_p}")
@@ -645,12 +649,14 @@ def three_stages_bottom_up_version_space_based(all_positive_paths, dataset, spec
                             print(f"Found new decreased precision: {old_p} -> {new_p}")
                         has_child[vs_idx] = True
                         if new_p == 1.0:
-                            perfect_ps.append(new_program)
+                            if io_key not in perfect_ps_io_value:
+                                perfect_ps.append(new_program)
                             continue
                         if new_p == 0.0 and new_r > 0.0:
+                            if io_key not in perfect_ps_io_value:
+                                perfect_ps.append(new_program)
                             perfect_ps.append(new_program)
                             continue
-                        io_key = tuple((tuple(new_tt), tuple(new_tf), tuple(new_ft)))
                         if io_key not in new_io_to_vs:
                             new_vs = VersionSpace(new_tt, new_tf, new_ft, [new_program], vs_intersect_mapping)
                             new_vss.append(new_vs)
