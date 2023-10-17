@@ -43,6 +43,7 @@ if __name__ == '__main__':
                 w0 = w_binding[WordVariable('w0')]
                 wlast = w_binding[return_var]
                 uf.union(w0, wlast)
+                print(w0, wlast)
                 ucount += 1
         print(f"Union count: {ucount}")
 
