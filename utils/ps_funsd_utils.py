@@ -49,14 +49,14 @@ if __name__ == '__main__':
             group_word = sorted(list([(i, data['words'][i]) for i in group]),key=lambda x: data['boxes'][int(x[0])][0])
             words.append(' '.join([word for _, word in group_word]))
             # merge label
-            group_label = Counter([data['label'][i] for i in group])
+            group_label = Counter([data['labels'][i] for i in group])
             label.append(group_label.most_common(1)[0][0])
         data['boxes'] = boxes
         data['words'] = words
-        data['label'] = label
+        data['labels'] = label
         img = cv2.imread(data['img_fp'])
         # Draw all of these boxes on data
-        for box, label in zip(data['boxes'], data['label']):
+        for box, label in zip(data['boxes'], data['labels']):
             color = (0, 0, 255)
             if label == 'header': # yellow
                 color = (0, 255, 255)
