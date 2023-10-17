@@ -7,7 +7,7 @@ import numpy as np
 import itertools
 import functools
 from collections import defaultdict, namedtuple
-from networkx.algorithms import isomorphism
+from networkx.algorithms import constraint, isomorphism
 from utils.ps_utils import FalseValue, LiteralReplacement, Program, EmptyProgram, GrammarReplacement, FindProgram, RelationLabelConstant, RelationLabelProperty, TrueValue, WordLabelProperty, WordVariable, RelationVariable, RelationConstraint, LabelEqualConstraint, RelationLabelEqualConstraint, construct_entity_merging_specs, SpecIterator, LabelConstant, AndConstraint, LiteralSet, Constraint, GrammarReplacement, Hole, replace_hole, find_holes, SymbolicList, FilterStrategy, fill_hole, Expression
 from utils.visualization_script import visualize_program_with_support
 from utils.version_space import VersionSpace
@@ -598,31 +598,6 @@ def three_stages_bottom_up_version_space_based(all_positive_paths, dataset, spec
                     pkl.dump([vss, extended_cands], f)
         # Now we have extended_cands
         # Let's create the set of valid input for each cands
-        if cache_dir and os.path.exists(os.path.join(cache_dir, f"stage3_{it}_valid_inputs.pkl")):
-            print("Loading valid inputs...")
-            valid_inputs = pkl.load(open(os.path.join(cache_dir, f"stage3_{it}_valid_inputs.pkl"), "rb"))
-            print("Loaded Valid inputs")
-        else:
-            valid_inputs = defaultdict(set)
-            for ex_cand, vs_idxs in extended_cands.items():
-                for vs_idx in vs_idxs:
-                    valid_inputs[ex_cand].update(vss[vs_idx].mappings)
-            # Save this for this iter
-            if cache_dir:
-                with open(os.path.join(cache_dir, f"stage3_{it}_valid_inputs.pkl"), "wb") as f:
-                    pkl.dump(valid_inputs, f)
-
-
-        if cache_dir and os.path.exists(os.path.join(cache_dir, f"stage3_{it}_output.pkl")):
-            with open(os.path.join(cache_dir, f"stage3_{it}_output.pkl"), "rb") as f:
-                all_out_mappingss = pkl.load(f)
-        else:
-            programs = list(extended_cands.keys())
-            all_out_mappingss = collect_constraint_execution(data_sample_set_relation_cache, valid_inputs)
-            print(all_out_mappingss)
-            with open(os.path.join(cache_dir, f"stage3_{it}_output.pkl"), "wb") as f:
-                pkl.dump(all_out_mappingss, f)
-
         # for each constraint, check against each of the original programs
         if cache_dir and os.path.exists(os.path.join(cache_dir, f"stage3_{it}_new_vs.pkl")):
             with open(os.path.join(cache_dir, f"stage3_{it}_new_vs.pkl"), "rb") as f:
@@ -630,13 +605,20 @@ def three_stages_bottom_up_version_space_based(all_positive_paths, dataset, spec
         else:
             new_vss = []
             new_io_to_vs = {}
-            parent = {}
             perfect_ps = []
             has_child = [False] * len(vss)
+            big_bar = tqdm.tqdm(extended_cands.items())
+            big_bar.set_description("Stage 3 - Creating New Version Spaces")
             for ex_cand, vs_idxs in extended_cands.items():
-                for vs_idx in vs_idxs:
+                bar = tqdm.tqdm(vs_idxs)
+                bar.set_description("Stage 3 - Looping through all vs_idxs")
+                for vs_idx in bar:
+                    vs_intersect_mapping = set()
+                    for i, (word_binding, relation_binding) in vs_idx:
+                        word_binding, relation_binding = tuple2mapping((word_binding, relation_binding))
+                        if ex_cand.evaluate(word_binding, relation_binding):
+                            vs_intersect_mapping.add(mapping2tuple((word_binding, relation_binding)))
                     # each constraint combined with each vs will lead to another vs
-                    vs_intersect_mapping = all_out_mappingss[ex_cand].intersection(vss[vs_idx].mappings)
                     if not vs_intersect_mapping:        # There is no more candidate
                         continue
                     ios = set()
