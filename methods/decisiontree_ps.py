@@ -651,12 +651,14 @@ def three_stages_bottom_up_version_space_based(all_positive_paths, dataset, spec
                             continue
                         if new_p == 0.0 and new_r > 0.0:
                             perfect_ps.append(new_program)
-                        if (new_tt, new_tf, new_ft) not in new_io_to_vs:
+                            continue
+                        io_key = tuple((tuple(new_tt), tuple(new_tf), tuple(new_ft)))
+                        if io_key not in new_io_to_vs:
                             new_vs = VersionSpace(new_tt, new_tf, new_ft, [new_program], vs_intersect_mapping)
                             new_vss.append(new_vs)
-                            new_io_to_vs[(new_tt, new_tf, new_ft)] = new_vs
+                            new_io_to_vs[io_key] = new_vs
                         else:
-                            new_io_to_vs[(new_tt, new_tf, new_ft)].programs.append(new_program)
+                            new_io_to_vs[io_key].programs.append(new_program)
 
 
             new_vss = list(new_io_to_vs.values())
