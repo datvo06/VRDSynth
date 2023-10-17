@@ -628,7 +628,7 @@ def three_stages_bottom_up_version_space_based(all_positive_paths, dataset, spec
                     binding_var = vss[vs_idx].programs[0].word_variables[-1]
                     for i, (word_binding, relation_binding) in vs_intersect_mapping:
                         word_binding, relation_binding = tuple2mapping((word_binding, relation_binding))
-                        ios.add((i, word_binding[WordVariable("w0")], word_binding[binding_var[-1]]))
+                        ios.add((i, word_binding[WordVariable("w0")], word_binding[binding_var]))
                     # Now check the tt, tf, ft
                     new_tt = ios.intersection(vss[vs_idx].tt)
                     new_tf = ios.intersection(vss[vs_idx].tf)
