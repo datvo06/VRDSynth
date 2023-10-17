@@ -579,6 +579,9 @@ class WordBoxProperty(FloatValue):
     def __str__(self):
         return f'{self.word_var}.{self.prop}'
 
+    def __eq__(self, other):
+        return isinstance(other, WordBoxProperty) and self.word_var == other.word_var and self.prop == other.prop
+
 
 class RelationPropertyConstant(Literal):
     def __init__(self, prop):
