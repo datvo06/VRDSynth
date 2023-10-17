@@ -635,7 +635,10 @@ def three_stages_bottom_up_version_space_based(all_positive_paths, dataset, spec
                     # theoretically, ft should stay the same
                     new_ft = vss[vs_idx].ft
                     old_p, old_r, old_f1 = get_p_r_f1(vss[vs_idx].tt, vss[vs_idx].tf, vss[vs_idx].ft)
-                    new_p, new_r, new_f1 = get_p_r_f1(new_tt, new_tf, new_ft)
+                    try:
+                        new_p, new_r, new_f1 = get_p_r_f1(new_tt, new_tf, new_ft)
+                    except:
+                        continue
                     if (old_p >= 0.3 and new_p > old_p) or (old_p < 0.1 and old_r > 0.1 and new_p < old_p):
                         new_program = add_constraint_to_find_program(vss[vs_idx].programs[0], ex_cand)
                         if new_p > old_p: 
