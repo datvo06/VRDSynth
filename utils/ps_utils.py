@@ -808,6 +808,12 @@ class StringEqualConstraint(Constraint):
     def __str__(self):
         return f'{self.lhs} == {self.rhs}'
 
+    def __eq__(self, other):
+        return (self.lhs == other.lhs and self.rhs == other.rhs) or (self.rhs == other.lhs and self.lhs == other.rhs)
+
+    def __hash__(self):
+        return str(hash(str(self)))
+
 
 class StringContainsConstraint(Constraint):
     def __init__(self, lhs: StringValue, rhs: StringValue):
