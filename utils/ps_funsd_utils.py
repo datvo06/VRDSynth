@@ -27,7 +27,9 @@ if __name__ == '__main__':
 
     with open(f"{args.cache_dir}/data_sample_set_relation_cache.pkl", 'rb') as f:
         data_sample_set_relation_cache = pkl.load(f)
+    stage_1 = pkl.load(open(f"{args.cache_dir}/stage1.pkl", 'rb'))
     ps = pkl.load(open(args.ps_fp, 'rb'))
+    ps = list(set(ps) - set(stage_1))
     for i, data in tqdm.tqdm(enumerate(dataset)):
         nx_g = data_sample_set_relation_cache[i]
         out_bindings = batch_find_program_executor(nx_g, ps)
