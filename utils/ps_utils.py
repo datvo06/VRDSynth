@@ -832,7 +832,8 @@ class StringContainsConstraint(Constraint):
     def reduce(self):
         if isinstance(self.rhs, StringConstant) and self.rhs.evaluate() == "":
             return True, TrueValue()
-
+        elif self.lhs == self.rhs:
+            return True, TrueValue()
         if isinstance(self.lhs, StringConstant) and isinstance(self.rhs, StringConstant):
             if self.rhs.evaluate() in self.lhs.evaluate():
                 return True, TrueValue()
