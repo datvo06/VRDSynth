@@ -1176,7 +1176,7 @@ LiteralReplacement = {
         'TrueValue': [TrueValue()],
         'FalseValue': [FalseValue()],
         'StringConstant': [StringConstant(''), StringConstant('.'), StringConstant('-'), StringConstant('%')],
-        'FloatConstant': [FloatConstant(0.0), FloatConstant(0.1), FloatConstant(0.2), FloatConstant(0.3), FloatConstant(0.4)],
+        'FloatConstant': [FloatConstant(0.1), FloatConstant(0.2), FloatConstant(0.3), FloatConstant(0.4)],
         'LabelConstant': [LabelConstant('header'), LabelConstant('key'), LabelConstant('value')],
         'BoxConstantValue': [BoxConstantValue('x0'), BoxConstantValue('y0'), BoxConstantValue('x1'), BoxConstantValue('y1')],
         'RelationPropertyConstant': [RelationPropertyConstant('mag'), *[RelationPropertyConstant(f'proj{i}') for i in range(4)]],
