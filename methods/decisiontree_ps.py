@@ -274,6 +274,15 @@ class NoDuplicateLabelConstraintFilter(FilterStrategy):
         return self.constraint_set == o.constraint_set
 
 
+class DistinguishPropertyFilter(FilterStrategy):
+    def __init__(self, mappings):
+        pass
+
+
+class RemoveFilteredConstraint(FilterStrategy):
+    def __init__(self, constraint_set):
+        self.constraint_set = constraint_set
+
 
 class CompositeFilter(FilterStrategy):
     def __init__(self, filters):
@@ -284,8 +293,6 @@ class CompositeFilter(FilterStrategy):
             if not filter.check_valid(program):
                 return False
         return True
-        
-
 
 
 def get_valid_cand_find_program(version_space: VersionSpace, program: FindProgram):
@@ -619,6 +626,7 @@ def three_stages_bottom_up_version_space_based(all_positive_paths, dataset, spec
                 # Cache to save computation cycles
                 cache = {}
                 cnt = 0
+                acc = 0
                 for vs_idx in vs_idxs:
                     cnt += 1
                     big_bar.set_postfix({"cnt" : cnt})
@@ -662,12 +670,14 @@ def three_stages_bottom_up_version_space_based(all_positive_paths, dataset, spec
                         new_program = add_constraint_to_find_program(vss[vs_idx].programs[0], ex_cand)
                         if new_p > old_p: 
                             print(f"Found new increased precision: {old_p} -> {new_p}")
+                            acc += 1
                         has_child[vs_idx] = True
                         if new_p == 1.0:
                             if io_key not in perfect_ps_io_value:
                                 perfect_ps.append(new_program)
                             continue
                         if new_p == 0.0 and new_r > 0.0:
+                            acc += 1
                             print(f"Found new decreased precision: {old_p} -> {new_p}")
                             if io_key not in perfect_ps_io_value:
                                 perfect_ps.append(new_program)
@@ -679,6 +689,8 @@ def three_stages_bottom_up_version_space_based(all_positive_paths, dataset, spec
                             new_io_to_vs[io_key] = new_vs
                         else:
                             new_io_to_vs[io_key].programs.append(new_program)
+                if not acc:
+                    print("Rejecting: ", ex_cand)
 
 
             new_vss = list(new_io_to_vs.values())
