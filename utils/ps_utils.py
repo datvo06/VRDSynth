@@ -809,7 +809,7 @@ class StringEqualConstraint(Constraint):
         return f'{self.lhs} == {self.rhs}'
 
     def __eq__(self, other):
-        return (self.lhs == other.lhs and self.rhs == other.rhs) or (self.rhs == other.lhs and self.lhs == other.rhs)
+        return isinstance(other, StringEqualConstraint) and (self.lhs == other.lhs and self.rhs == other.rhs) or (self.rhs == other.lhs and self.lhs == other.rhs)
 
     def __hash__(self):
         return hash(str(self))
