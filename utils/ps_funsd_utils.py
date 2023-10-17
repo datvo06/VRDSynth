@@ -1,4 +1,5 @@
 from utils.ps_utils import FindProgram, WordVariable
+from utils.funsd_utils import DataSample
 from methods.decisiontree_ps import batch_find_program_executor
 import argparse
 import pickle as pkl
@@ -51,10 +52,9 @@ if __name__ == '__main__':
             # merge label
             group_label = Counter([data['labels'][i] for i in group])
             label.append(group_label.most_common(1)[0][0])
-        data['boxes'] = boxes
-        data['words'] = words
-        data['labels'] = label
         img = cv2.imread(data['img_fp'])
+        data = DataSample(
+                words, label, data['entities'], data['entities_map'], boxes, data['img_fp'])
         # Draw all of these boxes on data
         for box, label in zip(data['boxes'], data['labels']):
             color = (0, 0, 255)
