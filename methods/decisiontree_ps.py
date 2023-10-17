@@ -613,9 +613,7 @@ def three_stages_bottom_up_version_space_based(all_positive_paths, dataset, spec
             big_bar = tqdm.tqdm(extended_cands.items())
             big_bar.set_description("Stage 3 - Creating New Version Spaces")
             for ex_cand, vs_idxs in extended_cands.items():
-                bar = tqdm.tqdm(vs_idxs)
-                bar.set_description("Stage 3 - Looping through all vs_idxs")
-                for vs_idx in bar:
+                for vs_idx in vs_idxs:
                     vs_intersect_mapping = set()
                     for i, (word_binding, relation_binding) in vss[vs_idx].mappings:
                         word_binding, relation_binding = tuple2mapping((word_binding, relation_binding))
