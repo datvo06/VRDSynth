@@ -52,7 +52,7 @@ class Page(object):
             self.unit_size = np.mean([t.height for t in self.textlines])
         self.paragraphs = sort_box(self.group_to_paragraph(self.textlines))
 
-    def group_to_paragraph(self, textlines, height_threshold: int=2, unit_size: int=None):
+    def group_to_paragraph(self, textlines, height_threshold: int = 2, unit_size: int = None):
         """
         Group textlines to paragraph
         :return:
@@ -212,3 +212,55 @@ class Page(object):
             cv2.rectangle(image, (int(block.x0), int(block.y0)), (int(block.x1), int(block.y1)),
                           (0, 255, 255), thickness=2)
         return image
+
+    def to_funsd(self) -> Dict[str, Any]:
+        """
+        Convert pdf page to the funsd format.
+        :return:
+        """
+        form = []
+        for paragraph in self.paragraphs:
+            for textline in paragraph.textlines:
+                # Split textbox to words
+                words = textline.split(r"\s+", min_distance=0.1)
+                word_boxes = []
+                previous_label = None
+                for ibox, word in enumerate(words):
+                    # Group words by label.
+                    word_labels = [span.label for span in word.spans if span.label]
+                    if word_labels:
+                        word_label = word_labels[0].strip()
+                    else:
+                        word_label = "other"
+                    if word_label == previous_label:
+                        word_boxes.append({
+                            "box": [word.x0, word.y0, word.x1, word.y1],
+                            "text": word.text
+                        })
+                    else:
+                        if word_boxes:
+                            form.append({
+                                "text": " ".join(word["text"] for word in word_boxes),
+                                "label": previous_label or "other",
+                                "id": len(form),
+                                "words": word_boxes
+                            })
+                        previous_label = word_label
+                        word_boxes = [{
+                            "box": [word.x0, word.y0, word.x1, word.y1],
+                            "text": word.text
+                        }]
+                if word_boxes:
+                    form.append({
+                        "text": " ".join(word["text"] for word in word_boxes),
+                        "label": previous_label or "other",
+                        "id": len(form),
+                        "words": word_boxes
+                    })
+
+        return {
+            "width": self.width,
+            "height": self.height,
+            "image": self.image,
+            "form": form
+        }
