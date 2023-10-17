@@ -481,6 +481,8 @@ class WordTextProperty(StringValue):
 
     def __str__(self): return f'{self.word_variable}.text'
 
+    def __hash__(self): return hash(str(self))
+
 
 class LabelValue(Expression):
     def evaluate(self, word_binding, relation_binding, nx_g_data) -> List[str]:
