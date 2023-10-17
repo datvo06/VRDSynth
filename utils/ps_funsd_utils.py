@@ -6,6 +6,7 @@ import pickle as pkl
 from utils.algorithms import UnionFind
 from collections import Counter
 import numpy as np
+import tqdm
 import cv2
 
 
@@ -27,7 +28,7 @@ if __name__ == '__main__':
     with open(f"{args.cache_dir}/data_sample_set_relation_cache.pkl", 'rb') as f:
         data_sample_set_relation_cache = pkl.load(f)
     ps = pkl.load(open(args.ps_fp, 'rb'))
-    for i, data in enumerate(dataset):
+    for i, data in tqdm.tqdm(enumerate(dataset)):
         nx_g = data_sample_set_relation_cache[i]
         out_bindings = batch_find_program_executor(nx_g, ps)
 
