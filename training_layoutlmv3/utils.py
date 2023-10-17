@@ -14,27 +14,6 @@ import cv2
 
 PRETRAINED_SOURCE = "nielsr/layoutlmv3-finetuned-funsd"
 
-def init_datahandler_instance(_instance):
-    pretrained = PRETRAINED_SOURCE
-    _instance.pretrained = PRETRAINED_SOURCE
-    _instance.processor = LayoutLMv3Processor.from_pretrained(pretrained, apply_ocr=False)
-    _instance.config = LayoutLMv3Config.from_pretrained(pretrained)
-    _instance.id2label = _instance.config.id2label
-    assert _instance.id2label is not None, "id2label is None"
-    label2id = defaultdict()
-    label2id.default_factory = label2id.__len__
-    label2id['O'] = 0
-    _instance.label_list = list(_instance.id2label.values())
-    for id, label in _instance.id2label.items():
-        label2id[label] = id
-    _instance.label2id = label2id
-    _instance.features = Features({
-        'pixel_values': Array3D(dtype="float32", shape=(3, 224, 224)),
-        'input_ids': Sequence(feature=Value(dtype='int64')),
-        'attention_mask': Sequence(Value(dtype='int64')),
-        'bbox': Array2D(dtype="int64", shape=(512, 4)),
-        'labels': Sequence(feature=Value(dtype='int64')),
-    })
 
 class LayoutLMv3DataHandler:
     '''Singleton to store layoutLMv3 metadata'''
@@ -43,10 +22,92 @@ class LayoutLMv3DataHandler:
     def __new__(cls, *args, **kwargs):
         if not LayoutLMv3DataHandler._instance:
             LayoutLMv3DataHandler._instance = super(LayoutLMv3DataHandler, cls).__new__(cls, *args, **kwargs)
-            init_datahandler_instance(LayoutLMv3DataHandler._instance)
-
+            cls.init_datahandler_instance(LayoutLMv3DataHandler._instance)
         return LayoutLMv3DataHandler._instance
 
+    @classmethod
+    def init_datahandler_instance(cls, _instance):
+        pretrained = PRETRAINED_SOURCE
+        _instance.pretrained = PRETRAINED_SOURCE
+        _instance.processor = LayoutLMv3Processor.from_pretrained(pretrained, apply_ocr=False)
+        _instance.config = LayoutLMv3Config.from_pretrained(pretrained)
+        _instance.id2label = _instance.config.id2label
+        assert _instance.id2label is not None, "id2label is None"
+        
+        label2id = defaultdict()
+        label2id.default_factory = label2id.__len__
+        label2id['O'] = 0
+        _instance.label_list = list(_instance.id2label.values())
+        
+        for id, label in _instance.id2label.items():
+            label2id[label] = id
+        
+        _instance.label2id = label2id
+        _instance.features = Features({
+            'pixel_values': Array3D(dtype="float32", shape=(3, 224, 224)),
+            'input_ids': Sequence(feature=Value(dtype='int64')),
+            'attention_mask': Sequence(Value(dtype='int64')),
+            'bbox': Array2D(dtype="int64", shape=(512, 4)),
+            'labels': Sequence(feature=Value(dtype='int64')),
+        })
+
+    @property
+    def id2label(self) -> Dict[int, str]:
+        return self._id2label
+
+    @id2label.setter
+    def id2label(self, val: Dict[int, str]):
+        self._id2label =val 
+
+    @property
+    def label2id(self) -> Dict[str, int]:
+        return self._label2id
+
+    @label2id.setter
+    def label2id(self, val: Dict[str, int]):
+        self._label2id =val 
+
+    @property
+    def label_list(self) -> List[str]:
+        return self._label_list
+
+    @label_list.setter
+    def label_list(self, val: List[str]):
+        self._label_list = val
+
+    @property
+    def features(self) -> Features:
+        return self._features
+
+    @features.setter
+    def features(self, val: Features):
+        self._features = val
+
+    @property
+    def processor(self) -> LayoutLMv3Processor:
+        return self._processor
+
+    @processor.setter
+    def processor(self, val: LayoutLMv3Processor):
+        self._processor = val 
+
+    @property
+    def config(self) -> LayoutLMv3Config:
+        return self._config
+
+    @config.setter
+    def config(self, cfg: LayoutLMv3Config):
+        self._config = cfg
+
+    @property
+    def pretrained(self) -> str:
+        return self._pretrained
+
+    @pretrained.setter
+    def pretrained(self, val: str):
+        self._pretrained = val 
+
+ 
 
 def load_data(json_path, image_path) -> Dict[str, List]:
     json_data = json.load(open(json_path, encoding="utf-8"))
