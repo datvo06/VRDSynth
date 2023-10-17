@@ -617,7 +617,7 @@ def three_stages_bottom_up_version_space_based(all_positive_paths, dataset, spec
                 bar.set_description("Stage 3 - Looping through all vs_idxs")
                 for vs_idx in bar:
                     vs_intersect_mapping = set()
-                    for i, (word_binding, relation_binding) in vs_idx:
+                    for i, (word_binding, relation_binding) in vs_idx.mappings:
                         word_binding, relation_binding = tuple2mapping((word_binding, relation_binding))
                         if ex_cand.evaluate(word_binding, relation_binding):
                             vs_intersect_mapping.add(mapping2tuple((word_binding, relation_binding)))
