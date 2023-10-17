@@ -613,7 +613,7 @@ def three_stages_bottom_up_version_space_based(all_positive_paths, dataset, spec
             has_child = [False] * len(vss)
             big_bar = tqdm.tqdm(extended_cands.items())
             big_bar.set_description("Stage 3 - Creating New Version Spaces")
-            for ex_cand, vs_idxs in extended_cands.items():
+            for ex_cand, vs_idxs in big_bar:
                 # Cache to save computation cycles
                 cache = {}
                 cnt = 0
