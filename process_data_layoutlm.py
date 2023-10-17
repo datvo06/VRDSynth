@@ -41,7 +41,11 @@ if __name__ == '__main__':
         # if "LABELEDALL" in name:
         #     pages = pages[5:]
         for i, page in enumerate(file_reader.pages):
-            data, images = feature_extraction.get_feature(page, expand_after=0, expand_before=0)
+            try:
+                data, images = feature_extraction.get_feature(page, expand_after=0, expand_before=0)
+            except Exception as e:
+                print(f"Parse feature got error: {e}")
+                continue
             for words, image in zip(data, images):
                 flag = False
                 labels = set()
