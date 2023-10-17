@@ -812,7 +812,7 @@ class StringEqualConstraint(Constraint):
         return (self.lhs == other.lhs and self.rhs == other.rhs) or (self.rhs == other.lhs and self.lhs == other.rhs)
 
     def __hash__(self):
-        return str(hash(str(self)))
+        return hash(str(self))
 
 
 class StringContainsConstraint(Constraint):
