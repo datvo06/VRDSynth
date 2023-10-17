@@ -33,8 +33,8 @@ if __name__ == '__main__':
         out_bindings = batch_find_program_executor(nx_g, ps)
 
         uf = UnionFind(len(data['boxes']))
-        for i, p_bindings in enumerate(out_bindings):
-            return_var = ps[i].return_variables[0]
+        for j, p_bindings in enumerate(out_bindings):
+            return_var = ps[j].return_variables[0]
             for w_binding, r_binding in p_bindings:
                 w0 = w_binding[WordVariable('w0')]
                 wlast = w_binding[return_var]
