@@ -473,6 +473,9 @@ class WordTextProperty(StringValue):
     def type_name():
         return 'WordTextProperty'
 
+    def __eq__(self, other):
+        return isinstance(other, WordTextProperty) and self.word_variable == other.word_variable
+
     def evaluate(self, word_binding, relation_binding, nx_g_data):
         return nx_g_data.nodes[word_binding[self.word_variable]]['word']
 
@@ -834,7 +837,7 @@ class StringContainsConstraint(Constraint):
             return True, TrueValue()
         elif self.lhs == self.rhs:
             return True, TrueValue()
-        if isinstance(self.lhs, StringConstant) and isinstance(self.rhs, StringConstant):
+        elif isinstance(self.lhs, StringConstant) and isinstance(self.rhs, StringConstant):
             if self.rhs.evaluate() in self.lhs.evaluate():
                 return True, TrueValue()
             else:
