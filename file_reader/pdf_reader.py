@@ -155,6 +155,7 @@ def get_annot_character(vertices, chars, label=''):
         try:
             (x0, y0), (x1, y1), (x2, y2), (x3, y3) = vertices[:4]
         except ValueError:
+            print("Warning: Encountered invalid vertices")
             continue
         vertices = vertices[4:]
         xvals = [x0, x1, x2, x3]
