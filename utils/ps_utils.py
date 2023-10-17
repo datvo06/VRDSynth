@@ -553,6 +553,13 @@ class BoxConstantValue(Literal):
         return 'BoxConstantValue'
 
 
+    def __eq__(self, other):
+        assert isinstance(other, BoxConstantValue) and self.value == other.value
+
+    def __hash__(self):
+        return hash(str(self))
+
+
     def __str__(self):
         return f'{self.value}'
 
