@@ -614,12 +614,20 @@ def three_stages_bottom_up_version_space_based(all_positive_paths, dataset, spec
             big_bar = tqdm.tqdm(extended_cands.items())
             big_bar.set_description("Stage 3 - Creating New Version Spaces")
             for ex_cand, vs_idxs in extended_cands.items():
+                # Cache to save computation cycles
+                cache = {}
                 for vs_idx in vs_idxs:
                     vs_intersect_mapping = set()
                     for i, (word_binding, relation_binding) in vss[vs_idx].mappings:
-                        word_binding, relation_binding = tuple2mapping((word_binding, relation_binding))
-                        if ex_cand.evaluate(word_binding, relation_binding, data_sample_set_relation_cache[i]):
-                            vs_intersect_mapping.add((i, mapping2tuple((word_binding, relation_binding))))
+                        if (i, (word_binding, relation_binding)) in cache:
+                            if cache[(i, (word_binding, relation_binding))]:
+                                vs_intersect_mapping.add((i, mapping2tuple((word_binding, relation_binding))))
+                            else:
+                                continue
+                        else:
+                            word_binding, relation_binding = tuple2mapping((word_binding, relation_binding))
+                            if ex_cand.evaluate(word_binding, relation_binding, data_sample_set_relation_cache[i]):
+                                vs_intersect_mapping.add((i, mapping2tuple((word_binding, relation_binding))))
                     # each constraint combined with each vs will lead to another vs
                     if not vs_intersect_mapping:        # There is no more candidate
                         continue
@@ -645,14 +653,13 @@ def three_stages_bottom_up_version_space_based(all_positive_paths, dataset, spec
                         new_program = add_constraint_to_find_program(vss[vs_idx].programs[0], ex_cand)
                         if new_p > old_p: 
                             print(f"Found new increased precision: {old_p} -> {new_p}")
-                        else:
-                            print(f"Found new decreased precision: {old_p} -> {new_p}")
                         has_child[vs_idx] = True
                         if new_p == 1.0:
                             if io_key not in perfect_ps_io_value:
                                 perfect_ps.append(new_program)
                             continue
                         if new_p == 0.0 and new_r > 0.0:
+                            print(f"Found new decreased precision: {old_p} -> {new_p}")
                             if io_key not in perfect_ps_io_value:
                                 perfect_ps.append(new_program)
                             perfect_ps.append(new_program)
