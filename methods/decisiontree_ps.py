@@ -16,6 +16,8 @@ import pickle as pkl
 import os
 import tqdm
 import copy
+import multiprocessing
+from multiprocessing import Pool
 from functools import lru_cache, partial
 
 
@@ -644,6 +646,8 @@ def three_stages_bottom_up_version_space_based(all_positive_paths, dataset, spec
                     new_tf = ios.intersection(vss[vs_idx].tf)
                     # theoretically, ft should stay the same
                     new_ft = vss[vs_idx].ft
+                    print(new_tt)
+                    input()
                     old_p, old_r, old_f1 = get_p_r_f1(vss[vs_idx].tt, vss[vs_idx].tf, vss[vs_idx].ft)
                     try:
                         new_p, new_r, new_f1 = get_p_r_f1(new_tt, new_tf, new_ft)
