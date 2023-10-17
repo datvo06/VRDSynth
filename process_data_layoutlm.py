@@ -24,13 +24,31 @@ if __name__ == '__main__':
     start = time.time()
     map_label = {
         "b-title": "B-HEADER",
+        "b-title.": "B-HEADER",
+        "b-titlle": "B-HEADER",
+        "b- title": "B-HEADER",
         "b-titletitle": "B-HEADER",
         "i-title": "I-HEADER",
+        "i-titlle": "I-HEADER",
+        "i- title": "I-HEADER",
+        "i-title.": "I-HEADER",
         "i-titletitle": "I-HEADER",
         "b-key": "B-QUESTION",
+        "b-mkey": "B-QUESTION",
         "i-key": "I-QUESTION",
+        "i-mkey": "I-QUESTION",
         "b-value": "B-ANSWER",
+        "b-mvalue": "B-ANSWER",
+        "b-bvalue": "B-ANSWER",
         "i-value": "I-ANSWER",
+        "i-bvalue": "I-ANSWER",
+        "i-mvalue": "I-ANSWER",
+        "b- value": "B-ANSWER",
+        "b- \rvalue": "B-ANSWER",
+        "b-package": "B-HEADER",
+        "b-package:": "B-HEADER",
+        "b-" : "O",
+        "i-" : "O"
     }
     for file in tqdm(pdf_path.glob("*.pdf")):
         name = file.name[:-4]
