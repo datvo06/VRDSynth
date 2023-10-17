@@ -588,6 +588,9 @@ def three_stages_bottom_up_version_space_based(all_positive_paths, dataset, spec
         else:
             extended_cands = defaultdict(set)
             for i, vs in enumerate(vss):
+                old_p, old_r, old_f1 = get_p_r_f1(vs.tt, vs.tf, vs.ft)
+                if 0.1 <= old_p < 0.3:  # Do not extend
+                    continue
                 for p in vs.programs:
                     extend_cands = get_valid_cand_find_program(vs, p)
                     for ex_cand in extend_cands:
@@ -633,7 +636,7 @@ def three_stages_bottom_up_version_space_based(all_positive_paths, dataset, spec
                     new_ft = vss[vs_idx].ft
                     old_p, old_r, old_f1 = get_p_r_f1(vss[vs_idx].tt, vss[vs_idx].tf, vss[vs_idx].ft)
                     new_p, new_r, new_f1 = get_p_r_f1(new_tt, new_tf, new_ft)
-                    if (old_p > 0.3 and new_p > old_p) or (old_p < 0.1 and old_r > 0.1 and new_p < old_p):
+                    if (old_p >= 0.3 and new_p > old_p) or (old_p < 0.1 and old_r > 0.1 and new_p < old_p):
                         new_program = add_constraint_to_find_program(vss[vs_idx].programs[0], ex_cand)
                         if new_p > old_p: 
                             print(f"Found new increased precision: {old_p} -> {new_p}")
