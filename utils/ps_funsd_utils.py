@@ -50,6 +50,7 @@ if __name__ == '__main__':
         words = []
         label = []
         for group in uf.groups():
+            print(group)
             # merge boxes
             group_box = np.array(list([data['boxes'][j] for j in group]))
             boxes.append(np.array([np.min(group_box[:, 0]), np.min(group_box[:, 1]), np.max(group_box[:, 2]), np.max(group_box[:, 3])]))
