@@ -695,8 +695,8 @@ def three_stages_bottom_up_version_space_based(all_positive_paths, dataset, spec
             if cache_dir and os.path.exists(os.path.join(cache_dir, f"stage3_{it}_new_vs.pkl")):
                 with open(os.path.join(cache_dir, f"stage3_{it}_new_vs.pkl"), "wb") as f:
                     pkl.dump(new_vss, f)
-            perfect_ps = perfect_ps + list(itertools.chain.from_iterable(vs.programs for vs, hc in zip(vss, has_child) if not hc))
-            print("Number of non-improved programs:", len(perfect_ps))
+            # perfect_ps = perfect_ps + list(itertools.chain.from_iterable(vs.programs for vs, hc in zip(vss, has_child) if not hc))
+            print("Number of perfect programs:", len(perfect_ps))
             if cache_dir:
                 with open(os.path.join(cache_dir, f"stage3_{it}_perfect_ps.pkl"), "wb") as f:
                     pkl.dump(perfect_ps, f)
