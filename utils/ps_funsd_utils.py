@@ -52,7 +52,7 @@ if __name__ == '__main__':
             # merge label
             group_label = Counter([data['labels'][i] for i in group])
             label.append(group_label.most_common(1)[0][0])
-        img = cv2.imread(data['img_fp'])
+        img = cv2.imread(data['img_fp'].replace(".jpg", ".png"))
         data = DataSample(
                 words, label, data['entities'], data['entities_map'], boxes, data['img_fp'])
         # Draw all of these boxes on data
