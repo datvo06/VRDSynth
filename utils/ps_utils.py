@@ -993,6 +993,17 @@ class FloatGreaterConstraint(Constraint):
                 return True, TrueValue()
             else:
                 return True, FalseValue()
+        elif self.lhs == self.rhs:
+            return True, FalseValue()
+        elif isinstance(self.lhs, WordBoxProperty) and isinstance(self.rhs, WordBoxProperty) and self.lhs.word_var == self.rhs.word_var:
+            if self.lhs.prop == BoxConstantValue("x0") and self.rhs.prop == BoxConstantValue("x1"):
+                return True, FalseValue()
+            elif self.lhs.prop == BoxConstantValue("y0") and self.rhs.prop == BoxConstantValue("y1"):
+                return True, FalseValue()
+            elif self.lhs.prop == BoxConstantValue("x1") and self.rhs.prop == BoxConstantValue("x0"):
+                return True, TrueValue()
+            elif self.lhs.prop == BoxConstantValue("y1") and self.rhs.prop == BoxConstantValue("y0"):
+                return True, TrueValue()
         return False, self
 
     def __str__(self):
@@ -1043,6 +1054,17 @@ class FloatLessConstraint(Constraint):
             if self.lhs.evaluate() < self.rhs.evaluate():
                 return True, TrueValue()
             else:
+                return True, FalseValue()
+        elif self.lhs == self.rhs:
+            return True, FalseValue()
+        elif isinstance(self.lhs, WordBoxProperty) and isinstance(self.rhs, WordBoxProperty) and self.lhs.word_var == self.rhs.word_var:
+            if self.lhs.prop == BoxConstantValue("x0") and self.rhs.prop == BoxConstantValue("x1"):
+                return True, TrueValue()
+            elif self.lhs.prop == BoxConstantValue("y0") and self.rhs.prop == BoxConstantValue("y1"):
+                return True, TrueValue()
+            elif self.lhs.prop == BoxConstantValue("x1") and self.rhs.prop == BoxConstantValue("x0"):
+                return True, FalseValue()
+            elif self.lhs.prop == BoxConstantValue("y1") and self.rhs.prop == BoxConstantValue("y0"):
                 return True, FalseValue()
         return False, self
 
