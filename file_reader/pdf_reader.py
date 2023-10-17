@@ -199,7 +199,9 @@ def get_annotation(page, labels=None, delete_annot=False):
             continue
         if labels is not None:
             label = labels[label]
-
+        if "highlight" not in annot.type[1].lower():
+            annot = annot.next
+            continue
         annots = get_annot_character(annot.vertices, chars, label)
         paragraph = Paragraph(textlines=annots)
         paragraph.tag = tag
