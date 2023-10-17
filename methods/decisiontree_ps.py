@@ -641,13 +641,15 @@ def three_stages_bottom_up_version_space_based(all_positive_paths, dataset, spec
                     for i, (word_binding, relation_binding) in vs_intersect_mapping:
                         word_binding, relation_binding = tuple2mapping((word_binding, relation_binding))
                         ios.add((i, word_binding[WordVariable("w0")], word_binding[binding_var]))
+                    if not ios:
+                        continue
                     # Now check the tt, tf, ft
                     new_tt = ios.intersection(vss[vs_idx].tt)
                     new_tf = ios.intersection(vss[vs_idx].tf)
                     # theoretically, ft should stay the same
                     new_ft = vss[vs_idx].ft
-                    print(new_tt)
-                    input()
+                    if not new_tt and not new_ft:
+                        continue
                     old_p, old_r, old_f1 = get_p_r_f1(vss[vs_idx].tt, vss[vs_idx].tf, vss[vs_idx].ft)
                     try:
                         new_p, new_r, new_f1 = get_p_r_f1(new_tt, new_tf, new_ft)
