@@ -698,6 +698,13 @@ class RelationLabelProperty(RelationLabelValue):
     def __str__(self):
         return f'{self.relation_variable}.lbl'
 
+    def __eq__(self, other):
+        return isinstance(other, RelationLabelProperty) and other.relation_variable == self.relation_variable
+
+    def hash(self):
+        return hash(str(self))
+
+
 
 class Constraint(BoolValue):
     def evaluate(self, *values) -> bool:
