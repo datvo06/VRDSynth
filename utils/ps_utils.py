@@ -1165,7 +1165,7 @@ GrammarReplacement = {
     BoolValue.type_name(): [TrueValue, FalseValue, Constraint],
     LabelValue.type_name(): [LabelConstant, WordLabelProperty],
     RelationLabelValue.type_name(): [RelationLabelConstant, RelationLabelProperty],
-    Constraint.type_name(): [BooleanEqualConstraint, StringEqualConstraint, StringContainsConstraint, OrConstraint, NotConstraint, LabelEqualConstraint, RelationLabelEqualConstraint, FloatEqualConstraint, FloatGreaterConstraint, FloatLessConstraint]
+    Constraint.type_name(): [BooleanEqualConstraint, StringEqualConstraint, StringContainsConstraint, OrConstraint, NotConstraint, LabelEqualConstraint, RelationLabelEqualConstraint, FloatGreaterConstraint, FloatLessConstraint] # removed float equal constraint
 }
 
 LiteralSet = set(['WordVariable', 'RelationVariable', 'EmptyProgram', "TrueValue", "FalseValue", "StringConstant", "FloatConstant", "LabelConstant", "BoxConstantValue", "RelationPropertyConstant", "RelationLabelConstant"])
@@ -1176,7 +1176,7 @@ LiteralReplacement = {
         'TrueValue': [TrueValue()],
         'FalseValue': [FalseValue()],
         'StringConstant': [StringConstant(''), StringConstant('.'), StringConstant('-'), StringConstant('%')],
-        'FloatConstant': [FloatConstant(0.1), FloatConstant(0.2), FloatConstant(0.3), FloatConstant(0.4)],
+        'FloatConstant': [FloatConstant(0.1), FloatConstant(0.2), FloatConstant(0.3), FloatConstant(0.4)], # this should reflect our normalization method.
         'LabelConstant': [LabelConstant('header'), LabelConstant('key'), LabelConstant('value')],
         'BoxConstantValue': [BoxConstantValue('x0'), BoxConstantValue('y0'), BoxConstantValue('x1'), BoxConstantValue('y1')],
         'RelationPropertyConstant': [RelationPropertyConstant('mag'), *[RelationPropertyConstant(f'proj{i}') for i in range(4)]],
