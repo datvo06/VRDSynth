@@ -31,7 +31,7 @@ if __name__ == '__main__':
         out_bindings = batch_find_program_executor(nx_g, ps)
 
         uf = UnionFind(len(data['boxes']))
-        for i, p_bindings in out_bindings:
+        for i, p_bindings in out_bindings.items()
             return_var = p_bindings.return_variables[0]
             for w_binding, r_binding in p_bindings:
                 w0 = w_binding[WordVariable('w0')]
