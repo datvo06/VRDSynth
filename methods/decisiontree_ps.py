@@ -460,7 +460,8 @@ def collect_program_execution(programs, dataset, data_sample_set_relation_cache,
 
 def collect_constraint_execution(data_sample_set_relation_cache, valid_inputs):
     all_out_mappingss = defaultdict(set)
-    for c, inp_set in valid_inputs:
+    bar = tqdm.tqdm(valid_inputs.items())
+    for c, inp_set in bar:
         for i, (word_binding, relation_binding) in inp_set.items():
             word_binding, relation_binding = tuple2mapping((word_binding, relation_binding))
             nx_g = data_sample_set_relation_cache[i]
@@ -598,7 +599,9 @@ def three_stages_bottom_up_version_space_based(all_positive_paths, dataset, spec
         # Now we have extended_cands
         # Let's create the set of valid input for each cands
         if cache_dir and os.path.exists(os.path.join(cache_dir, f"stage3_{it}_valid_inputs.pkl")):
+            print("Loading valid inputs...")
             valid_inputs = pkl.load(open(os.path.join(cache_dir, f"stage3_{it}_valid_inputs.pkl"), "rb"))
+            print("Loaded Valid inputs")
         else:
             valid_inputs = defaultdict(set)
             for ex_cand, vs_idxs in extended_cands.items():
