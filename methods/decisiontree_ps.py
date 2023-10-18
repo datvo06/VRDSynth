@@ -598,23 +598,24 @@ def three_stages_bottom_up_version_space_based(all_positive_paths, dataset, spec
     for p in programs:
         tt_p, tf_p, ft_p = tt[p], tf[p], ft[p]
         io_to_program[tuple(tt_p), tuple(tf_p), tuple(ft_p)].append(p)
+        w0 = WordVariable("w0")
+        wret = p.return_variables[0]
+        all_set = set(tt_p) | set(tf_p)
+        all_set_verify = set()
+        for i, (w_bind, r_bind) in all_out_mappingss[p]:
+            w_bind, r_bind = tuple2mapping((w_bind, r_bind))
+            all_set_verify.add((i, w_bind[w0], w_bind[wret]))
+
+        assert all_set == all_set_verify, f"{all_set - all_set_verify} != {all_set_verify - all_set}"
+
+
     for (tt_p, tf_p, ft_p), ps in io_to_program.items():
         for p in ps:
             for op in ps:
                 if op == p:
                     continue
                 assert all_out_mappingss[p] == all_out_mappingss[op]
-            w0 = WordVariable("w0")
-            wret = p.return_variables[0]
-            all_set = set(tt_p) | set(tf_p )
-            all_set_verify = set()
-            for i, (w_bind, r_bind) in all_out_mappingss[p]:
-                w_bind, r_bind = tuple2mapping((w_bind, r_bind))
-                all_set_verify.add((i, w_bind[w0], w_bind[wret]))
-
-            assert all_set == all_set_verify, f"{all_set - all_set_verify} != {all_set_verify - all_set}"
-
-
+            
         vss.append(VersionSpace(tt, tf, ft, ps, all_out_mappingss[ps[0]]))
 
     print("Number of version spaces: ", len(vss))
