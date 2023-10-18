@@ -670,6 +670,9 @@ def three_stages_bottom_up_version_space_based(all_positive_paths, dataset, spec
                         if new_p == 1.0:
                             if io_key not in perfect_ps_io_value:
                                 perfect_ps.append(new_program)
+                            if len(covered_tt) == 22858:
+                                with open(os.path.join(cache_dir, f"stage3_{it}_perfect_ps.pkl"), "wb") as f:
+                                    pkl.dump(perfect_ps, f)
                             continue
                         if new_p == 0.0 and new_r > 0.0:
                             acc += 1
