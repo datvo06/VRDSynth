@@ -607,6 +607,7 @@ def three_stages_bottom_up_version_space_based(all_positive_paths, dataset, spec
             all_set = set(tt_p) | set(tf_p )
             all_set_verify = set()
             for i, (w_bind, r_bind) in all_out_mappingss[p]:
+                w_bind, r_bind = tuple2mapping((w_bind, r_bind))
                 all_set_verify.add((i, w_bind[w0], w_bind[wret]))
 
             assert all_set == all_set_verify
