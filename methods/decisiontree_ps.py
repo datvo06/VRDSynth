@@ -602,7 +602,7 @@ def three_stages_bottom_up_version_space_based(all_positive_paths, dataset, spec
         wret = p.return_variables[0]
         all_set = set(tt_p) | set(tf_p)
         all_set_verify = set()
-        for i, (w_bind, r_bind) in all_out_mappings[p]:
+        for i, (w_bind, r_bind) in sorted(list(all_out_mappings[p])):
             nx_g = data_sample_set_relation_cache[i]
             w_bind, r_bind = tuple2mapping((w_bind, r_bind))
             print(w_bind, r_bind)
