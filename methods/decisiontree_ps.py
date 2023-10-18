@@ -617,9 +617,9 @@ def three_stages_bottom_up_version_space_based(all_positive_paths, dataset, spec
                 tf[p].add((i, w_bind[w0], w_bind[wret]))
             w2otherwords[i][w_bind[w0]].add(w_bind[wret])
         for i in range(len(dataset)):
-            for w0 in w2otherwords[i]:
-                rem = w2e[i][w0] - w2otherwords[i][w0] - {w0}
-                ft[p].update([(i, w0, w) for w in rem])
+            for w0bind in w2otherwords[i]:
+                rem = w2e[i][w0bind] - w2otherwords[i][w0bind] - {w0bind}
+                ft[p].update([(i, w0bind, w) for w in rem])
 
         
     # STAGE 3: Build version space
