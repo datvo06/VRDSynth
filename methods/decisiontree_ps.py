@@ -450,6 +450,7 @@ def collect_program_execution(programs, dataset, data_sample_set_relation_cache,
     bar = tqdm.tqdm(specs)
     bar.set_description("Getting Program Output")
     all_out_mappings = defaultdict(set)
+    all_word_pairs = defaultdict(set)
     for i, entities in bar:
         nx_g = data_sample_set_relation_cache[i]
         w2entities = {}
@@ -461,10 +462,12 @@ def collect_program_execution(programs, dataset, data_sample_set_relation_cache,
         word_mappingss = list([list([om[0] for om in oms]) for oms in out_mappingss])
         assert len(out_mappingss) == len(programs), len(out_mappingss)
         assert len(word_mappingss) == len(programs), len(word_mappingss)
+        w0 = WordVariable("w0")
         for p, oms in zip(programs, out_mappingss):
+            wret = p.return_variables[0]
             for mapping in oms:
                 all_out_mappings[p].add((i, mapping2tuple(mapping)))
-        w0 = WordVariable("w0")
+                all_word_pairs[p].add((i, (mapping[0][w0], mapping[0][wret])))
         for (word_mappings, p) in zip(word_mappingss, programs):
             w2otherwords = defaultdict(set)
             ret_var = p.return_variables[0]
