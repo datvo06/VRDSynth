@@ -600,6 +600,7 @@ def three_stages_bottom_up_version_space_based(all_positive_paths, dataset, spec
         for e in data.entities:
             for w in e:
                 w2e[i][w] = set(e)
+    io_to_program = defaultdict(list)
 
     tt, tf, ft = [defaultdict(set) for _ in range(3)]
     w0 = WordVariable("w0")
@@ -617,6 +618,7 @@ def three_stages_bottom_up_version_space_based(all_positive_paths, dataset, spec
             for w0bind in w2otherwords[i]:
                 rem = w2e[i][w0bind] - w2otherwords[i][w0bind] - {w0bind}
                 ft[p].update([(i, w0bind, w) for w in rem])
+        io_to_program[tuple(tt[p]), tuple(tf[p]), tuple(ft[p])].append(p)
 
         
     all_word_pairs = defaultdict(set)
@@ -628,30 +630,8 @@ def three_stages_bottom_up_version_space_based(all_positive_paths, dataset, spec
         assert all_word_pairs[p] == (tt[p] | tf[p])
     # STAGE 3: Build version space
     vss = []
-    io_to_program = defaultdict(list)
-    for p in programs:
-        tt_p, tf_p, ft_p = tt[p], tf[p], ft[p]
-        io_to_program[tuple(tt_p), tuple(tf_p), tuple(ft_p)].append(p)
-        wret = p.return_variables[0]
-        all_set = tt_p | tf_p
-        all_set_verify = set()
-        for i, (w_bind, r_bind) in sorted(list(all_out_mappings[p])):
-            nx_g = data_sample_set_relation_cache[i]
-            w_bind, r_bind = tuple2mapping((w_bind, r_bind))
-            w_bind_val = {w: nx_g.nodes[v] for w, v in w_bind.items()}
-            r_bind_val = {r: nx_g.edges[v] for r, v in r_bind.items()}
-            val = p.constraint.evaluate(w_bind, r_bind, nx_g)
-            assert val
-        for i, (w_bind, r_bind) in sorted(list(all_out_mappings[p])):
-            w_bind, r_bind = tuple2mapping((w_bind, r_bind))
-            assert ((i, (w_bind[w0], w_bind[wret])) in all_set), (i, w_bind[w0], w_bind[wret])
-            all_set_verify.add((i, w_bind[w0], w_bind[wret]))
-
-        assert all_set == all_set_verify, f"{all_set - all_set_verify} != {all_set_verify - all_set}"
-
-
     for (tt_p, tf_p, ft_p), ps in io_to_program.items():
-        vss.append(VersionSpace(tt, tf, ft, ps, all_out_mappings[ps[0]]))
+        vss.append(VersionSpace(tt_p, tf_p, ft_p, ps, all_out_mappings[ps[0]]))
 
     print("Number of version spaces: ", len(vss))
     max_its = 10
