@@ -598,6 +598,7 @@ def three_stages_bottom_up_version_space_based(all_positive_paths, dataset, spec
     w2e = [defaultdict(set) for _ in range(len(dataset))]
     for i, data in enumerate(dataset):
         for e in data.entities:
+            print(e)
             for w in e:
                 w2e[i][w] = set(e)
 
