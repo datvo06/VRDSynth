@@ -490,6 +490,8 @@ def collect_program_execution(programs, dataset, data_sample_set_relation_cache,
                 rem = e - w2otherwords[w] - set([w])
                 for w2 in rem:
                     ft[p].add((i, w, w2))
+            for l in tt[p] | tf[p]:
+                assert l[2] in w2otherwords[l[1]]
             assert all_set_verify[p] == (tt[p].union(tf[p])), (all_set_verify[p] - tt[p].union(tf[p]), (tt[p].union(tf[p]) - all_set_verify[p]))
     return tt, ft, tf, all_out_mappingss
 
