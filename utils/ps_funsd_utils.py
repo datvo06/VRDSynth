@@ -73,7 +73,6 @@ if __name__ == '__main__':
                 color = (255, 0, 255)
             elif label == 'answer': # red
                 color = (0, 0, 255)
-            cv2.rectangle(img, (box[0], box[1]), (box[2], box[3]), (0, 0, 255))
-            cv2.putText(img, label, (box[0], box[1]), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 1)
+            cv2.rectangle(img, (box[0], box[1]), (box[2], box[3]), color)
         cv2.imwrite(f"{args.cache_dir}/inference_{i}.png", img)
 
