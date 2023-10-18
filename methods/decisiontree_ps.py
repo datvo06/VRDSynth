@@ -471,13 +471,13 @@ def collect_program_execution(programs, dataset, data_sample_set_relation_cache,
             for i, (w_bind, r_bind) in all_out_mappingss[p]:
                 w_bind, r_bind = tuple2mapping((w_bind, r_bind))
                 all_set_verify[p].add((i, w_bind[w0], w_bind[wret]))
-        for j, (res, p) in enumerate(zip(word_mappingss, p)):
+        for (res, p) in zip(word_mappingss, programs):
             w2otherwords = defaultdict(set)
             ret_var = p.return_variables[0]
             # Turn off return var to return every mapping
             for w_bind in res:
                 w2otherwords[w_bind[w0]].add(w_bind[ret_var])
-                assert (i, w_bind[w0], w_bind[ret_var]) in all_set_verify[p], (i, w_bind[w0], w_bind[ret_var])
+                assert (i, w_bind[w0], w_bind[ret_var]) in all_set_verify[p], ((i, w_bind[w0], w_bind[ret_var]), all_set_verify[p])
             for w in w2otherwords:
                 e = w2entities[w]
                 for w2 in w2otherwords[w]:
