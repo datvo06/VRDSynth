@@ -597,7 +597,7 @@ def three_stages_bottom_up_version_space_based(all_positive_paths, dataset, spec
             for w in e:
                 w2e[i][w] = set(e)
 
-    tt, tf, ft = defaultdict(set)
+    tt, tf, ft = [defaultdict(set) for _ in range(3)]
     w0 = WordVariable("w0")
     for p in programs:
         wret = p.return_variables[0]
