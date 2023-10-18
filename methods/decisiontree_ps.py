@@ -602,6 +602,14 @@ def three_stages_bottom_up_version_space_based(all_positive_paths, dataset, spec
                 if op == p:
                     continue
                 assert all_out_mappingss[p] == all_out_mappingss[op]
+            w0 = WordVariable("w0")
+            wret = p.return_variables[0]
+            all_set = tt_p | tf_p 
+            all_set_verify = set()
+            for i, (w_bind, r_bind) in all_out_mappingss[p]:
+                all_set_verify.add((i, w_bind[w0], w_bind[wret]))
+
+
         vss.append(VersionSpace(tt, tf, ft, ps, all_out_mappingss[ps[0]]))
 
     print("Number of version spaces: ", len(vss))
@@ -644,7 +652,8 @@ def three_stages_bottom_up_version_space_based(all_positive_paths, dataset, spec
                     cnt += 1
                     big_bar.set_postfix({"cnt" : cnt, 'covered_tt': len(covered_tt)})
                     vs_intersect_mapping = set()
-                    for i, (w_bind, r_bind) in vss[vs_idx].mappings:
+                    vs = vss[vs_idx]
+                    for i, (w_bind, r_bind) in vs.mappings:
                         nx_g = data_sample_set_relation_cache[i]
                         if (i, (w_bind, r_bind)) in cache:
                             if cache[(i, (w_bind, r_bind))]:
@@ -688,7 +697,7 @@ def three_stages_bottom_up_version_space_based(all_positive_paths, dataset, spec
                         io_key = tuple((tuple(new_tt), tuple(new_tf), tuple(new_ft)))
                         if io_key in new_io_to_vs:
                             continue
-                        new_program = add_constraint_to_find_program(vss[vs_idx].programs[0], ex_cand)
+                        new_program = add_constraint_to_find_program(vss[vs_idx].programs[0], c)
 
                         if new_p > old_p: 
                             if not (new_tt - covered_tt):
@@ -717,7 +726,7 @@ def three_stages_bottom_up_version_space_based(all_positive_paths, dataset, spec
                         else:
                             new_io_to_vs[io_key].programs.append(new_program)
                 if not acc:
-                    print("Rejecting: ", ex_cand)
+                    print("Rejecting: ", c)
 
 
             if cache_dir and os.path.exists(os.path.join(cache_dir, f"stage3_{it}_new_vs.pkl")):
