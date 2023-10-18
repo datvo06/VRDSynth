@@ -603,8 +603,12 @@ def three_stages_bottom_up_version_space_based(all_positive_paths, dataset, spec
         all_set = set(tt_p) | set(tf_p)
         all_set_verify = set()
         for i, (w_bind, r_bind) in all_out_mappings[p]:
+            nx_g = data_sample_set_relation_cache[i]
             w_bind, r_bind = tuple2mapping((w_bind, r_bind))
             print(w_bind, r_bind)
+            w_bind_val = {w: nx_g.nodes[v] for w, v in w_bind.items()}
+            r_bind_val = {r: nx_g.edges[v] for r, v in r_bind.items()}
+            print(p.constraint, w_bind_val, r_bind_val, p.constraint.evaluate(w_bind, r_bind, nx_g))
             assert ((i, (w_bind[w0], w_bind[wret])) in all_set), (i, w_bind[w0], w_bind[wret])
             all_set_verify.add((i, w_bind[w0], w_bind[wret]))
 
