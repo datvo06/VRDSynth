@@ -666,12 +666,13 @@ def three_stages_bottom_up_version_space_based(all_positive_paths, dataset, spec
             big_bar = tqdm.tqdm(c2vs.items())
             big_bar.set_description("Stage 3 - Creating New Version Spaces")
             covered_tt = set()
+            covered_tt_perfect = set()
             for c, vs_idxs in big_bar:
                 # Cache to save computation cycles
                 cache, cnt, acc = {}, 0, 0 
                 for vs_idx in vs_idxs:
                     cnt += 1
-                    big_bar.set_postfix({"cnt" : cnt, 'covered_tt': len(covered_tt)})
+                    big_bar.set_postfix({"cnt" : cnt, 'covered_tt': len(covered_tt), 'covered_tt_perfect': len(covered_tt_perfect)})
                     vs_intersect_mapping = set()
                     vs = vss[vs_idx]
                     for i, (w_bind, r_bind) in vs.mappings:
@@ -714,7 +715,14 @@ def three_stages_bottom_up_version_space_based(all_positive_paths, dataset, spec
                         if io_key in new_io_to_vs:
                             continue
                         new_program = add_constraint_to_find_program(vss[vs_idx].programs[0], c)
-
+                        if new_p == 1.0 and (new_tt - covered_tt_perfect):
+                            if io_key not in perfect_ps_io_value:
+                                perfect_ps.append(new_program)
+                                perfect_ps_io_value.add(io_key)
+                                with open(os.path.join(cache_dir, f"stage3_{it}_perfect_ps.pkl"), "wb") as f:
+                                    pkl.dump(perfect_ps, f)
+                            covered_tt_perfect.update(new_tt)
+                            continue
                         if new_p > old_p: 
                             if not (new_tt - covered_tt):
                                 continue
@@ -722,13 +730,7 @@ def three_stages_bottom_up_version_space_based(all_positive_paths, dataset, spec
                             print(f"Found new increased precision: {old_p} -> {new_p}")
                             acc += 1
                         has_child[vs_idx] = True
-                        if new_p == 1.0:
-                            if io_key not in perfect_ps_io_value:
-                                perfect_ps.append(new_program)
-                            if len(covered_tt) == 22858:
-                                with open(os.path.join(cache_dir, f"stage3_{it}_perfect_ps.pkl"), "wb") as f:
-                                    pkl.dump(perfect_ps, f)
-                            continue
+
                         if new_p == 0.0 and new_r > 0.0:
                             acc += 1
                             print(f"Found new decreased precision: {old_p} -> {new_p}")
