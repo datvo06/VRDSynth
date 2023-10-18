@@ -530,6 +530,8 @@ def report_metrics(programs, p_io_tt, p_io_tf, p_io_ft, io_to_program):
         tt_j, tf_j, ft_j = p_io_tt[p], p_io_tf[p], p_io_ft[p]
         if len(tt_j) + len(tf_j) == 0:
             continue
+        if len(tt_j) == 0:
+            continue
         io_to_program[tuple(tt_j), tuple(tf_j), tuple(ft_j)].append(programs[j])
         # Calculate precision, recall, f1
         p = len(tt_j) / (len(tt_j) + len(tf_j))
