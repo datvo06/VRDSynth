@@ -639,9 +639,7 @@ def three_stages_bottom_up_version_space_based(all_positive_paths, dataset, spec
             covered_tt = set()
             for c, vs_idxs in big_bar:
                 # Cache to save computation cycles
-                cache = {}
-                cnt = 0
-                acc = 0
+                cache, cnt, acc = {}, 0, 0 
                 for vs_idx in vs_idxs:
                     cnt += 1
                     big_bar.set_postfix({"cnt" : cnt, 'covered_tt': len(covered_tt)})
@@ -653,7 +651,9 @@ def three_stages_bottom_up_version_space_based(all_positive_paths, dataset, spec
                         else:
                             w_bind, r_bind = tuple2mapping((w_bind, r_bind))
                             val = c.evaluate(w_bind, r_bind, data_sample_set_relation_cache[i])
-                            print(c, w_bind, r_bind, val)
+                            w_bind_val = {w: nx_g.nodes[v] for w, v in w_bind.items()}
+                            r_bind_val = {r: nx_g.edges[v] for r, v in r_bind.items()}
+                            print(c, w_bind_val, r_bind_val, val)
                             input()
                             if val:
                                 cache[(i, mapping2tuple((w_bind, r_bind)))] = True
