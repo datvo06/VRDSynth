@@ -555,8 +555,8 @@ def three_stages_bottom_up_version_space_based(all_positive_paths, dataset, spec
     # Load the following: vs_io, vs_io_neg, p_io, p_io_neg, io_to_program
     if cache_dir is not None and os.path.exists(os.path.join(cache_dir, 'stage2.pkl')):
         with open(os.path.join(cache_dir, "stage2.pkl"), "rb") as f:
-            p_io_tt, p_io_tf, p_io_ft, io_to_program, all_out_mappingss = pkl.load(f)
-            print(len(p_io_tt), len(p_io_tf), len(p_io_ft))
+            tt, tf, ft, io_to_program, all_out_mappingss = pkl.load(f)
+            print(len(tt), len(tf), len(ft))
     else:
         bar = tqdm.tqdm(specs)
         bar.set_description("Stage 2 - Getting Program Output")
@@ -572,9 +572,13 @@ def three_stages_bottom_up_version_space_based(all_positive_paths, dataset, spec
 
         
     # STAGE 3: Build version space
-    vss = [VersionSpace(*k, v, all_out_mappingss[v[0]]) for k, v in io_to_program.items()]
-    for i, k in enumerate(io_to_program.keys()):
-        vss[i].mappings = all_out_mappingss[io_to_program[k][0]]
+    vss = []
+    io_to_program = defaultdict(list)
+    for p in programs:
+        tt_p, tf_p, ft_p = tt[p], tf[p], ft[p]
+        io_to_program[tuple(tt_p), tuple(tf_p), tuple(ft_p)].append(p)
+    for (tt_p, tf_p, ft_p), ps in io_to_program.items():
+        vss.append(VersionSpace(tt, tf, ft, ps, all_out_mappingss[ps[0]]))
 
     print("Number of version spaces: ", len(vss))
     max_its = 10
