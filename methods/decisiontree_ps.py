@@ -668,7 +668,6 @@ def three_stages_bottom_up_version_space_based(all_positive_paths, dataset, spec
                             acc += 1
                         has_child[vs_idx] = True
                         if new_p == 1.0:
-                            print(new_tt, new_tf)
                             if io_key not in perfect_ps_io_value:
                                 perfect_ps.append(new_program)
                             continue
