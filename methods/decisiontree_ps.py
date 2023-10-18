@@ -610,7 +610,7 @@ def three_stages_bottom_up_version_space_based(all_positive_paths, dataset, spec
                 w_bind, r_bind = tuple2mapping((w_bind, r_bind))
                 all_set_verify.add((i, w_bind[w0], w_bind[wret]))
 
-            assert all_set == all_set_verify, f"{all_set} != {all_set_verify}"
+            assert all_set == all_set_verify, f"{all_set - all_set_verify} != {all_set_verify - all_set}"
 
 
         vss.append(VersionSpace(tt, tf, ft, ps, all_out_mappingss[ps[0]]))
