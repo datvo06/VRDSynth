@@ -611,6 +611,7 @@ def three_stages_bottom_up_version_space_based(all_positive_paths, dataset, spec
             print(p.constraint, w_bind_val, r_bind_val, p.constraint.evaluate(w_bind, r_bind, nx_g))
             assert val
         for i, (w_bind, r_bind) in sorted(list(all_out_mappings[p])):
+            w_bind, r_bind = tuple2mapping((w_bind, r_bind))
             print(w_bind, r_bind)
             assert ((i, (w_bind[w0], w_bind[wret])) in all_set), (i, w_bind[w0], w_bind[wret])
             all_set_verify.add((i, w_bind[w0], w_bind[wret]))
