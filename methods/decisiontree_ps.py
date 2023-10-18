@@ -609,19 +609,19 @@ def three_stages_bottom_up_version_space_based(all_positive_paths, dataset, spec
     perfect_ps = []
     for it in range(max_its):
         if cache_dir and os.path.exists(os.path.join(cache_dir, f"stage3_{it}.pkl")):
-            vss, extended_cands = pkl.load(open(os.path.join(cache_dir, f"stage3_{it}.pkl"), "rb"))
+            vss, c2vs = pkl.load(open(os.path.join(cache_dir, f"stage3_{it}.pkl"), "rb"))
         else:
-            extended_cands = defaultdict(set)
+            c2vs = defaultdict(set)
             for i, vs in enumerate(vss):
                 old_p, old_r, old_f1 = get_p_r_f1(vs.tt, vs.tf, vs.ft)
                 for p in vs.programs:
-                    extend_cands = get_valid_cand_find_program(vs, p)
-                    for ex_cand in extend_cands:
-                        extended_cands[ex_cand].add(i)
+                    cs = get_valid_cand_find_program(vs, p)
+                    for c in cs:
+                        c2vs[c].add(i)
             # Save this for this iter
             if cache_dir:
                 with open(os.path.join(cache_dir, f"stage3_{it}.pkl"), "wb") as f:
-                    pkl.dump([vss, extended_cands], f)
+                    pkl.dump([vss, c2vs], f)
         # Now we have extended_cands
         # Let's create the set of valid input for each cands
         # for each constraint, check against each of the original programs
@@ -634,10 +634,10 @@ def three_stages_bottom_up_version_space_based(all_positive_paths, dataset, spec
             perfect_ps = []
             perfect_ps_io_value = set()
             has_child = [False] * len(vss)
-            big_bar = tqdm.tqdm(extended_cands.items())
+            big_bar = tqdm.tqdm(c2vs.items())
             big_bar.set_description("Stage 3 - Creating New Version Spaces")
             covered_tt = set()
-            for ex_cand, vs_idxs in big_bar:
+            for c, vs_idxs in big_bar:
                 # Cache to save computation cycles
                 cache = {}
                 cnt = 0
@@ -646,20 +646,20 @@ def three_stages_bottom_up_version_space_based(all_positive_paths, dataset, spec
                     cnt += 1
                     big_bar.set_postfix({"cnt" : cnt, 'covered_tt': len(covered_tt)})
                     vs_intersect_mapping = set()
-                    for i, (word_binding, relation_binding) in vss[vs_idx].mappings:
-                        if (i, (word_binding, relation_binding)) in cache:
-                            if cache[(i, (word_binding, relation_binding))]:
-                                vs_intersect_mapping.add((i, (word_binding, relation_binding)))
-                            else:
-                                continue
+                    for i, (w_bind, r_bind) in vss[vs_idx].mappings:
+                        if (i, (w_bind, r_bind)) in cache:
+                            if cache[(i, (w_bind, r_bind))]:
+                                vs_intersect_mapping.add((i, (w_bind, r_bind)))
                         else:
-                            word_binding, relation_binding = tuple2mapping((word_binding, relation_binding))
-                            val = ex_cand.evaluate(word_binding, relation_binding, data_sample_set_relation_cache[i])
+                            w_bind, r_bind = tuple2mapping((w_bind, r_bind))
+                            val = c.evaluate(w_bind, r_bind, data_sample_set_relation_cache[i])
+                            print(c, w_bind, r_bind, val)
+                            input()
                             if val:
-                                cache[(i, mapping2tuple((word_binding, relation_binding)))] = True
-                                vs_intersect_mapping.add((i, mapping2tuple((word_binding, relation_binding))))
+                                cache[(i, mapping2tuple((w_bind, r_bind)))] = True
+                                vs_intersect_mapping.add((i, mapping2tuple((w_bind, r_bind))))
                             else:
-                                cache[(i, mapping2tuple((word_binding, relation_binding)))] = False
+                                cache[(i, mapping2tuple((w_bind, r_bind)))] = False
                     # each constraint combined with each vs will lead to another vs
                     if not vs_intersect_mapping:        # There is no more candidate
                         continue
