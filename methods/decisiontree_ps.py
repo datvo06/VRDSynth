@@ -578,6 +578,11 @@ def three_stages_bottom_up_version_space_based(all_positive_paths, dataset, spec
         tt_p, tf_p, ft_p = tt[p], tf[p], ft[p]
         io_to_program[tuple(tt_p), tuple(tf_p), tuple(ft_p)].append(p)
     for (tt_p, tf_p, ft_p), ps in io_to_program.items():
+        for p in ps:
+            for op in ps:
+                if op == p:
+                    continue
+                assert all_out_mappingss[p] == all_out_mappingss[op]
         vss.append(VersionSpace(tt, tf, ft, ps, all_out_mappingss[ps[0]]))
 
     print("Number of version spaces: ", len(vss))
