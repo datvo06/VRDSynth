@@ -43,7 +43,6 @@ if __name__ == '__main__':
                 w0 = w_binding[WordVariable('w0')]
                 wlast = w_binding[return_var]
                 uf.union(w0, wlast)
-                print(w0, wlast)
                 ucount += 1
         print(f"Union count: {ucount}")
 
@@ -58,6 +57,7 @@ if __name__ == '__main__':
             # merge words
             group_word = sorted(list([(j, data['words'][j]) for j in group]),key=lambda x: data['boxes'][int(x[0])][0])
             words.append(' '.join([word for _, word in group_word]))
+            print(words[-1])
             # merge label
             group_label = Counter([data['labels'][j] for j in group])
             label.append(group_label.most_common(1)[0][0])
