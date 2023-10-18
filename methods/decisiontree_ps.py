@@ -463,12 +463,19 @@ def collect_program_execution(programs, dataset, data_sample_set_relation_cache,
         for p, oms in zip(programs, out_mappingss):
             for mapping in oms:
                 all_out_mappingss[p].add((i, mapping2tuple(mapping)))
+        w0 = WordVariable("w0")
+        all_set_verify = defaultdict(set)
+        for p in programs:
+            wret = p.return_variables[0]
+            for i, (w_bind, r_bind) in all_out_mappingss[p]:
+                w_bind, r_bind = tuple2mapping((w_bind, r_bind))
+                all_set_verify[p].add((i, w_bind[w0], w_bind[wret]))
         for j, (res, program) in enumerate(zip(word_mappingss, programs)):
             w2otherwords = defaultdict(set)
             return_vars = program.return_variables
             # Turn off return var to return every mapping
             for word_binding in res:
-                w2otherwords[word_binding[WordVariable("w0")]].add(word_binding[return_vars[0]])
+                w2otherwords[word_binding[w0]].add(word_binding[return_vars[0]])
             for w in w2otherwords:
                 e = w2entities[w]
                 for w2 in w2otherwords[w]:
@@ -479,6 +486,7 @@ def collect_program_execution(programs, dataset, data_sample_set_relation_cache,
                 rem = e - w2otherwords[w] - set([w])
                 for w2 in rem:
                     ft[program].add((i, w, w2))
+            assert all_set_verify[program] == (tt[program] | tf[program]), (all_set_verify[program], tt[program] | tf[program])
     return tt, ft, tf, all_out_mappingss
 
     
