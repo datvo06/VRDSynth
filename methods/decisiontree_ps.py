@@ -620,6 +620,7 @@ def three_stages_bottom_up_version_space_based(all_positive_paths, dataset, spec
             has_child = [False] * len(vss)
             big_bar = tqdm.tqdm(extended_cands.items())
             big_bar.set_description("Stage 3 - Creating New Version Spaces")
+            covered_tt = set()
             for ex_cand, vs_idxs in big_bar:
                 # Cache to save computation cycles
                 cache = {}
@@ -630,15 +631,19 @@ def three_stages_bottom_up_version_space_based(all_positive_paths, dataset, spec
                     big_bar.set_postfix({"cnt" : cnt})
                     vs_intersect_mapping = set()
                     for i, (word_binding, relation_binding) in vss[vs_idx].mappings:
-                        if (i, (word_binding, relation_binding)) in cache:
+                        if (i, (word_binding, relation_binding))in cache:
                             if cache[(i, (word_binding, relation_binding))]:
                                 vs_intersect_mapping.add((i, mapping2tuple((word_binding, relation_binding))))
                             else:
                                 continue
                         else:
                             word_binding, relation_binding = tuple2mapping((word_binding, relation_binding))
-                            if ex_cand.evaluate(word_binding, relation_binding, data_sample_set_relation_cache[i]):
+                            val = ex_cand.evaluate(word_binding, relation_binding, data_sample_set_relation_cache[i])
+                            if val:
+                                cache[(i, (word_binding, relation_binding))] = True
                                 vs_intersect_mapping.add((i, mapping2tuple((word_binding, relation_binding))))
+                            else:
+                                cache[(i, (word_binding, relation_binding))] = False
                     # each constraint combined with each vs will lead to another vs
                     if not vs_intersect_mapping:        # There is no more candidate
                         continue
@@ -651,6 +656,9 @@ def three_stages_bottom_up_version_space_based(all_positive_paths, dataset, spec
                         continue
                     # Now check the tt, tf, ft
                     new_tt = ios.intersection(vss[vs_idx].tt)
+                    if not(new_tt - covered_tt):
+                        continue
+                    covered_tt |= new_tt
                     new_tf = ios.intersection(vss[vs_idx].tf)
                     # theoretically, ft should stay the same
                     new_ft = vss[vs_idx].ft
@@ -666,6 +674,7 @@ def three_stages_bottom_up_version_space_based(all_positive_paths, dataset, spec
                         if io_key in new_io_to_vs:
                             continue
                         new_program = add_constraint_to_find_program(vss[vs_idx].programs[0], ex_cand)
+
                         if new_p > old_p: 
                             print(f"Found new increased precision: {old_p} -> {new_p}")
                             acc += 1
