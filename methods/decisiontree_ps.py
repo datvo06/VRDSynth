@@ -471,24 +471,24 @@ def collect_program_execution(programs, dataset, data_sample_set_relation_cache,
             for i, (w_bind, r_bind) in all_out_mappingss[p]:
                 w_bind, r_bind = tuple2mapping((w_bind, r_bind))
                 all_set_verify[p].add((i, w_bind[w0], w_bind[wret]))
-        for j, (res, program) in enumerate(zip(word_mappingss, programs)):
+        for j, (res, p) in enumerate(zip(word_mappingss, p)):
             w2otherwords = defaultdict(set)
-            ret_var = program.return_variables[0]
+            ret_var = p.return_variables[0]
             # Turn off return var to return every mapping
             for w_bind in res:
                 w2otherwords[w_bind[w0]].add(w_bind[ret_var])
-                assert (i, w_bind[w0], w_bind[ret_var]) in all_set_verify[program], (i, w_bind[w0], w_bind[ret_var])
+                assert (i, w_bind[w0], w_bind[ret_var]) in all_set_verify[p], (i, w_bind[w0], w_bind[ret_var])
             for w in w2otherwords:
                 e = w2entities[w]
                 for w2 in w2otherwords[w]:
                     if w2 in e:
-                        tt[program].add((i, w, w2))
+                        tt[p].add((i, w, w2))
                     else:
-                        tf[program].add((i, w, w2))
+                        tf[p].add((i, w, w2))
                 rem = e - w2otherwords[w] - set([w])
                 for w2 in rem:
-                    ft[program].add((i, w, w2))
-            assert all_set_verify[program] == (tt[program] | tf[program]), (all_set_verify[program], tt[program] | tf[program])
+                    ft[p].add((i, w, w2))
+            assert all_set_verify[p] == (tt[p] | tf[p]), (all_set_verify[p], tt[p] | tf[p])
     return tt, ft, tf, all_out_mappingss
 
     
