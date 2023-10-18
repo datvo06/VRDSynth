@@ -616,7 +616,7 @@ def three_stages_bottom_up_version_space_based(all_positive_paths, dataset, spec
                 acc = 0
                 for vs_idx in vs_idxs:
                     cnt += 1
-                    big_bar.set_postfix({"cnt" : cnt})
+                    big_bar.set_postfix({"cnt" : cnt, 'covered_tt': len(covered_tt)})
                     vs_intersect_mapping = set()
                     for i, (word_binding, relation_binding) in vss[vs_idx].mappings:
                         if (i, (word_binding, relation_binding)) in cache:
