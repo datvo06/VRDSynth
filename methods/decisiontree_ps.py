@@ -426,15 +426,15 @@ def construct_dataset_idx_2_list_prog(vss, p2vidxs):
 
 def mapping2tuple(mapping):
     word_mapping, relation_mapping = mapping
-    word_mapping = tuple((k, v) for k, v in word_mapping.items())
-    relation_mapping = tuple((k, v) for k, v in relation_mapping.items())
+    word_mapping = tuple((k, v) for k, v in sorted(word_mapping.items()))
+    relation_mapping = tuple((k, v) for k, v in sorted(relation_mapping.items()))
     return word_mapping, relation_mapping
 
 
 def tuple2mapping(tup):
     word_mapping, relation_mapping = tup
-    word_mapping = {k: v for k, v in word_mapping}
-    relation_mapping = {k: v for k, v in relation_mapping}
+    word_mapping = {k: v for k, v in sorted(word_mapping)}
+    relation_mapping = {k: v for k, v in sorted(relation_mapping)}
     return word_mapping, relation_mapping
 
 
