@@ -676,7 +676,6 @@ def three_stages_bottom_up_version_space_based(all_positive_paths, dataset, spec
                             print(f"Found new decreased precision: {old_p} -> {new_p}")
                             if io_key not in perfect_ps_io_value:
                                 perfect_ps.append(new_program)
-                            perfect_ps.append(new_program)
                             continue
                         if io_key not in new_io_to_vs:
                             new_vs = VersionSpace(new_tt, new_tf, new_ft, [new_program], vs_intersect_mapping)
@@ -688,7 +687,6 @@ def three_stages_bottom_up_version_space_based(all_positive_paths, dataset, spec
                     print("Rejecting: ", ex_cand)
 
 
-            new_vss = list(new_io_to_vs.values())
             if cache_dir and os.path.exists(os.path.join(cache_dir, f"stage3_{it}_new_vs.pkl")):
                 with open(os.path.join(cache_dir, f"stage3_{it}_new_vs.pkl"), "wb") as f:
                     pkl.dump(new_vss, f)
