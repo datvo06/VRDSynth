@@ -619,6 +619,13 @@ def three_stages_bottom_up_version_space_based(all_positive_paths, dataset, spec
                 ft[p].update([(i, w0bind, w) for w in rem])
 
         
+    all_word_pairs = defaultdict(set)
+    for p in programs:
+        wret = p.return_variables[0]
+        for i, (w_bind, r_bind) in sorted(list(all_out_mappings[p])):
+            w_bind, r_bind = tuple2mapping((w_bind, r_bind))
+            all_word_pairs[p].add((i, w_bind[w0], w_bind[wret]))
+        assert all_word_pairs[p] == (tt[p] | tf[p])
     # STAGE 3: Build version space
     vss = []
     io_to_program = defaultdict(list)
