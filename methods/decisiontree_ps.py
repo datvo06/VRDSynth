@@ -477,6 +477,7 @@ def collect_program_execution(programs, dataset, data_sample_set_relation_cache,
             for w in w2otherwords:
                 e = w2entities[w]
                 for w2 in w2otherwords[w]:
+                    assert (i, w, w2) in all_word_pairs[p]
                     if w2 in e:
                         tt[p].add((i, w, w2))
                     else:
@@ -604,7 +605,7 @@ def three_stages_bottom_up_version_space_based(all_positive_paths, dataset, spec
     w0 = WordVariable("w0")
     for p in programs:
         wret = p.return_variables[0]
-        w2otherwords = [defaultdict(set) for i in range(len(dataset))]
+        w2otherwords = [defaultdict(set) for _ in range(len(dataset))]
         for i, (w_bind, r_bind) in sorted(list(all_out_mappings[p])):
             w_bind, r_bind = tuple2mapping((w_bind, r_bind))
             print(i, w_bind, flush=True)
