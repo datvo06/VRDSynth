@@ -604,10 +604,12 @@ def three_stages_bottom_up_version_space_based(all_positive_paths, dataset, spec
                 assert all_out_mappingss[p] == all_out_mappingss[op]
             w0 = WordVariable("w0")
             wret = p.return_variables[0]
-            all_set = tt_p | tf_p 
+            all_set = set(tt_p) | set(tf_p )
             all_set_verify = set()
             for i, (w_bind, r_bind) in all_out_mappingss[p]:
                 all_set_verify.add((i, w_bind[w0], w_bind[wret]))
+
+            assert all_set == all_set_verify
 
 
         vss.append(VersionSpace(tt, tf, ft, ps, all_out_mappingss[ps[0]]))
