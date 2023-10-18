@@ -29,12 +29,8 @@ def build_nx_g(datasample: DataSample, relation_set: Set[Tuple[str, str, str]]) 
         # label is the index of max projection
         label = np.argmax(relation.projs)
         nx_g.add_edge(relation[0], relation[1], mag=relation.mag, projs=relation.projs, lbl=label)
-    for i, box in enumerate(datasample.boxes):
-        nx_g.nodes[i].update({'x0': box[0], 'y0': box[1], 'x1': box[2], 'y1': box[3]})
-    for i, label in enumerate(datasample.labels):
-        nx_g.nodes[i].update({'label': label})
-    for i, word in enumerate(datasample.words):
-        nx_g.nodes[i].update({'word': word})
+    for i, (box, label, word) in enumerate(zip(datasample.boxes, datasample.labels, datasample.words)):
+        nx_g.nodes[i].update({'x0': box[0], 'y0': box[1], 'x1': box[2], 'y1': box[3], 'label': label, 'word': word})
     # Normalize the mag according to the smallest and largest mag
     mags = [e[2]['mag'] for e in nx_g.edges(data=True)]
     if len(mags) > 1:
@@ -443,7 +439,7 @@ def collect_program_execution(programs, dataset, data_sample_set_relation_cache,
                 w2entities[w] = set(e)
         programs = idx2progs[i] if idx2progs is not None else programs
         out_mappingss = batch_find_program_executor(nx_g, programs)
-        word_mappingss = [[om[0] for om in oms] for oms in out_mappingss]
+        word_mappingss = list([list([om[0] for om in oms]) for oms in out_mappingss])
         assert len(out_mappingss) == len(programs), len(out_mappingss)
         for p, oms in zip(programs, out_mappingss):
             for mapping in oms:
@@ -465,19 +461,6 @@ def collect_program_execution(programs, dataset, data_sample_set_relation_cache,
                 for w2 in rem:
                     ft[program].add((i, w, w2))
     return tt, ft, tf, all_out_mappingss
-
-
-def collect_constraint_execution(data_sample_set_relation_cache, valid_inputs):
-    all_out_mappingss = defaultdict(set)
-    bar = tqdm.tqdm(valid_inputs.items())
-    for c, inp_set in bar:
-        for i, (word_binding, relation_binding) in inp_set.items():
-            word_binding, relation_binding = tuple2mapping((word_binding, relation_binding))
-            nx_g = data_sample_set_relation_cache[i]
-            if c.evaluate(word_binding, relation_binding, nx_g):
-                all_out_mappingss[c].add((i, mapping2tuple((word_binding, relation_binding))))
-    return all_out_mappingss
-
 
     
 def agg_pred(p_io_tt, p_io_tf, p_io_ft, good_prec):
@@ -653,7 +636,7 @@ def three_stages_bottom_up_version_space_based(all_positive_paths, dataset, spec
                     if not vs_intersect_mapping:        # There is no more candidate
                         continue
                     ios = set()
-                    binding_var = vss[vs_idx].programs[0].word_variables[-1]
+                    binding_var = vss[vs_idx].programs[0].return_variables[0]
                     for i, (word_binding, relation_binding) in vs_intersect_mapping:
                         word_binding, relation_binding = tuple2mapping((word_binding, relation_binding))
                         ios.add((i, word_binding[WordVariable("w0")], word_binding[binding_var]))
