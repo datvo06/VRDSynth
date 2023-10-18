@@ -459,7 +459,6 @@ def collect_program_execution(programs, dataset, data_sample_set_relation_cache,
         programs = idx2progs[i] if idx2progs is not None else programs
         out_mappingss = batch_find_program_executor(nx_g, programs)
         word_mappingss = list([list([om[0] for om in oms]) for oms in out_mappingss])
-        print(word_mappingss[0])
         assert len(out_mappingss) == len(programs), len(out_mappingss)
         assert len(word_mappingss) == len(programs), len(word_mappingss)
         for p, oms in zip(programs, out_mappingss):
@@ -484,6 +483,7 @@ def collect_program_execution(programs, dataset, data_sample_set_relation_cache,
                 e = w2entities[w]
                 for w2 in w2otherwords[w]:
                     if w2 in e:
+                        assert ((i, w, w2) in all_set_verify[p])
                         tt[p].add((i, w, w2))
                     else:
                         tf[p].add((i, w, w2))
