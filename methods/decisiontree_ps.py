@@ -682,11 +682,6 @@ def three_stages_bottom_up_version_space_based(all_positive_paths, dataset, spec
                         else:
                             w_bind, r_bind = tuple2mapping((w_bind, r_bind))
                             val = c.evaluate(w_bind, r_bind, nx_g)
-                            w_bind_val = {w: nx_g.nodes[v] for w, v in w_bind.items()}
-                            r_bind_val = {r: nx_g.edges[v] for r, v in r_bind.items()}
-                            print(c, w_bind_val, r_bind_val, val)
-                            if not val:
-                                input()
                             if val:
                                 cache[(i, mapping2tuple((w_bind, r_bind)))] = True
                                 vs_intersect_mapping.add((i, mapping2tuple((w_bind, r_bind))))
