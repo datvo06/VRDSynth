@@ -449,7 +449,7 @@ def collect_program_execution(programs, dataset, data_sample_set_relation_cache,
     # TF: Predicted True, but was supposed to be False
     bar = tqdm.tqdm(specs)
     bar.set_description("Getting Program Output")
-    all_out_mappingss = defaultdict(set)
+    all_out_mappings = defaultdict(set)
     for i, entities in bar:
         nx_g = data_sample_set_relation_cache[i]
         w2entities = {}
@@ -463,7 +463,7 @@ def collect_program_execution(programs, dataset, data_sample_set_relation_cache,
         assert len(word_mappingss) == len(programs), len(word_mappingss)
         for p, oms in zip(programs, out_mappingss):
             for mapping in oms:
-                all_out_mappingss[p].add((i, mapping2tuple(mapping)))
+                all_out_mappings[p].add((i, mapping2tuple(mapping)))
         w0 = WordVariable("w0")
         for (word_mappings, p) in zip(word_mappingss, programs):
             w2otherwords = defaultdict(set)
@@ -481,7 +481,7 @@ def collect_program_execution(programs, dataset, data_sample_set_relation_cache,
                 rem = e - w2otherwords[w] - set([w])
                 for w2 in rem:
                     ft[p].add((i, w, w2))
-    return tt, ft, tf, all_out_mappingss
+    return tt, ft, tf, all_out_mappings
 
     
 def agg_pred(p_io_tt, p_io_tf, p_io_ft, good_prec):
@@ -576,12 +576,12 @@ def three_stages_bottom_up_version_space_based(all_positive_paths, dataset, spec
     # Load the following: vs_io, vs_io_neg, p_io, p_io_neg, io_to_program
     if cache_dir is not None and os.path.exists(os.path.join(cache_dir, 'stage2.pkl')):
         with open(os.path.join(cache_dir, "stage2.pkl"), "rb") as f:
-            tt, tf, ft, io_to_program, all_out_mappingss = pkl.load(f)
+            tt, tf, ft, io_to_program, all_out_mappings = pkl.load(f)
             print(len(tt), len(tf), len(ft))
     else:
         bar = tqdm.tqdm(specs)
         bar.set_description("Stage 2 - Getting Program Output")
-        tt, tf, ft, all_out_mappingss = collect_program_execution(
+        tt, tf, ft, all_out_mappings = collect_program_execution(
                 programs, dataset,
                 data_sample_set_relation_cache)
         print(len(programs), len(tt))
@@ -589,7 +589,7 @@ def three_stages_bottom_up_version_space_based(all_positive_paths, dataset, spec
         report_metrics(programs, tt, tf, ft, io_to_program)
         if cache_dir is not None:
             with open(os.path.join(cache_dir, "stage2.pkl"), "wb") as f:
-                pkl.dump([tt, tf, ft, io_to_program, all_out_mappingss], f)
+                pkl.dump([tt, tf, ft, io_to_program, all_out_mappings], f)
 
         
     # STAGE 3: Build version space
@@ -602,22 +602,17 @@ def three_stages_bottom_up_version_space_based(all_positive_paths, dataset, spec
         wret = p.return_variables[0]
         all_set = set(tt_p) | set(tf_p)
         all_set_verify = set()
-        for i, (w_bind, r_bind) in all_out_mappingss[p]:
+        for i, (w_bind, r_bind) in all_out_mappings[p]:
             w_bind, r_bind = tuple2mapping((w_bind, r_bind))
-            assert ((i, (w_bind[w0], w_bind[wret])) in (tt_p | tf_p)), (i, w_bind[w0], w_bind[wret])
+            print(w_bind, r_bind)
+            assert ((i, (w_bind[w0], w_bind[wret])) in all_set), (i, w_bind[w0], w_bind[wret])
             all_set_verify.add((i, w_bind[w0], w_bind[wret]))
 
         assert all_set == all_set_verify, f"{all_set - all_set_verify} != {all_set_verify - all_set}"
 
 
     for (tt_p, tf_p, ft_p), ps in io_to_program.items():
-        for p in ps:
-            for op in ps:
-                if op == p:
-                    continue
-                assert all_out_mappingss[p] == all_out_mappingss[op]
-            
-        vss.append(VersionSpace(tt, tf, ft, ps, all_out_mappingss[ps[0]]))
+        vss.append(VersionSpace(tt, tf, ft, ps, all_out_mappings[ps[0]]))
 
     print("Number of version spaces: ", len(vss))
     max_its = 10
