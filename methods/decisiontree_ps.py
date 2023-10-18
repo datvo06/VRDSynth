@@ -591,6 +591,29 @@ def three_stages_bottom_up_version_space_based(all_positive_paths, dataset, spec
             with open(os.path.join(cache_dir, "stage2.pkl"), "wb") as f:
                 pkl.dump([tt, tf, ft, io_to_program, all_out_mappings], f)
 
+    w2e = [defaultdict(set) for _ in range(len(dataset))]
+    for i, data in enumerate(dataset):
+        for e in data.entities:
+            for w in e:
+                w2e[i][w] = set(e)
+
+    tt, tf, ft = defaultdict(set)
+    w0 = WordVariable("w0")
+    for p in programs:
+        wret = p.return_variables[0]
+        w2otherwords = [defaultdict(set) for i in range(len(dataset))]
+        for i, (w_bind, r_bind) in sorted(list(all_out_mappings[p])):
+            w_bind, r_bind = tuple2mapping((w_bind, r_bind))
+            if w_bind[wret] in w2e[i][w_bind[w0]]:
+                tt[p].add((i, w_bind[w0], w_bind[wret]))
+            else:
+                tf[p].add((i, w_bind[w0], w_bind[wret]))
+            w2otherwords[i][w_bind[w0]].add(w_bind[wret])
+        for i in range(len(dataset)):
+            for w0 in w2otherwords[i]:
+                rem = w2e[i][w0] - w2otherwords[i][w0] - {w0}
+                ft[p].update([(i, w0, w) for w in rem])
+
         
     # STAGE 3: Build version space
     vss = []
