@@ -460,6 +460,7 @@ def collect_program_execution(programs, dataset, data_sample_set_relation_cache,
         out_mappingss = batch_find_program_executor(nx_g, programs)
         word_mappingss = list([list([om[0] for om in oms]) for oms in out_mappingss])
         assert len(out_mappingss) == len(programs), len(out_mappingss)
+        assert len(word_mappingss) == len(programs), len(word_mappingss)
         for p, oms in zip(programs, out_mappingss):
             for mapping in oms:
                 all_out_mappingss[p].add((i, mapping2tuple(mapping)))
