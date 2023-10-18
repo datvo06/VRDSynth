@@ -526,7 +526,8 @@ def get_p_r_f1(tt, tf, ft):
 
 
 def report_metrics(programs, p_io_tt, p_io_tf, p_io_ft, io_to_program):
-    for j, (tt_j, tf_j, ft_j) in enumerate(zip(p_io_tt.values(), p_io_tf.values(), p_io_ft.values())):
+    for j, p in enumerate(programs):
+        tt_j, tf_j, ft_j = p_io_tt[p], p_io_tf[p], p_io_ft[p]
         io_to_program[tuple(tt_j), tuple(tf_j), tuple(ft_j)].append(programs[j])
         # Calculate precision, recall, f1
         p = len(tt_j) / (len(tt_j) + len(tf_j))
