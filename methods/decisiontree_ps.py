@@ -482,8 +482,8 @@ def collect_program_execution(programs, dataset, data_sample_set_relation_cache,
             for w in w2otherwords:
                 e = w2entities[w]
                 for w2 in w2otherwords[w]:
+                    assert ((i, w, w2) in all_set_verify[p])
                     if w2 in e:
-                        assert ((i, w, w2) in all_set_verify[p])
                         tt[p].add((i, w, w2))
                     else:
                         tf[p].add((i, w, w2))
