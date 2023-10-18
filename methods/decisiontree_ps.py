@@ -645,12 +645,13 @@ def three_stages_bottom_up_version_space_based(all_positive_paths, dataset, spec
                     big_bar.set_postfix({"cnt" : cnt, 'covered_tt': len(covered_tt)})
                     vs_intersect_mapping = set()
                     for i, (w_bind, r_bind) in vss[vs_idx].mappings:
+                        nx_g = data_sample_set_relation_cache[i]
                         if (i, (w_bind, r_bind)) in cache:
                             if cache[(i, (w_bind, r_bind))]:
                                 vs_intersect_mapping.add((i, (w_bind, r_bind)))
                         else:
                             w_bind, r_bind = tuple2mapping((w_bind, r_bind))
-                            val = c.evaluate(w_bind, r_bind, data_sample_set_relation_cache[i])
+                            val = c.evaluate(w_bind, r_bind, nx_g)
                             w_bind_val = {w: nx_g.nodes[v] for w, v in w_bind.items()}
                             r_bind_val = {r: nx_g.edges[v] for r, v in r_bind.items()}
                             print(c, w_bind_val, r_bind_val, val)
