@@ -8,6 +8,8 @@ from collections import Counter
 import numpy as np
 import tqdm
 import cv2
+import glob
+import itertools
 
 
 # Implementing inference and measurement
@@ -19,7 +21,6 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--training_dir', type=str, default='funsd_dataset/training_data', help='training directory')
     parser.add_argument('--cache_dir', type=str, default='funsd_cache', help='cache directory')
-    parser.add_argument('--ps_fp', type=str, default='ps.pkl')
     args = parser.parse_args()
 
     with open(f"{args.cache_dir}/dataset.pkl", 'rb') as f:
@@ -27,8 +28,7 @@ if __name__ == '__main__':
 
     with open(f"{args.cache_dir}/data_sample_set_relation_cache.pkl", 'rb') as f:
         data_sample_set_relation_cache = pkl.load(f)
-    ps = pkl.load(open(args.ps_fp, 'rb'))
-    print(len(ps))
+    ps = list(itertools.chain.from_iterable(pkl.load(open(ps_fp, 'rb')) for ps_fp in glob.glob(f"{args.cache_dir}/stage3_*_perfect_ps.pkl")))
     for i, data in tqdm.tqdm(enumerate(dataset)):
         nx_g = data_sample_set_relation_cache[i]
         out_bindings = batch_find_program_executor(nx_g, ps)
