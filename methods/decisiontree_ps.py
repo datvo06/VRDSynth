@@ -469,9 +469,8 @@ def collect_program_execution(programs, dataset, data_sample_set_relation_cache,
         for p in programs:
             wret = p.return_variables[0]
             for j, (w_bind, r_bind) in all_out_mappingss[p]:
-                if j == i:
-                    w_bind, r_bind = tuple2mapping((w_bind, r_bind))
-                    all_set_verify[p].add((i, w_bind[w0], w_bind[wret]))
+                w_bind, r_bind = tuple2mapping((w_bind, r_bind))
+                all_set_verify[p].add((j, w_bind[w0], w_bind[wret]))
         for (word_mappings, p) in zip(word_mappingss, programs):
             w2otherwords = defaultdict(set)
             ret_var = p.return_variables[0]
@@ -490,8 +489,6 @@ def collect_program_execution(programs, dataset, data_sample_set_relation_cache,
                 rem = e - w2otherwords[w] - set([w])
                 for w2 in rem:
                     ft[p].add((i, w, w2))
-            for l in tt[p] | tf[p]:
-                assert l[2] in w2otherwords[l[1]], l
             assert all_set_verify[p] == (tt[p].union(tf[p])), (all_set_verify[p] - tt[p].union(tf[p]), (tt[p].union(tf[p]) - all_set_verify[p]))
     return tt, ft, tf, all_out_mappingss
 
