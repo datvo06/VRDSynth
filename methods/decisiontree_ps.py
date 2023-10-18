@@ -307,10 +307,29 @@ def get_valid_cand_find_program(version_space: VersionSpace, program: FindProgra
 
 def add_constraint_to_find_program(find_program, constraint):
     args = find_program.get_args()[:]
+    args = copy.deepcopy(args)
     args[3] = AndConstraint(args[3], constraint)
     return FindProgram(*args)
 
 
+def test_add_constraint_to_find_program():
+    find_program = FindProgram([WordVariable("w0"), WordVariable("w1")],
+                               [RelationVariable("r0")], 
+                               [RelationConstraint(WordVariable("w0"), WordVariable("w1"), RelationVariable("r0"))],
+                               AndConstraint(
+                                   LabelEqualConstraint(WordLabelProperty(WordVariable("w0")), WordLabelProperty(WordVariable("w1"))), 
+                                   RelationLabelEqualConstraint(RelationLabelProperty(RelationVariable("r0")), RelationLabelProperty(RelationVariable("r0")))), [WordVariable("w1")])
+    constraint = LabelEqualConstraint(WordLabelProperty(WordVariable("w1")), LabelConstant("header"))
+    new_find_program = add_constraint_to_find_program(find_program, constraint)
+    assert new_find_program == FindProgram(
+        [WordVariable("w0"), WordVariable("w1")],
+        [RelationVariable("r0")], 
+        [RelationConstraint(WordVariable("w0"), WordVariable("w1"), RelationVariable("r0"))],
+        AndConstraint(
+            AndConstraint(
+                                   LabelEqualConstraint(WordLabelProperty(WordVariable("w0")), WordLabelProperty(WordVariable("w1"))), 
+                                   RelationLabelEqualConstraint(RelationLabelProperty(RelationVariable("r0")), RelationLabelProperty(RelationVariable("r0")))), constraint),
+         [WordVariable("w1")])
 
 def extend_program_general(version_space: VersionSpace, program: FindProgram):
     all_cands = get_valid_cand_find_program(version_space, program)
