@@ -640,10 +640,10 @@ def three_stages_bottom_up_version_space_based(all_positive_paths, dataset, spec
                             word_binding, relation_binding = tuple2mapping((word_binding, relation_binding))
                             val = ex_cand.evaluate(word_binding, relation_binding, data_sample_set_relation_cache[i])
                             if val:
-                                cache[(i, (word_binding, relation_binding))] = True
+                                cache[(i, mapping2tuple((word_binding, relation_binding)))] = True
                                 vs_intersect_mapping.add((i, mapping2tuple((word_binding, relation_binding))))
                             else:
-                                cache[(i, (word_binding, relation_binding))] = False
+                                cache[(i, mapping2tuple((word_binding, relation_binding)))] = False
                     # each constraint combined with each vs will lead to another vs
                     if not vs_intersect_mapping:        # There is no more candidate
                         continue
