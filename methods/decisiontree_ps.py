@@ -656,9 +656,6 @@ def three_stages_bottom_up_version_space_based(all_positive_paths, dataset, spec
                         continue
                     # Now check the tt, tf, ft
                     new_tt = ios.intersection(vss[vs_idx].tt)
-                    if not(new_tt - covered_tt):
-                        continue
-                    covered_tt |= new_tt
                     new_tf = ios.intersection(vss[vs_idx].tf)
                     # theoretically, ft should stay the same
                     new_ft = vss[vs_idx].ft
@@ -676,6 +673,9 @@ def three_stages_bottom_up_version_space_based(all_positive_paths, dataset, spec
                         new_program = add_constraint_to_find_program(vss[vs_idx].programs[0], ex_cand)
 
                         if new_p > old_p: 
+                            if not (new_tt - covered_tt):
+                                continue
+                            covered_tt |= new_tt
                             print(f"Found new increased precision: {old_p} -> {new_p}")
                             acc += 1
                         has_child[vs_idx] = True
