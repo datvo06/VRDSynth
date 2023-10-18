@@ -19,7 +19,6 @@ import os
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--training_dir', type=str, default='funsd_dataset/training_data', help='training directory')
-    parser.add_argument('--cache_dir', type=str, default='funsd_cache', help='cache directory')
     parser.add_argument('--ps_fp', type=str, default='assets/stage3_0_perfect_ps.pkl')
     args = parser.parse_args()
 
