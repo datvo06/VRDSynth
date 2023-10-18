@@ -598,7 +598,6 @@ def three_stages_bottom_up_version_space_based(all_positive_paths, dataset, spec
     w2e = [defaultdict(set) for _ in range(len(dataset))]
     for i, data in enumerate(dataset):
         for e in data.entities:
-            print(e)
             for w in e:
                 w2e[i][w] = set(e)
 
@@ -609,7 +608,7 @@ def three_stages_bottom_up_version_space_based(all_positive_paths, dataset, spec
         w2otherwords = [defaultdict(set) for _ in range(len(dataset))]
         for i, (w_bind, r_bind) in sorted(list(all_out_mappings[p])):
             w_bind, r_bind = tuple2mapping((w_bind, r_bind))
-            print(i, w_bind, flush=True)
+            print(i, w_bind, w2e[i], flush=True)
             if w_bind[wret] in w2e[i][w_bind[w0]]:
                 tt[p].add((i, w_bind[w0], w_bind[wret]))
             else:
