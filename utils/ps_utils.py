@@ -234,6 +234,9 @@ class WordVariable(Literal):
     def __eq__(self, other):
         return self.name == other.name
 
+    def __lt__(self, other):
+        return self.name < other.name
+
 
 class RelationVariable(Literal):
     def __init__(self, name):
@@ -252,6 +255,9 @@ class RelationVariable(Literal):
 
     def __eq__(self, other):
         return self.name == other.name
+
+    def __lt__(self, other):
+        return self.name < other.name
 
 
 class RelationConstraint(Expression):
