@@ -631,9 +631,9 @@ def three_stages_bottom_up_version_space_based(all_positive_paths, dataset, spec
                     big_bar.set_postfix({"cnt" : cnt})
                     vs_intersect_mapping = set()
                     for i, (word_binding, relation_binding) in vss[vs_idx].mappings:
-                        if (i, (word_binding, relation_binding))in cache:
+                        if (i, (word_binding, relation_binding)) in cache:
                             if cache[(i, (word_binding, relation_binding))]:
-                                vs_intersect_mapping.add((i, mapping2tuple((word_binding, relation_binding))))
+                                vs_intersect_mapping.add((i, (word_binding, relation_binding)))
                             else:
                                 continue
                         else:
