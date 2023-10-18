@@ -1,5 +1,5 @@
 from utils.ps_utils import FindProgram, WordVariable
-from utils.funsd_utils import DataSample
+from utils.funsd_utils import DataSample, load_dataset, RELATION_SET, build_nx_g
 from methods.decisiontree_ps import batch_find_program_executor
 import argparse
 import pickle as pkl
@@ -8,6 +8,7 @@ from collections import Counter
 import numpy as np
 import tqdm
 import cv2
+import os
 
 
 # Implementing inference and measurement
@@ -19,14 +20,33 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--training_dir', type=str, default='funsd_dataset/training_data', help='training directory')
     parser.add_argument('--cache_dir', type=str, default='funsd_cache', help='cache directory')
-    parser.add_argument('--ps_fp', type=str, default='ps.pkl')
+    parser.add_argument('--ps_fp', type=str, default='assets/stage3_0_perfect_ps.pkl')
     args = parser.parse_args()
 
-    with open(f"{args.cache_dir}/dataset.pkl", 'rb') as f:
-        dataset = pkl.load(f)
+    relation_set = RELATION_SET
+    
+    if os.path.exists(f"{args.cache_dir}/dataset.pkl"):
+        with open(f"{args.cache_dir}/dataset.pkl", 'rb') as f:
+            dataset = pkl.load(f)
+    else:
+        dataset = load_dataset(f"{args.training_dir}/annotations/", f"{args.training_dir}/images/")
+        with open(f"{args.cache_dir}/dataset.pkl", 'wb') as f:
+            pkl.dump(dataset, f)
 
-    with open(f"{args.cache_dir}/data_sample_set_relation_cache.pkl", 'rb') as f:
-        data_sample_set_relation_cache = pkl.load(f)
+    
+    if os.path.exists(f"{args.cache_dir}/data_sample_set_relation_cache.pkl"):
+        with open(f"{args.cache_dir}/data_sample_set_relation_cache.pkl", 'rb') as f:
+            data_sample_set_relation_cache = pkl.load(f)
+    else:
+        data_sample_set_relation_cache = []
+        bar = tqdm.tqdm(total=len(dataset))
+        bar.set_description("Constructing data sample set relation cache")
+        for data_sample in dataset:
+            nx_g = build_nx_g(data_sample, relation_set)
+            data_sample_set_relation_cache.append(nx_g)
+            bar.update(1)
+        with open(f"{args.cache_dir}/data_sample_set_relation_cache.pkl", 'wb') as f:
+            pkl.dump(data_sample_set_relation_cache, f)
     ps = pkl.load(open(args.ps_fp, 'rb'))
     print(len(ps))
     for i, data in tqdm.tqdm(enumerate(dataset)):

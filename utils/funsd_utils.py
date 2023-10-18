@@ -1,7 +1,11 @@
 import json
 from collections import namedtuple
-from typing import List, Tuple 
+from typing import List, Tuple, Set
 import glob
+from utils.relation_building_utils import calculate_relation_set, dummy_calculate_relation_set, calculate_relation
+import networkx as nx
+import numpy as np
+
 
 Bbox = namedtuple('Bbox', ['x0', 'y0', 'x1', 'y1'])
 
@@ -82,6 +86,44 @@ class DataSample:
     def to_json(self):
         return json.dumps(self._dict)
 
+
+def build_nx_g(datasample: DataSample, relation_set: Set[Tuple[str, str, str]]) -> nx.MultiDiGraph:
+    all_relation = calculate_relation([datasample], relation_set)[0]
+    # build a networkx graph
+    nx_g = nx.MultiDiGraph()
+    for relation in all_relation:
+        # label is the index of max projection
+        label = np.argmax(relation.projs)
+        nx_g.add_edge(relation[0], relation[1], mag=relation.mag, projs=relation.projs, lbl=label)
+    for i, (box, label, word) in enumerate(zip(datasample.boxes, datasample.labels, datasample.words)):
+        nx_g.nodes[i].update({'x0': box[0], 'y0': box[1], 'x1': box[2], 'y1': box[3], 'label': label, 'word': word})
+    # Normalize the mag according to the smallest and largest mag
+    mags = [e[2]['mag'] for e in nx_g.edges(data=True)]
+    if len(mags) > 1:
+        min_mag = min(mags)
+        max_mag = max(mags)
+        for e in nx_g.edges(data=True):
+            e[2]['mag'] = (e[2]['mag'] - min_mag) / (max_mag - min_mag)
+    # Remove all the edges that has mag > 0.5
+    rm_edges = []
+    for e in nx_g.edges(data=True):
+        if e[2]['mag'] > 0.5:
+            rm_edges.append(e[:2])
+    nx_g.remove_edges_from(rm_edges)
+    # normalize the coord according to the largest coord
+    max_coord_x = max([e[1]['x1'] for e in nx_g.nodes(data=True)])
+    max_coord_y = max([e[1]['y1'] for e in nx_g.nodes(data=True)])
+    min_coord_x = min([e[1]['x0'] for e in nx_g.nodes(data=True)])
+    min_coord_y = min([e[1]['y0'] for e in nx_g.nodes(data=True)])
+    for _, n in nx_g.nodes(data=True):
+        n['x0'] = (n['x0'] - min_coord_x) / (max_coord_x - min_coord_x)
+        n['y0'] = (n['y0'] - min_coord_y) / (max_coord_y - min_coord_y)
+        n['x1'] = (n['x1'] - min_coord_x) / (max_coord_x - min_coord_x)
+        n['y1'] = (n['y1'] - min_coord_y) / (max_coord_y - min_coord_y)
+    return nx_g
+
+
+RELATION_SET = dummy_calculate_relation_set(None, None, None)
 
 def load_data(json_fp, img_fp):
     words = []

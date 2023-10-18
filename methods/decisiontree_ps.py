@@ -1,6 +1,6 @@
 import networkx as nx
 from typing import List, Tuple, Dict, Set, Optional
-from utils.funsd_utils import DataSample, load_dataset
+from utils.funsd_utils import DataSample, load_dataset, build_nx_g, RELATION_SET
 from utils.relation_building_utils import calculate_relation_set, dummy_calculate_relation_set, calculate_relation
 import argparse
 import numpy as np
@@ -20,41 +20,6 @@ import multiprocessing
 from multiprocessing import Pool
 from functools import lru_cache, partial
 
-
-def build_nx_g(datasample: DataSample, relation_set: Set[Tuple[str, str, str]]) -> nx.MultiDiGraph:
-    all_relation = calculate_relation([datasample], relation_set)[0]
-    # build a networkx graph
-    nx_g = nx.MultiDiGraph()
-    for relation in all_relation:
-        # label is the index of max projection
-        label = np.argmax(relation.projs)
-        nx_g.add_edge(relation[0], relation[1], mag=relation.mag, projs=relation.projs, lbl=label)
-    for i, (box, label, word) in enumerate(zip(datasample.boxes, datasample.labels, datasample.words)):
-        nx_g.nodes[i].update({'x0': box[0], 'y0': box[1], 'x1': box[2], 'y1': box[3], 'label': label, 'word': word})
-    # Normalize the mag according to the smallest and largest mag
-    mags = [e[2]['mag'] for e in nx_g.edges(data=True)]
-    if len(mags) > 1:
-        min_mag = min(mags)
-        max_mag = max(mags)
-        for e in nx_g.edges(data=True):
-            e[2]['mag'] = (e[2]['mag'] - min_mag) / (max_mag - min_mag)
-    # Remove all the edges that has mag > 0.5
-    rm_edges = []
-    for e in nx_g.edges(data=True):
-        if e[2]['mag'] > 0.5:
-            rm_edges.append(e[:2])
-    nx_g.remove_edges_from(rm_edges)
-    # normalize the coord according to the largest coord
-    max_coord_x = max([e[1]['x1'] for e in nx_g.nodes(data=True)])
-    max_coord_y = max([e[1]['y1'] for e in nx_g.nodes(data=True)])
-    min_coord_x = min([e[1]['x0'] for e in nx_g.nodes(data=True)])
-    min_coord_y = min([e[1]['y0'] for e in nx_g.nodes(data=True)])
-    for _, n in nx_g.nodes(data=True):
-        n['x0'] = (n['x0'] - min_coord_x) / (max_coord_x - min_coord_x)
-        n['y0'] = (n['y0'] - min_coord_y) / (max_coord_y - min_coord_y)
-        n['x1'] = (n['x1'] - min_coord_x) / (max_coord_x - min_coord_x)
-        n['y1'] = (n['y1'] - min_coord_y) / (max_coord_y - min_coord_y)
-    return nx_g
 
 
 def get_all_path(nx_g, w1, w2, hops=2):
@@ -762,7 +727,7 @@ def three_stages_bottom_up_version_space_based(all_positive_paths, dataset, spec
 
 
 if __name__ == '__main__': 
-    relation_set = dummy_calculate_relation_set(None, None, None)
+    relation_set = RELATION_SET
     parser = get_parser()
     # training_dir
     parser.add_argument('--training_dir', type=str, default='funsd_dataset/training_data', help='training directory')
