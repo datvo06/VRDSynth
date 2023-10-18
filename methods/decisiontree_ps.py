@@ -473,10 +473,11 @@ def collect_program_execution(programs, dataset, data_sample_set_relation_cache,
                 all_set_verify[p].add((i, w_bind[w0], w_bind[wret]))
         for j, (res, program) in enumerate(zip(word_mappingss, programs)):
             w2otherwords = defaultdict(set)
-            return_vars = program.return_variables
+            ret_var = program.return_variables[0]
             # Turn off return var to return every mapping
-            for word_binding in res:
-                w2otherwords[word_binding[w0]].add(word_binding[return_vars[0]])
+            for w_bind in res:
+                w2otherwords[w_bind[w0]].add(w_bind[ret_var])
+                assert (i, w_bind[w0], w_bind[ret_var]) in all_set_verify[program], (i, w_bind[w0], w_bind[ret_var])
             for w in w2otherwords:
                 e = w2entities[w]
                 for w2 in w2otherwords[w]:
