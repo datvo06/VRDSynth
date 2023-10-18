@@ -604,7 +604,7 @@ def three_stages_bottom_up_version_space_based(all_positive_paths, dataset, spec
         w2otherwords = [defaultdict(set) for i in range(len(dataset))]
         for i, (w_bind, r_bind) in sorted(list(all_out_mappings[p])):
             w_bind, r_bind = tuple2mapping((w_bind, r_bind))
-            print(w_bind)
+            print(i, w_bind)
             if w_bind[wret] in w2e[i][w_bind[w0]]:
                 tt[p].add((i, w_bind[w0], w_bind[wret]))
             else:
