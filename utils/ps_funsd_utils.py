@@ -62,6 +62,9 @@ if __name__ == '__main__':
                         new_box = np.array([np.min(group_box[:, 0]), np.min(group_box[:, 1]), np.max(group_box[:, 2]), np.max(group_box[:, 3])])
                         uf.union(groups[i][0], groups[j][0])
                         changed = True
+                        groups = uf.groups()
+                        group_box = np.array(list([data['boxes'][j] for j in groups[i]]))
+                        new_box = np.array([np.min(group_box[:, 0]), np.min(group_box[:, 1]), np.max(group_box[:, 2]), np.max(group_box[:, 3])])
                         break
             i += 1
         for group in uf.groups():
