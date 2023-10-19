@@ -2,18 +2,23 @@ from typing import *
 from collections import defaultdict
 import numpy as np
 from transformers import LayoutLMv3ForTokenClassification, LayoutLMv3Processor, LayoutLMv3Config
+from tqdm import tqdm
 from file_reader.layout.page import Page, TextLine, Paragraph
 from file_reader.layout.textline import Span
 from file_reader.layout.box import group_by_row
 from layout_extraction.layoutlm_utils import FeatureExtraction
+from layout_extraction.ps_utils import RuleSynthesis
 from file_reader import prj_path
+from utils.ps_utils import FindProgram
 
 
 class LayoutExtraction:
-    def __init__(self, model_path=prj_path / "models" / "layoutlmv3", **kwargs):
+    def __init__(self, model_path=prj_path / "models" / "layoutlmv3", find_programs: List[FindProgram] = None,
+                 **kwargs):
         """
         Init LayoutLM model if exists.
         :param model_path:
+        :param find_programs: A list of find_program objects.
         :param kwargs:
         """
         try:
@@ -27,15 +32,19 @@ class LayoutExtraction:
                 self.use_layoutlm = False
         except Exception:
             self.use_layoutlm = False
+        if find_programs:
+            self.rule_synthesis = RuleSynthesis(find_programs)
+        else:
+            self.rule_synthesis = None
 
-    def extract_entity(self, pages: List[Page], ):
+    def extract_entity(self, pages: List[Page]) -> List[Dict]:
         """
         Extract section titles using LayoutLM and group textboxes to paragraphs.
         :param pages:
         :return:
         """
         result = []
-        for page in pages:
+        for page in tqdm(pages, desc="Extract entity from page:"):
             batchs, imgs = self.feature_extraction.get_feature(page, expand_before=0, expand_after=0)
             if len(imgs) == 0:
                 continue
@@ -50,6 +59,7 @@ class LayoutExtraction:
             id2label = self.config.id2label
             # entities = {label: [] for _, label in id2label.items()}
             entities = defaultdict(list)
+            word_with_labels = []
             if len(imgs) == 1:
                 offset_mappings = [offset_mappings]
                 predictions_list = [predictions_list]
@@ -66,50 +76,82 @@ class LayoutExtraction:
                     entities[label.split("-", 1)[-1]].extend(
                         [batch[idx]["origin_data"] for idx, pred in zip(true_ids, true_predictions) if
                          pred == label and idx is not None])
-            output = []
-            paragraphs = []
-            for entity_type, boxes in entities.items():
-                if len(boxes) == 0:
-                    continue
-                textlines = []
-                for t in boxes:
-                    spans: List[Span] = []
-                    if len(t["text"]) == 0:
-                        continue
-                    w = (t["x1"] - t["x0"]) / len(t["text"])
-                    for i, c in enumerate(t["text"]):
-                        spans.append(Span(t["x0"] + i * w, t["y0"], t["x0"] + i * w + w, t["y1"], c))
-                    textlines.append(TextLine(x0=t["x0"], x1=t["x1"], y0=t["y0"], y1=t["y1"], spans=spans,
-                                              properties=t["properties"]))
-                if entity_type == 'HEADER':
-                    rows = group_by_row(textlines)
-                    answers = [Paragraph(row) for row in rows]
-                    for answer in answers:
-                        if 2*page.width / 5 < answer.x_cen < 3 * page.width / 5:
-                            answer.is_header = True
+                for idx, pred in zip(true_ids, true_predictions):
+                    if idx is not None:
+                        word_with_label = batch[idx]["origin_data"].copy()
+                        word_with_label["label"] = pred.split("-", 1)[-1]
+                        word_with_labels.append(word_with_label)
+
+            # Group words to entities
+            if self.rule_synthesis:
+                # Use Synthesis rules
+                for word in word_with_labels:
+                    word["label"] = word["label"].lower()
+                output = self.rule_synthesis.inference(word_with_labels)
+                for entity in output:
+                    entity["label"] = entity["label"].upper()
+                    if entity["label"] == "HEADER":
+                        # Consider titles in the middle of the line as headers
+                        if 2 * page.width / 5 < (entity["x0"] + entity["x1"]) / 2 < 3 * page.width / 5:
+                            entity["is_header"] = True
                         else:
-                            answer._is_title = True
-                else:
-                    # rows = group_by_row(textlines)
-
-                    answers = page.group_to_paragraph(textlines)
-                paragraphs.extend(answers)
-                for ans in answers:
-                    ans.label = entity_type
-                    entity = ans.to_dict()
-                    entity["is_header"] = getattr(ans, "is_header", None)
-                    entity["predict"] = [{
-                        "start_pos": 0,
-                        "text": entity["text"],
-                        "label": entity["label"],
-                        "y0": entity["y0"],
-                        "y1": entity["y1"]
-                    }]
-                    entity["raw"] = [t.properties for t in ans.textlines]
-                    output.append(entity)
-
-            page.paragraphs = paragraphs
+                            entity["is_header"] = False
+                    else:
+                        entity["is_header"] = False
+            else:
+                output = self.post_process(word_with_labels, page)
+            # page.paragraphs = paragraphs
             result.append(output)
         return result
 
+    def post_process(self, words: List[Dict], page) -> List[Dict]:
+        """
+        Old rules.
+        """
+        entities = defaultdict(list)
+        for word in words:
+            entities[word["label"]].append(word)
 
+        output = []
+        paragraphs = []
+        for entity_type, boxes in entities.items():
+            if len(boxes) == 0:
+                continue
+            textlines = []
+            for t in boxes:
+                spans: List[Span] = []
+                if len(t["text"]) == 0:
+                    continue
+                w = (t["x1"] - t["x0"]) / len(t["text"])
+                for i, c in enumerate(t["text"]):
+                    spans.append(Span(t["x0"] + i * w, t["y0"], t["x0"] + i * w + w, t["y1"], c))
+                textlines.append(TextLine(x0=t["x0"], x1=t["x1"], y0=t["y0"], y1=t["y1"], spans=spans,
+                                          properties=t["properties"]))
+            if entity_type == 'HEADER':
+                rows = group_by_row(textlines)
+                answers = [Paragraph(row) for row in rows]
+                for answer in answers:
+                    if 2 * page.width / 5 < answer.x_cen < 3 * page.width / 5:
+                        answer.is_header = True
+                    else:
+                        answer._is_title = True
+            else:
+                # rows = group_by_row(textlines)
+
+                answers = page.group_to_paragraph(textlines)
+            paragraphs.extend(answers)
+            for ans in answers:
+                ans.label = entity_type
+                entity = ans.to_dict()
+                entity["is_header"] = getattr(ans, "is_header", None)
+                entity["predict"] = [{
+                    "start_pos": 0,
+                    "text": entity["text"],
+                    "label": entity["label"],
+                    "y0": entity["y0"],
+                    "y1": entity["y1"]
+                }]
+                entity["raw"] = [t.properties for t in ans.textlines]
+                output.append(entity)
+
+        return output

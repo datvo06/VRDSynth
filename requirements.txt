@@ -18,3 +18,5 @@ pydantic~=1.10.2
 pydantic[dotenv]~=1.10.2
 pytesseract~=0.3.10
 python-multipart~=0.0.5
+networkx~=2.8.6
+scipy~=1.9.1
