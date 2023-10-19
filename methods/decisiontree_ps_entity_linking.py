@@ -240,7 +240,10 @@ def three_stages_bottom_up_version_space_based_same_parent(pos_paths, dataset, s
                     new_ft = vss[vs_idx].ft
                     if not new_tt and not new_ft:
                         continue
-                    old_p, old_r, old_f1 = get_p_r_f1(vss[vs_idx].tt, vss[vs_idx].tf, vss[vs_idx].ft)
+                    try:
+                        old_p, old_r, old_f1 = get_p_r_f1(vss[vs_idx].tt, vss[vs_idx].tf, vss[vs_idx].ft)
+                    except:
+                        continue
                     try:
                         new_p, new_r, new_f1 = get_p_r_f1(new_tt, new_tf, new_ft)
                     except:
