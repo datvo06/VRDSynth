@@ -25,6 +25,7 @@ if __name__ == '__main__':
     map_label = {
         "b-title": "B-HEADER",
         "b-title.": "B-HEADER",
+        "b-titled": "B-HEADER",
         "b-titlle": "B-HEADER",
         "b- title": "B-HEADER",
         "b-titletitle": "B-HEADER",
@@ -34,8 +35,10 @@ if __name__ == '__main__':
         "i-title.": "I-HEADER",
         "i-titletitle": "I-HEADER",
         "b-key": "B-QUESTION",
+        "b-keyd": "B-QUESTION",
         "b-mkey": "B-QUESTION",
         "i-key": "I-QUESTION",
+        "i-keyd": "I-QUESTION",
         "i-mkey": "I-QUESTION",
         "b-value": "B-ANSWER",
         "b-mvalue": "B-ANSWER",
