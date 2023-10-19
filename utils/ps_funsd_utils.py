@@ -49,19 +49,20 @@ if __name__ == '__main__':
         label = []
         i = 0
         while i < len(uf.groups()):
-            group = uf.groups()[i]
+            groups = uf.groups()
             changed = True 
             # merge boxes
-            group_box = np.array(list([data['boxes'][j] for j in group]))
+            group_box = np.array(list([data['boxes'][j] for j in groups[i]]))
             new_box = np.array([np.min(group_box[:, 0]), np.min(group_box[:, 1]), np.max(group_box[:, 2]), np.max(group_box[:, 3])])
             while changed:
                 changed = False
-                for j in range(len(data['boxes'])):
-                    if j not in group:
-                        if new_box[0] <= data['boxes'][j][0] <= data['boxes'][j][2] <= new_box[2] and new_box[1] <= data['boxes'][j][1] <= data['boxes'][j][3] <= new_box[3]:
-                            uf.union(group[0], j)
-                            new_box = np.array([np.min([new_box[0], data['boxes'][j][0]]), np.min([new_box[1], data['boxes'][j][1]]), np.max([new_box[2], data['boxes'][j][2]]), np.max([new_box[3], data['boxes'][j][3]])])
-                            changed = True
+                for j in range(i+1, len(groups)):
+                    group_box = np.array(list([data['boxes'][k] for k in groups[j]]))
+                    if np.min(group_box[:, 0]) <= new_box[0] and np.min(group_box[:, 1]) <= new_box[1] and np.max(group_box[:, 2]) >= new_box[2] and np.max(group_box[:, 3]) >= new_box[3]:
+                        new_box = np.array([np.min(group_box[:, 0]), np.min(group_box[:, 1]), np.max(group_box[:, 2]), np.max(group_box[:, 3])])
+                        uf.union(groups[i][0], groups[j][0])
+                        changed = True
+                        break
             i += 1
         for group in uf.groups():
             group_box = np.array(list([data['boxes'][j] for j in group]))
