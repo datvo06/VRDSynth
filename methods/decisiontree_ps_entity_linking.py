@@ -64,7 +64,6 @@ def collect_program_execution_same_parent(programs, specs: SpecType, data_sample
     all_word_pairs = defaultdict(set)
     for i, _, entities in bar:
         nx_g = data_sample_set_relation_cache[i]
-        print(nx_g)
         w2entities = {}
         for e in entities:
             for w in e:
@@ -166,7 +165,8 @@ def three_stages_bottom_up_version_space_based_same_parent(pos_paths, dataset, s
     # STAGE 3: Build version space
     vss = []
     for (tt_p, tf_p, ft_p), ps in io_to_program.items():
-        vss.append(VersionSpace(tt_p, tf_p, ft_p, ps, all_out_mappings[ps[0]]))
+        if tt_p or tf_p:
+            vss.append(VersionSpace(tt_p, tf_p, ft_p, ps, all_out_mappings[ps[0]]))
 
     print("Number of version spaces: ", len(vss))
     max_its = 10
@@ -177,7 +177,10 @@ def three_stages_bottom_up_version_space_based_same_parent(pos_paths, dataset, s
         else:
             c2vs = defaultdict(set)
             for i, vs in enumerate(vss):
-                old_p, old_r, old_f1 = get_p_r_f1(vs.tt, vs.tf, vs.ft)
+                try:
+                    old_p, old_r, old_f1 = get_p_r_f1(vs.tt, vs.tf, vs.ft)
+                except:
+                    continue
                 for p in vs.programs:
                     cs = get_valid_cand_find_program(vs, p)
                     for c in cs:
