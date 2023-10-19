@@ -8,7 +8,7 @@ import itertools
 import functools
 from collections import defaultdict, namedtuple
 from networkx.algorithms import constraint, isomorphism
-from utils.ps_utils import FalseValue, LiteralReplacement, Program, EmptyProgram, GrammarReplacement, FindProgram, RelationLabelConstant, RelationLabelProperty, TrueValue, WordLabelProperty, WordVariable, RelationVariable, RelationConstraint, LabelEqualConstraint, RelationLabelEqualConstraint, construct_entity_linking_specs, SpecIterator, LabelConstant, AndConstraint, LiteralSet, Constraint, GrammarReplacement, Hole, replace_hole, find_holes, SymbolicList, FilterStrategy, fill_hole, Expression
+from utils.ps_utils import FalseValue, LiteralReplacement, Program, EmptyProgram, GrammarReplacement, FindProgram, RelationLabelConstant, RelationLabelProperty, TrueValue, WordLabelProperty, WordVariable, RelationVariable, RelationConstraint, LabelEqualConstraint, RelationLabelEqualConstraint, construct_entity_linking_specs, LabelConstant, AndConstraint, LiteralSet, Constraint, GrammarReplacement, Hole, replace_hole, find_holes, SymbolicList, FilterStrategy, fill_hole, Expression
 from utils.visualization_script import visualize_program_with_support
 from utils.version_space import VersionSpace
 import json
@@ -329,7 +329,7 @@ if __name__ == '__main__':
         data_sample_set_relation_cache = []
         bar = tqdm.tqdm(total=len(dataset))
         bar.set_description("Constructing data sample set relation cache")
-        for _, data in entity_dataset:
+        for data in entity_dataset:
             nx_g = build_nx_g(data, relation_set, y_threshold=10)
             data_sample_set_relation_cache.append(nx_g)
             bar.update(1)
