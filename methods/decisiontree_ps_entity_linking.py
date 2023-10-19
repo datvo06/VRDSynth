@@ -79,7 +79,7 @@ def collect_program_execution_same_parent(programs, specs: SpecType, data_sample
             wret = p.return_variables[0]
             for mapping in oms:
                 all_out_mappings[p].add((i, mapping2tuple(mapping)))
-                all_word_pairs[p].add((i, (mapping[0][w0], mapping[0][wret])))
+                all_word_pairs[p].add((i, mapping[0][w0], mapping[0][wret]))
         for (word_mappings, p) in zip(word_mappingss, programs):
             w2otherwords = defaultdict(set)
             ret_var = p.return_variables[0]
