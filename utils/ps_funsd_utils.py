@@ -47,7 +47,9 @@ if __name__ == '__main__':
         boxes = []
         words = []
         label = []
-        for group in uf.groups():
+        i = 0
+        while i < len(uf.groups()):
+            group = uf.groups()[i]
             changed = True 
             print(group)
             # merge boxes
@@ -61,6 +63,7 @@ if __name__ == '__main__':
                             uf.union(group[0], j)
                             new_box = np.array([np.min([new_box[0], data['boxes'][j][0]]), np.min([new_box[1], data['boxes'][j][1]]), np.max([new_box[2], data['boxes'][j][2]]), np.max([new_box[3], data['boxes'][j][3]])])
                             changed = True
+            i += 1
         for group in uf.groups():
             group_box = np.array(list([data['boxes'][j] for j in group]))
             new_box = np.array([np.min(group_box[:, 0]), np.min(group_box[:, 1]), np.max(group_box[:, 2]), np.max(group_box[:, 3])])
