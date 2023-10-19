@@ -51,7 +51,6 @@ if __name__ == '__main__':
         while i < len(uf.groups()):
             group = uf.groups()[i]
             changed = True 
-            print(group)
             # merge boxes
             group_box = np.array(list([data['boxes'][j] for j in group]))
             new_box = np.array([np.min(group_box[:, 0]), np.min(group_box[:, 1]), np.max(group_box[:, 2]), np.max(group_box[:, 3])])
