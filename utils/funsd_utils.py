@@ -130,6 +130,8 @@ def build_nx_g(datasample: DataSample, relation_set: Set[Tuple[str, str, str]],
         label = np.argmax(relation.projs)
         nx_g.add_edge(relation[0], relation[1], mag=relation.mag, projs=relation.projs, lbl=label)
     for i, (box, label, word) in enumerate(zip(datasample.boxes, datasample.labels, datasample.words)):
+        if i not in nx_g.nodes():
+            nx_g.add_node(i)
         nx_g.nodes[i].update({'x0': box[0], 'y0': box[1], 'x1': box[2], 'y1': box[3], 'label': label, 'word': word})
     # Normalize the mag according to the smallest and largest mag
     mags = [e[2]['mag'] for e in nx_g.edges(data=True)]
