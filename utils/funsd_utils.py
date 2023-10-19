@@ -6,8 +6,8 @@ from utils.relation_building_utils import calculate_relation_set, dummy_calculat
 import networkx as nx
 import numpy as np
 
-
 Bbox = namedtuple('Bbox', ['x0', 'y0', 'x1', 'y1'])
+
 
 class DataSample:
 
@@ -16,7 +16,7 @@ class DataSample:
                  labels: List[int], entities: List[List[int]],
                  entities_map: List[Tuple[int, int]],
                  boxes: List[Bbox],
-                 img_fp: str=""):
+                 img_fp: str = ""):
         self._words = words
         self._labels = labels
         self._entities = entities
@@ -87,8 +87,9 @@ class DataSample:
         return json.dumps(self._dict)
 
 
-def build_nx_g(datasample: DataSample, relation_set: Set[Tuple[str, str, str]]) -> nx.MultiDiGraph:
-    all_relation = calculate_relation([datasample], relation_set)[0]
+def build_nx_g(datasample: DataSample, relation_set: Set[Tuple[str, str, str]],
+               y_threshold: float = None) -> nx.MultiDiGraph:
+    all_relation = calculate_relation([datasample], relation_set, y_threshold)[0]
     # build a networkx graph
     nx_g = nx.MultiDiGraph()
     for relation in all_relation:
@@ -124,6 +125,7 @@ def build_nx_g(datasample: DataSample, relation_set: Set[Tuple[str, str, str]]) 
 
 
 RELATION_SET = dummy_calculate_relation_set(None, None, None)
+
 
 def load_data(json_fp, img_fp):
     words = []

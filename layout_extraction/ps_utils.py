@@ -10,17 +10,18 @@ class RuleSynthesis:
     def __init__(self, ps: List[FindProgram]):
         self.ps = ps
 
-    def inference(self, words: List[Dict]) -> List[Dict]:
+    def inference(self, words: List[Dict], y_threshold: float = None) -> List[Dict]:
         """
         Merge words into entities.
         :param words: a list of words as dictionary. {"text", "label", "x0", "y0", "x1", "y1"}
+        :param y_threshold:
         :return: a list of entities as dictionary. {"text", "label", "x0", "y0", "x1", "y1"}
         """
         texts = [word["text"] for word in words]
         labels = [word["label"] for word in words]
         boxes = [[word["x0"], word["y0"], word["x1"], word["y1"]] for word in words]
         data_sample = DataSample(texts, labels, [], [], boxes, )
-        nx_g = build_nx_g(data_sample, RELATION_SET)
+        nx_g = build_nx_g(data_sample, RELATION_SET, y_threshold)
         out_bindings = batch_find_program_executor(nx_g, self.ps)
 
         uf = UnionFind(len(data_sample['boxes']))

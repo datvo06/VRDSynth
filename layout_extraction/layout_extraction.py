@@ -33,9 +33,9 @@ class LayoutExtraction:
         except Exception:
             self.use_layoutlm = False
         if find_programs:
-            self.rule_synthesis = RuleSynthesis(find_programs)
+            self.rule_synthesis: RuleSynthesis = RuleSynthesis(find_programs)
         else:
-            self.rule_synthesis = None
+            self.rule_synthesis: RuleSynthesis = None
 
     def extract_entity(self, pages: List[Page]) -> List[Dict]:
         """
@@ -87,7 +87,7 @@ class LayoutExtraction:
                 # Use Synthesis rules
                 for word in word_with_labels:
                     word["label"] = word["label"].lower()
-                output = self.rule_synthesis.inference(word_with_labels)
+                output = self.rule_synthesis.inference(word_with_labels, y_threshold=10)
                 for entity in output:
                     entity["label"] = entity["label"].upper()
                     if entity["label"] == "HEADER":

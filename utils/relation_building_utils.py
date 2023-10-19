@@ -144,7 +144,7 @@ def filter_relation_med_dist(data_relation: List[BoxRel], coeff=1.3):
 
 
 
-def calculate_relation(dataset: Dataset, relation_set: List[Tuple[float, float]]) -> List[List[BoxRel]]:
+def calculate_relation(dataset: Dataset, relation_set: List[Tuple[float, float]], y_threshold: float = None) -> List[List[BoxRel]]:
     """ Calculate the relation between samples in the dataset """
     all_relation = []
 
@@ -152,6 +152,7 @@ def calculate_relation(dataset: Dataset, relation_set: List[Tuple[float, float]]
 
     for i, data in enumerate(dataset):
         boxes = np.array(list(data['boxes']))
+        mean_height = np.mean(boxes[:, 3] - boxes[:, 1])
         centers = np.column_stack([(boxes[:, 0] + boxes[:, 2]) / 2, (boxes[:, 1] + boxes[:, 3]) / 2])
 
         # Using broadcasting to compute pairwise differences
@@ -172,6 +173,8 @@ def calculate_relation(dataset: Dataset, relation_set: List[Tuple[float, float]]
         data_relations = []
         for j in range(len(centers)):
             for k in range(len(centers)):
+                if y_threshold is not None and abs(centers[j][1] - centers[k][1]) > y_threshold * mean_height:
+                    continue
                 if j != k:
                     data_relations.append(BoxRel(j, k, magnitudes[j, k], relation_projections[j, k]))
         
