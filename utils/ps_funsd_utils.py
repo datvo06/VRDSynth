@@ -48,10 +48,23 @@ if __name__ == '__main__':
         words = []
         label = []
         for group in uf.groups():
+            changed = True 
             print(group)
             # merge boxes
             group_box = np.array(list([data['boxes'][j] for j in group]))
-            boxes.append(np.array([np.min(group_box[:, 0]), np.min(group_box[:, 1]), np.max(group_box[:, 2]), np.max(group_box[:, 3])]))
+            new_box = np.array([np.min(group_box[:, 0]), np.min(group_box[:, 1]), np.max(group_box[:, 2]), np.max(group_box[:, 3])])
+            while changed:
+                changed = False
+                for j in range(len(data['boxes'])):
+                    if j not in group:
+                        if new_box[0] <= data['boxes'][j][0] <= data['boxes'][j][2] <= new_box[2] and new_box[1] <= data['boxes'][j][1] <= data['boxes'][j][3] <= new_box[3]:
+                            uf.union(group[0], j)
+                            new_box = np.array([np.min([new_box[0], data['boxes'][j][0]]), np.min([new_box[1], data['boxes'][j][1]]), np.max([new_box[2], data['boxes'][j][2]]), np.max([new_box[3], data['boxes'][j][3]])])
+                            changed = True
+        for group in uf.groups():
+            group_box = np.array(list([data['boxes'][j] for j in group]))
+            new_box = np.array([np.min(group_box[:, 0]), np.min(group_box[:, 1]), np.max(group_box[:, 2]), np.max(group_box[:, 3])])
+            boxes.append(new_box)
             # merge words
             group_word = sorted(list([(j, data['words'][j]) for j in group]),key=lambda x: data['boxes'][int(x[0])][0])
             words.append(' '.join([word for _, word in group_word]))
