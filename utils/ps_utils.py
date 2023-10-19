@@ -1,4 +1,5 @@
-from utils.funsd_utils import DataSample
+from utils.funsd_utils import DataSample, Bbox
+from utils.algorithms import UnionFind
 from typing import List, Tuple
 from collections import namedtuple, defaultdict
 import itertools
@@ -16,12 +17,51 @@ def construct_entity_merging_specs(dataset: List[DataSample]):
     return specs
 
 
+def construct_entity_level_data(data) -> DataSample:
+    """
+    Construct entity level data from word level data
+    :return:
+    """
+    words = []
+    labels = []
+    entities = []
+    entities_map = data['entities_map']
+    boxes = []
+    for i, entity in enumerate(data.entities):
+        entity_words = []
+        entity_labels = []
+        entity_boxes = []
+        for word_idx in entity:
+            entity_words.append(data.words[word_idx])
+            entity_labels.append(data.labels[word_idx])
+            entity_boxes.append(data.boxes[word_idx])
+        words.append(' '.join(entity_words))
+        labels.append(entity_labels[0])
+        entities.append([i])
+        bbox = Bbox(
+                min([box.x0 for box in entity_boxes]),
+                min([box.y0 for box in entity_boxes]),
+                max([box.x1 for box in entity_boxes]),
+                max([box.y1 for box in entity_boxes])
+        )
+        boxes.append(bbox)
+
+    return DataSample(words, labels, entities, entities_map, boxes, data.img_fp)
+
+
 def construct_entity_linking_specs(dataset: List[DataSample]):
     # Construct the following pairs 
     specs = []
-    for datasample in dataset:
-        specs.append((datasample.to_json(), datasample.entities_map))
-    return specs
+    entity_dataset = []
+    for i, datasample in enumerate(dataset):
+        entity_datasample = construct_entity_level_data(datasample)
+        entity_dataset.append(entity_datasample)
+        parent_entities = defaultdict(set)
+        for e1, e2 in entity_datasample.entities_map:
+            parent_entities[e1].add(e2)
+        specs.append((i, datasample.entities_map, list(parent_entities.values())))
+    return specs, entity_dataset
+
 
 class SpecIterator:
     def __init__(self, specs: List[Tuple[int, List[List[int]]]]):

@@ -1,7 +1,11 @@
 import json
 from collections import namedtuple
-from typing import List, Tuple 
+from typing import List, Tuple, Set
 import glob
+from utils.relation_building_utils import calculate_relation_set, dummy_calculate_relation_set, calculate_relation
+import networkx as nx
+import numpy as np
+
 
 Bbox = namedtuple('Bbox', ['x0', 'y0', 'x1', 'y1'])
 
@@ -27,6 +31,38 @@ class DataSample:
             'entities_map': self._entities_map,
             'img_fp': img_fp
         }
+
+
+    def construct_entity_level_data(self) -> DataSample:
+        """
+        Construct entity level data from word level data
+        :return:
+        """
+        words = []
+        labels = []
+        entities = []
+        entities_map = self['entities_map']
+        boxes = []
+        for i, entity in enumerate(self._entities):
+            entity_words = []
+            entity_labels = []
+            entity_boxes = []
+            for word_idx in entity:
+                entity_words.append(self._words[word_idx])
+                entity_labels.append(self._labels[word_idx])
+                entity_boxes.append(self._boxes[word_idx])
+            words.append(' '.join(entity_words))
+            labels.append(entity_labels[0])
+            entities.append([i])
+            bbox = Bbox(
+                    min([box.x0 for box in entity_boxes]),
+                    min([box.y0 for box in entity_boxes]),
+                    max([box.x1 for box in entity_boxes]),
+                    max([box.y1 for box in entity_boxes])
+            )
+            boxes.append(bbox)
+
+        return DataSample(words, labels, entities, entities_map, boxes, self._img_fp)
 
     @property
     def words(self) -> List[str]:
@@ -112,3 +148,42 @@ def load_dataset(annotation_dir, img_dir):
         img_fp = img_dir + '/' + json_fp.split('/')[-1].split('.')[0] + '.jpg'
         dataset.append(load_data(json_fp, img_fp))
     return dataset
+
+
+
+def build_nx_g(datasample: DataSample, relation_set: Set[Tuple[str, str, str]],
+               y_threshold: float = None) -> nx.MultiDiGraph:
+    all_relation = calculate_relation([datasample], relation_set, y_threshold)[0]
+    # build a networkx graph
+    nx_g = nx.MultiDiGraph()
+    for relation in all_relation:
+        # label is the index of max projection
+        label = np.argmax(relation.projs)
+        nx_g.add_edge(relation[0], relation[1], mag=relation.mag, projs=relation.projs, lbl=label)
+    for i, (box, label, word) in enumerate(zip(datasample.boxes, datasample.labels, datasample.words)):
+        nx_g.nodes[i].update({'x0': box[0], 'y0': box[1], 'x1': box[2], 'y1': box[3], 'label': label, 'word': word})
+    # Normalize the mag according to the smallest and largest mag
+    mags = [e[2]['mag'] for e in nx_g.edges(data=True)]
+    if len(mags) > 1:
+        min_mag = min(mags)
+        max_mag = max(mags)
+        for e in nx_g.edges(data=True):
+            e[2]['mag'] = (e[2]['mag'] - min_mag) / (max_mag - min_mag)
+    # Remove all the edges that has mag > 0.5
+    rm_edges = []
+    for e in nx_g.edges(data=True):
+        if e[2]['mag'] > 0.5:
+            rm_edges.append(e[:2])
+    nx_g.remove_edges_from(rm_edges)
+    # normalize the coord according to the largest coord
+    max_coord_x = max([e[1]['x1'] for e in nx_g.nodes(data=True)])
+    max_coord_y = max([e[1]['y1'] for e in nx_g.nodes(data=True)])
+    min_coord_x = min([e[1]['x0'] for e in nx_g.nodes(data=True)])
+    min_coord_y = min([e[1]['y0'] for e in nx_g.nodes(data=True)])
+    for _, n in nx_g.nodes(data=True):
+        n['x0'] = (n['x0'] - min_coord_x) / (max_coord_x - min_coord_x)
+        n['y0'] = (n['y0'] - min_coord_y) / (max_coord_y - min_coord_y)
+        n['x1'] = (n['x1'] - min_coord_x) / (max_coord_x - min_coord_x)
+        n['y1'] = (n['y1'] - min_coord_y) / (max_coord_y - min_coord_y)
+    return nx_g
+
