@@ -5,6 +5,7 @@ from pathlib import Path
 from file_reader.file_reader import FileReader
 from layout_extraction.layoutlm_utils import FeatureExtraction
 from tqdm import tqdm
+import difflib
 
 if __name__ == '__main__':
     import argparse
@@ -74,11 +75,13 @@ if __name__ == '__main__':
                     if word["label"]:
                         word["label"] = word["label"].lower().strip()
                     labels.add(word["label"])
-                    if word["label"] is not None and word["label"].lower() not in map_label:
+                    try:
+                        if word['label'] is not None:
+                            label = difflib.get_close_matches(word["label"], map_label.keys(), n=1)[0].lower()
+                            word["label"] = label
+                    except:
                         flag = True
                         break
-
-                    word["label"] = map_label.get(word["label"], word["label"])
                 if flag:
                     print(labels)
                     continue
