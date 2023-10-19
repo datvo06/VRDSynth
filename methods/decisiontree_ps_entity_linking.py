@@ -67,7 +67,6 @@ def collect_program_execution_same_parent(programs, specs: SpecType, dataset, da
         nx_g = data_sample_set_relation_cache[i]
         w2entities = {}
         for e in entities:
-            print(e)
             for w in e:
                 w2entities[w] = set(e)
         programs = idx2progs[i] if idx2progs is not None else programs
@@ -88,16 +87,20 @@ def collect_program_execution_same_parent(programs, specs: SpecType, dataset, da
             for w_bind in word_mappings:
                 w2otherwords[w_bind[w0]].add(w_bind[ret_var])
             for w in w2otherwords:
-                e = w2entities[w]
-                for w2 in w2otherwords[w]:
-                    assert (i, w, w2) in all_word_pairs[p]
-                    if w2 in e:
-                        tt[p].add((i, w, w2))
-                    else:
-                        tf[p].add((i, w, w2))
-                rem = e - w2otherwords[w] - set([w])
-                for w2 in rem:
-                    ft[p].add((i, w, w2))
+                if w not in w2entities: 
+                    for w2 in w2otherwords[w]:
+                        ft[p].add((i, w, w2))
+                else:
+                    e = w2entities[w]
+                    for w2 in w2otherwords[w]:
+                        assert (i, w, w2) in all_word_pairs[p]
+                        if w2 in e:
+                            tt[p].add((i, w, w2))
+                        else:
+                            tf[p].add((i, w, w2))
+                    rem = e - w2otherwords[w] - set([w])
+                    for w2 in rem:
+                        ft[p].add((i, w, w2))
     return tt, ft, tf, all_out_mappings
 
 
