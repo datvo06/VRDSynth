@@ -342,7 +342,7 @@ if __name__ == '__main__':
         with open(f"{args.cache_dir}/pos_paths_linking.pkl", 'rb') as f:
             pos_paths = pkl.load(f)
     else:
-        pos_paths = get_path_specs_same_parent(dataset, specs, relation_set=relation_set, data_sample_set_relation_cache=data_sample_set_relation_cache)
+        pos_paths = get_path_specs_same_parent(dataset, specs, relation_set=relation_set, data_sample_set_relation_cache=data_sample_set_relation_cache, cache_dir=args.cache_dir)
         with open(f"{args.cache_dir}/pos_paths_linking.pkl", 'wb') as f:
             pkl.dump(pos_paths, f)
 
