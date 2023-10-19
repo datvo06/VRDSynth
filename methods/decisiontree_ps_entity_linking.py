@@ -121,7 +121,7 @@ def three_stages_bottom_up_version_space_based_same_parent(pos_paths, dataset, s
         bar = tqdm.tqdm(specs)
         bar.set_description("Stage 2 - Getting Program Output")
         tt, tf, ft, all_out_mappings = collect_program_execution_same_parent(
-                programs, specs, dataset,
+                programs, specs, 
                 data_sample_set_relation_cache)
         print(len(programs), len(tt))
         io_to_program = defaultdict(list)
