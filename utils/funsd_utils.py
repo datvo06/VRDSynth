@@ -33,37 +33,6 @@ class DataSample:
         }
 
 
-    def construct_entity_level_data(self) -> DataSample:
-        """
-        Construct entity level data from word level data
-        :return:
-        """
-        words = []
-        labels = []
-        entities = []
-        entities_map = self['entities_map']
-        boxes = []
-        for i, entity in enumerate(self._entities):
-            entity_words = []
-            entity_labels = []
-            entity_boxes = []
-            for word_idx in entity:
-                entity_words.append(self._words[word_idx])
-                entity_labels.append(self._labels[word_idx])
-                entity_boxes.append(self._boxes[word_idx])
-            words.append(' '.join(entity_words))
-            labels.append(entity_labels[0])
-            entities.append([i])
-            bbox = Bbox(
-                    min([box.x0 for box in entity_boxes]),
-                    min([box.y0 for box in entity_boxes]),
-                    max([box.x1 for box in entity_boxes]),
-                    max([box.y1 for box in entity_boxes])
-            )
-            boxes.append(bbox)
-
-        return DataSample(words, labels, entities, entities_map, boxes, self._img_fp)
-
     @property
     def words(self) -> List[str]:
         return self._words
