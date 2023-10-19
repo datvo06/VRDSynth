@@ -53,8 +53,7 @@ def get_path_specs_same_parent(dataset, specs: SpecType, relation_set, hops=2, s
     return pos_relations
 
 
-def collect_program_execution_same_parent(programs, specs: SpecType, data_sample_set_relation_cache, vss = None, vs_map: Optional[Dict]=None):
-    idx2progs = None
+def collect_program_execution_same_parent(programs, specs: SpecType, data_sample_set_relation_cache):
     tt, ft, tf = defaultdict(set), defaultdict(set), defaultdict(set)
     # TT:  True x True
     # FT: Predicted False, but was supposed to be True
@@ -65,11 +64,12 @@ def collect_program_execution_same_parent(programs, specs: SpecType, data_sample
     all_word_pairs = defaultdict(set)
     for i, _, entities in bar:
         nx_g = data_sample_set_relation_cache[i]
+        print(nx_g)
         w2entities = {}
         for e in entities:
             for w in e:
                 w2entities[w] = set(e)
-        programs = idx2progs[i] if idx2progs is not None else programs
+        programs = programs
         out_mappingss = batch_find_program_executor(nx_g, programs)
         word_mappingss = list([list([om[0] for om in oms]) for oms in out_mappingss])
         assert len(out_mappingss) == len(programs), len(out_mappingss)
