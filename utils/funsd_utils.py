@@ -131,7 +131,7 @@ def load_data(json_fp, img_fp):
     labels = []
     entities = []
     entities_mapping = set()
-    with open(json_fp, 'r') as f:
+    with open(json_fp, 'r', encoding="utf-8") as f:
         json_dict = json.load(f)
         entities = [[] for _ in range(len(json_dict['form']))]
         for block in json_dict['form']:
