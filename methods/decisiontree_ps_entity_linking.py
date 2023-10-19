@@ -53,7 +53,7 @@ def get_path_specs_same_parent(dataset, specs: SpecType, relation_set, hops=2, s
     return pos_relations
 
 
-def collect_program_execution_same_parent(programs, specs: SpecType, dataset, data_sample_set_relation_cache, vss = None, vs_map: Optional[Dict]=None):
+def collect_program_execution_same_parent(programs, specs: SpecType, data_sample_set_relation_cache, vss = None, vs_map: Optional[Dict]=None):
     idx2progs = None
     tt, ft, tf = defaultdict(set), defaultdict(set), defaultdict(set)
     # TT:  True x True
@@ -86,6 +86,7 @@ def collect_program_execution_same_parent(programs, specs: SpecType, dataset, da
             # Turn off return var to return every mapping
             for w_bind in word_mappings:
                 w2otherwords[w_bind[w0]].add(w_bind[ret_var])
+                assert (i, w_bind[w0], w_bind[ret_var]) in all_word_pairs[p]
             for w in w2otherwords:
                 if w not in w2entities: 
                     for w2 in w2otherwords[w]:
