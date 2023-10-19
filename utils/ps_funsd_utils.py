@@ -56,7 +56,7 @@ if __name__ == '__main__':
             new_box = np.array([np.min(group_box[:, 0]), np.min(group_box[:, 1]), np.max(group_box[:, 2]), np.max(group_box[:, 3])])
             while changed:
                 changed = False
-                for j in range(i+1, len(groups)):
+                for j in range(len(groups)):
                     group_box = np.array(list([data['boxes'][k] for k in groups[j]]))
                     if np.min(group_box[:, 0]) <= new_box[0] and np.min(group_box[:, 1]) <= new_box[1] and np.max(group_box[:, 2]) >= new_box[2] and np.max(group_box[:, 3]) >= new_box[3]:
                         new_box = np.array([np.min(group_box[:, 0]), np.min(group_box[:, 1]), np.max(group_box[:, 2]), np.max(group_box[:, 3])])
