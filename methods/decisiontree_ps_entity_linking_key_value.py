@@ -289,8 +289,6 @@ def three_stages_bottom_up_version_space_based_entity_linking(pos_paths, dataset
     return programs
 
 
-
-
 if __name__ == '__main__': 
     relation_set = dummy_calculate_relation_set(None, None, None)
     args = get_args()
@@ -313,18 +311,18 @@ if __name__ == '__main__':
         with open(f"{args.cache_dir}/specs_linking.pkl", 'wb') as f:
             pkl.dump((specs, entity_dataset), f)
         
-    if os.path.exists(f"{args.cache_dir}/ds_cache_linking.pkl"):
-        with open(f"{args.cache_dir}/ds_cache_linking.pkl", 'rb') as f:
+    if os.path.exists(f"{args.cache_dir}/ds_cache_linking_kv.pkl"):
+        with open(f"{args.cache_dir}/ds_cache_linking_kv.pkl", 'rb') as f:
             data_sample_set_relation_cache = pkl.load(f)
     else:
         data_sample_set_relation_cache = []
         bar = tqdm.tqdm(total=len(dataset))
         bar.set_description("Constructing data sample set relation cache")
         for data in entity_dataset:
-            nx_g = build_nx_g(data, relation_set, y_threshold=10)
+            nx_g = build_nx_g(data, relation_set, y_threshold=30)
             data_sample_set_relation_cache.append(nx_g)
             bar.update(1)
-        with open(f"{args.cache_dir}/ds_cache_linking.pkl", 'wb') as f:
+        with open(f"{args.cache_dir}/ds_cache_linking_kv.pkl", 'wb') as f:
             pkl.dump(data_sample_set_relation_cache, f)
 
     # Now we have the data sample set relation cache
