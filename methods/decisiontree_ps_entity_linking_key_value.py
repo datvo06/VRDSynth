@@ -24,7 +24,7 @@ from methods.decisiontree_ps_entity_linking import SpecType
 
 
 
-def get_all_positive_relation_paths_linking(specs: SpecType, relation_set, hops=2, data_sample_set_relation_cache=None):
+def get_all_positive_relation_paths_linking(specs: SpecType, relation_set, hops=3, data_sample_set_relation_cache=None):
     data_sample_set_relation = [] if data_sample_set_relation_cache is None else data_sample_set_relation_cache
     path_set_counter = defaultdict(int)
     bar = tqdm.tqdm(specs, total=len(specs))
@@ -38,7 +38,7 @@ def get_all_positive_relation_paths_linking(specs: SpecType, relation_set, hops=
         yield path_type, count
 
 
-def get_path_specs_linking(dataset, specs: SpecType, relation_set, hops=2, sampling_rate=0.2, data_sample_set_relation_cache=None, cache_dir=None):
+def get_path_specs_linking(dataset, specs: SpecType, relation_set, hops=3, sampling_rate=0.2, data_sample_set_relation_cache=None, cache_dir=None):
     data_sample_set_relation = {} if data_sample_set_relation_cache is None else data_sample_set_relation_cache
     assert data_sample_set_relation_cache is not None
     pos_relations = []
@@ -91,8 +91,6 @@ def collect_program_execution_linking(programs, specs: SpecType, data_sample_set
                     tt[p].update([(i, w, w2) for w2 in w2otherwords[w] if w2 in w2e[w]])
                     tf[p].update([(i, w, w2) for w2 in w2otherwords[w] if w2 not in w2e[w]])
                     ft[p].update(w2e[w] - w2otherwords[w] - {w})
-    print("Total tt: ", sum(len(tt[p]) for p in programs))
-    input()
     return tt, ft, tf, all_out_mappings
 
 
