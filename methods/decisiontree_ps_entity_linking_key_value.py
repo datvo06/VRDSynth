@@ -130,12 +130,12 @@ def three_stages_bottom_up_version_space_based_entity_linking(pos_paths, dataset
     for p in programs:
         wret = p.return_variables[0]
         w2otherwords = [defaultdict(set) for _ in range(len(dataset))]
-        new_tt = set([(i, w_bind[w0], w_bind[wret]) for i, (w_bind, _) in sorted(list(all_out_mappings[p])) if w_bind[wret] in w2e[i][w_bind[w0]]])
-        new_tf = set([(i, w_bind[w0], w_bind[wret]) for i, (w_bind, _) in sorted(list(all_out_mappings[p])) if w_bind[wret] in w2e[i][w_bind[w0]]])
-        tt[p].update(new_tt)
-        tf[p].update(new_tf)
         for i, (w_bind, r_bind) in sorted(list(all_out_mappings[p])):
             w_bind, r_bind = tuple2mapping((w_bind, r_bind))
+            if w_bind[wret] in w2e[i][w_bind[w0]]:
+                tt[p].add((i, w_bind[w0], w_bind[wret]))
+            else:
+                tf[p].add((i, w_bind[w0], w_bind[wret]))
             w2otherwords[i][w_bind[w0]].add(w_bind[wret])
         for i in range(len(dataset)):
             for w0bind in w2otherwords[i]:
