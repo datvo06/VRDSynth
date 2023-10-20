@@ -54,7 +54,7 @@ if __name__ == '__main__':
         "b-": "O",
         "i-": "O"
     }
-    for file in tqdm(pdf_path.glob("*/*.pdf")):
+    for file in tqdm(pdf_path.glob("*.pdf")):
         name = file.name[:-4]
         print(name)
         file_reader = FileReader(path=file)
