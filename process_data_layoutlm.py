@@ -51,26 +51,31 @@ if __name__ == '__main__':
         "b- \rvalue": "B-ANSWER",
         "b-package": "B-HEADER",
         "b-package:": "B-HEADER",
-        "b-" : "O",
-        "i-" : "O"
+        "b-": "O",
+        "i-": "O"
     }
     for file in tqdm(pdf_path.glob("*.pdf")):
         name = file.name[:-4]
         print(name)
         file_reader = FileReader(path=file)
-        counter = 0
         pages = file_reader.pages
-        # if "LABELEDALL" in name:
-        #     pages = pages[5:]
+
         for i, page in enumerate(file_reader.pages):
+            if page.width > 900:
+                print(f"Ignore page {i}: too large")
+                continue
             try:
                 data, images = feature_extraction.get_feature(page, expand_after=0, expand_before=0)
             except Exception as e:
                 print(f"Parse feature got error: {e}")
                 continue
-            for words, image in zip(data, images):
+            for seg, (words, image) in enumerate(zip(data, images)):
                 flag = False
                 labels = set()
+                if len(words) == 0:
+                    # Ignore empty page
+                    print(f"Ignore page {i}: empty")
+                    continue
                 for word in words:
                     if word["label"]:
                         word["label"] = word["label"].lower().strip()
@@ -78,13 +83,16 @@ if __name__ == '__main__':
                     try:
                         if word['label'] is not None:
                             label = difflib.get_close_matches(word["label"], map_label.keys(), n=1)[0].lower()
-                            word["label"] = label
+                            word["label"] = map_label[label]
                     except:
                         flag = True
                         break
-                if flag:
-                    print(labels)
+                if len(labels) == 1 and None in labels:
+                    # Ignore page without annotation
+                    print(f"Ignore page {i}: no annotation")
                     continue
-                cv2.imwrite(str(result_path / f"{i}-{counter}.jpg"), image)
-                json.dump(words, open(result_path / f"{i}-{counter}.json", "w", encoding="utf-8"))
-                counter += 1
+                if flag:
+                    print("Ignore page {i}: wrong labels {labels}")
+                    continue
+                cv2.imwrite(str(result_path / f"{name}-{i}-{seg}.jpg"), image)
+                json.dump(words, open(result_path / f"{name}-{i}-{seg}.json", "w", encoding="utf-8"))

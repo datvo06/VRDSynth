@@ -23,7 +23,7 @@ class LayoutExtraction:
         """
         try:
             if model_path:
-                self.feature_extraction = FeatureExtraction()
+                self.feature_extraction = FeatureExtraction(max_height=700)
                 self.model = LayoutLMv3ForTokenClassification.from_pretrained(model_path)
                 self.processor = LayoutLMv3Processor.from_pretrained(model_path, apply_ocr=False)
                 self.config = LayoutLMv3Config.from_pretrained(model_path)
