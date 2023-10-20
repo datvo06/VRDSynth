@@ -729,9 +729,7 @@ def three_stages_bottom_up_version_space_based(all_positive_paths, dataset, spec
 
     return programs
 
-
-if __name__ == '__main__': 
-    relation_set = dummy_calculate_relation_set(None, None, None)
+def get_args():
     parser = get_parser()
     # training_dir
     parser.add_argument('--training_dir', type=str, default='funsd_dataset/training_data', help='training directory')
@@ -739,8 +737,14 @@ if __name__ == '__main__':
     parser.add_argument('--cache_dir', type=str, default='funsd_cache', help='cache directory')
     # output_dir
     parser.add_argument('--output_dir', type=str, default='funsd_output', help='output directory')
-    args = parser.parse_args()
+    args = parser.parse_known_args()[0]
+    return args
 
+
+if __name__ == '__main__': 
+    relation_set = dummy_calculate_relation_set(None, None, None)
+    args = get_args()
+    
     os.makedirs(args.cache_dir, exist_ok=True)
     os.makedirs(args.output_dir, exist_ok=True)
 

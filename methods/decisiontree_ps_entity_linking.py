@@ -8,7 +8,7 @@ import itertools
 import functools
 from collections import defaultdict, namedtuple
 from networkx.algorithms import constraint, isomorphism
-from utils.ps_utils import FalseValue, LiteralReplacement, Program, EmptyProgram, GrammarReplacement, FindProgram, RelationLabelConstant, RelationLabelProperty, TrueValue, WordLabelProperty, WordVariable, RelationVariable, RelationConstraint, LabelEqualConstraint, RelationLabelEqualConstraint, construct_entity_linking_specs, LabelConstant, AndConstraint, LiteralSet, Constraint, GrammarReplacement, Hole, replace_hole, find_holes, SymbolicList, FilterStrategy, fill_hole, Expression
+from utils.ps_utils import FalseValue, LiteralReplacement, Program, EmptyProgram, GrammarReplacement, FindProgram, RelationLabelConstant, RelationLabelProperty, TrueValue, WordLabelProperty, WordVariable, RelationVariable, RelationConstraint, LabelEqualConstraint, RelationLabelEqualConstraint, construct_entity_linking_specs, LabelConstant, AndConstraint, LiteralSet, Constraint, Hole, replace_hole, find_holes, SymbolicList, FilterStrategy, fill_hole, Expression
 from utils.visualization_script import visualize_program_with_support
 from utils.version_space import VersionSpace
 import json
@@ -19,11 +19,11 @@ import copy
 import multiprocessing
 from multiprocessing import Pool
 from functools import lru_cache, partial
-from methods.decisiontree_ps import get_all_path, get_parser, construct_or_get_initial_programs, batch_find_program_executor, mapping2tuple, tuple2mapping, report_metrics, get_p_r_f1, get_valid_cand_find_program, add_constraint_to_find_program
+from methods.decisiontree_ps import get_all_path, get_parser, construct_or_get_initial_programs, batch_find_program_executor, mapping2tuple, tuple2mapping, report_metrics, get_p_r_f1, get_valid_cand_find_program, add_constraint_to_find_program, get_args
 
 SpecType = List[Tuple[int, List[Tuple[int, int]], List[Set[int]]]]
 
-def get_all_positive_relation_paths_same_parent(dataset, specs: SpecType, relation_set, hops=2, data_sample_set_relation_cache=None):
+def get_all_positive_relation_paths_same_parent(specs: SpecType, relation_set, hops=2, data_sample_set_relation_cache=None):
     data_sample_set_relation = [] if data_sample_set_relation_cache is None else data_sample_set_relation_cache
     path_set_counter = defaultdict(int)
     bar = tqdm.tqdm(specs, total=len(specs))
@@ -39,6 +39,7 @@ def get_all_positive_relation_paths_same_parent(dataset, specs: SpecType, relati
         yield path_type, count
 
 
+
 def get_path_specs_same_parent(dataset, specs: SpecType, relation_set, hops=2, sampling_rate=0.2, data_sample_set_relation_cache=None, cache_dir=None):
     data_sample_set_relation = {} if data_sample_set_relation_cache is None else data_sample_set_relation_cache
     assert data_sample_set_relation_cache is not None
@@ -48,9 +49,11 @@ def get_path_specs_same_parent(dataset, specs: SpecType, relation_set, hops=2, s
     if os.path.exists(f"{cache_dir}/all_positive_paths.pkl"):
         pos_relations = pkl.load(open(f"{cache_dir}/all_positive_paths.pkl", 'rb'))
     else:
-        pos_relations = list(get_all_positive_relation_paths_same_parent(dataset, specs, relation_set, hops=hops, data_sample_set_relation_cache=data_sample_set_relation))
+        pos_relations = list(get_all_positive_relation_paths_same_parent(specs, relation_set, hops=hops, data_sample_set_relation_cache=data_sample_set_relation))
         pkl.dump(pos_relations, open(f"{cache_dir}/all_positive_paths.pkl", 'wb'))
     return pos_relations
+
+
 
 
 def collect_program_execution_same_parent(programs, specs: SpecType, data_sample_set_relation_cache):
@@ -88,19 +91,12 @@ def collect_program_execution_same_parent(programs, specs: SpecType, data_sample
                 assert (i, w_bind[w0], w_bind[ret_var]) in all_word_pairs[p]
             for w in w2otherwords:
                 if w not in w2entities: 
-                    for w2 in w2otherwords[w]:
-                        ft[p].add((i, w, w2))
+                    ft[p].update([(i, w, w2) for w2 in w2otherwords[w]])
                 else:
                     e = w2entities[w]
-                    for w2 in w2otherwords[w]:
-                        assert (i, w, w2) in all_word_pairs[p]
-                        if w2 in e:
-                            tt[p].add((i, w, w2))
-                        else:
-                            tf[p].add((i, w, w2))
-                    rem = e - w2otherwords[w] - set([w])
-                    for w2 in rem:
-                        ft[p].add((i, w, w2))
+                    tt[p].update([(i, w, w2) for w2 in w2otherwords[w] if w2 in e])
+                    tf[p].update([(i, w, w2) for w2 in w2otherwords[w] if w2 not in e])
+                    ft[p].update(e - w2otherwords[w] - {w})
     return tt, ft, tf, all_out_mappings
 
 
@@ -126,7 +122,7 @@ def three_stages_bottom_up_version_space_based_same_parent(pos_paths, dataset, s
         io_to_program = defaultdict(list)
         report_metrics(programs, tt, tf, ft, io_to_program)
         if cache_dir is not None:
-            with open(os.path.join(cache_dir, "stage2_same_parent.pkl"), "wb") as f:
+            with open(f"{cache_dir}/stage2_same_parent.pkl", "wb") as f:
                 pkl.dump([tt, tf, ft, io_to_program, all_out_mappings], f)
 
     w2e = [defaultdict(set) for _ in range(len(dataset))]
@@ -187,7 +183,7 @@ def three_stages_bottom_up_version_space_based_same_parent(pos_paths, dataset, s
                         c2vs[c].add(i)
             # Save this for this iter
             if cache_dir:
-                with open(os.path.join(cache_dir, f"stage3_{it}_same_parent.pkl"), "wb") as f:
+                with open(f"{cache_dir}/stage3_{it}_same_parent.pkl", "wb") as f:
                     pkl.dump([vss, c2vs], f)
         # Now we have extended_cands
         # Let's create the set of valid input for each cands
@@ -196,10 +192,8 @@ def three_stages_bottom_up_version_space_based_same_parent(pos_paths, dataset, s
             with open(f"{cache_dir}/stage3_{it}_new_vs_same_parent.pkl", "rb") as f:
                 new_vss = pkl.load(f)
         else:
-            new_vss = []
-            new_io_to_vs = {}
-            perfect_ps = []
-            perfect_ps_io_value = set()
+            new_vss, new_io_to_vs = [], {}
+            perfect_ps, perfect_ps_io_value = [], set()
             has_child = [False] * len(vss)
             big_bar = tqdm.tqdm(c2vs.items())
             big_bar.set_description("Stage 3 - Creating New Version Spaces")
@@ -260,7 +254,7 @@ def three_stages_bottom_up_version_space_based_same_parent(pos_paths, dataset, s
                             if io_key not in perfect_ps_io_value:
                                 perfect_ps.append(new_program)
                                 perfect_ps_io_value.add(io_key)
-                                with open(os.path.join(cache_dir, f"stage3_{it}_perfect_ps_same_parent.pkl"), "wb") as f:
+                                with open(f"{cache_dir}/stage3_{it}_perfect_ps_same_parent.pkl", "wb") as f:
                                     pkl.dump(perfect_ps, f)
                             covered_tt_perfect.update(new_tt)
                             continue
@@ -303,17 +297,9 @@ def three_stages_bottom_up_version_space_based_same_parent(pos_paths, dataset, s
 
 
 
-if __name__ == '__main__': 
-    relation_set = dummy_calculate_relation_set(None, None, None)
-    parser = get_parser()
-    # training_dir
-    parser.add_argument('--training_dir', type=str, default='funsd_dataset/training_data', help='training directory')
-    # cache_dir
-    parser.add_argument('--cache_dir', type=str, default='funsd_cache', help='cache directory')
-    # output_dir
-    parser.add_argument('--output_dir', type=str, default='funsd_output', help='output directory')
-    args = parser.parse_args()
 
+if __name__ == '__main__': 
+    args = get_args()
     os.makedirs(args.cache_dir, exist_ok=True)
     os.makedirs(args.output_dir, exist_ok=True)
 
