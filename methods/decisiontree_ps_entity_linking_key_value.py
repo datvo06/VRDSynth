@@ -52,22 +52,6 @@ def get_path_specs_linking(dataset, specs: SpecType, relation_set, hops=2, sampl
     return pos_relations
 
 
-
-def get_path_specs_linking(dataset, specs: SpecType, relation_set, hops=2, sampling_rate=0.2, data_sample_set_relation_cache=None, cache_dir=None):
-    data_sample_set_relation = {} if data_sample_set_relation_cache is None else data_sample_set_relation_cache
-    assert data_sample_set_relation_cache is not None
-    pos_relations = []
-    neg_rels = []
-    print("Start mining positive relations")
-    if os.path.exists(f"{cache_dir}/all_positive_paths.pkl"):
-        pos_relations = pkl.load(open(f"{cache_dir}/all_positive_paths.pkl", 'rb'))
-    else:
-        pos_relations = list(get_all_positive_relation_paths_linking(specs, relation_set, hops=hops, data_sample_set_relation_cache=data_sample_set_relation))
-        pkl.dump(pos_relations, open(f"{cache_dir}/all_positive_paths.pkl", 'wb'))
-    return pos_relations
-
-
-
 def collect_program_execution_linking(programs, specs: SpecType, data_sample_set_relation_cache):
     tt, ft, tf = defaultdict(set), defaultdict(set), defaultdict(set)
     # TT:  True x True
@@ -146,8 +130,8 @@ def three_stages_bottom_up_version_space_based_entity_linking(pos_paths, dataset
     for p in programs:
         wret = p.return_variables[0]
         w2otherwords = [defaultdict(set) for _ in range(len(dataset))]
-        new_tt = set([(i, w_bind[w0], w_bind[wret]) for i, w_bind, _ in sorted(list(all_out_mappings[p])) if w_bind[wret] in w2e[i][w_bind[w0]]])
-        new_tf = set([(i, w_bind[w0], w_bind[wret]) for i, w_bind, _ in sorted(list(all_out_mappings[p])) if w_bind[wret] in w2e[i][w_bind[w0]]])
+        new_tt = set([(i, w_bind[w0], w_bind[wret]) for i, (w_bind, _) in sorted(list(all_out_mappings[p])) if w_bind[wret] in w2e[i][w_bind[w0]]])
+        new_tf = set([(i, w_bind[w0], w_bind[wret]) for i, (w_bind, _) in sorted(list(all_out_mappings[p])) if w_bind[wret] in w2e[i][w_bind[w0]]])
         tt[p].update(new_tt)
         tf[p].update(new_tf)
         for i, (w_bind, r_bind) in sorted(list(all_out_mappings[p])):
