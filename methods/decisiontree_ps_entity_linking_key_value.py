@@ -329,12 +329,12 @@ if __name__ == '__main__':
 
     # Now we have the data sample set relation cache
     print("Stage 1 - Constructing Program Space")
-    if os.path.exists(f"{args.cache_dir}/pos_paths_linking.pkl"):
-        with open(f"{args.cache_dir}/pos_paths_linking.pkl", 'rb') as f:
+    if os.path.exists(f"{args.cache_dir}/pos_paths_linking_kv.pkl"):
+        with open(f"{args.cache_dir}/pos_paths_linking_kv.pkl", 'rb') as f:
             pos_paths = pkl.load(f)
     else:
         pos_paths = get_path_specs_linking(dataset, specs, relation_set=relation_set, data_sample_set_relation_cache=data_sample_set_relation_cache, cache_dir=args.cache_dir)
-        with open(f"{args.cache_dir}/pos_paths_linking.pkl", 'wb') as f:
+        with open(f"{args.cache_dir}/pos_paths_linking_kv.pkl", 'wb') as f:
             pkl.dump(pos_paths, f)
 
     programs = three_stages_bottom_up_version_space_based_entity_linking(pos_paths, dataset, specs, data_sample_set_relation_cache, args.cache_dir)
