@@ -62,7 +62,6 @@ def collect_program_execution_linking(programs, specs: SpecType, data_sample_set
     all_out_mappings = defaultdict(set)
     all_word_pairs = defaultdict(set)
     for i, entity_map, _ in bar:
-        print(entity_map)
         w2e = defaultdict(set)
         for w1, w2 in entity_map:
             w2e[w1].add(w2)
@@ -336,5 +335,7 @@ if __name__ == '__main__':
         pos_paths = get_path_specs_linking(dataset, specs, relation_set=relation_set, data_sample_set_relation_cache=data_sample_set_relation_cache, cache_dir=args.cache_dir)
         with open(f"{args.cache_dir}/pos_paths_linking_kv.pkl", 'wb') as f:
             pkl.dump(pos_paths, f)
+    print(len(pos_paths))
+    input()
 
     programs = three_stages_bottom_up_version_space_based_entity_linking(pos_paths, dataset, specs, data_sample_set_relation_cache, args.cache_dir)
