@@ -24,7 +24,7 @@ from methods.decisiontree_ps_entity_linking import SpecType
 
 
 
-def get_all_positive_relation_paths_linking(specs: SpecType, relation_set, hops=2, data_sample_set_relation_cache=None):
+def get_all_positive_relation_paths_linking(specs: SpecType, relation_set, hops=3, data_sample_set_relation_cache=None):
     data_sample_set_relation = [] if data_sample_set_relation_cache is None else data_sample_set_relation_cache
     path_set_counter = defaultdict(int)
     bar = tqdm.tqdm(specs, total=len(specs))
@@ -38,7 +38,7 @@ def get_all_positive_relation_paths_linking(specs: SpecType, relation_set, hops=
         yield path_type, count
 
 
-def get_path_specs_linking(dataset, specs: SpecType, relation_set, hops=2, sampling_rate=0.2, data_sample_set_relation_cache=None, cache_dir=None):
+def get_path_specs_linking(dataset, specs: SpecType, relation_set, hops=3, sampling_rate=0.2, data_sample_set_relation_cache=None, cache_dir=None):
     data_sample_set_relation = {} if data_sample_set_relation_cache is None else data_sample_set_relation_cache
     assert data_sample_set_relation_cache is not None
     pos_relations = []
@@ -292,6 +292,7 @@ def three_stages_bottom_up_version_space_based_entity_linking(pos_paths, dataset
 if __name__ == '__main__': 
     relation_set = dummy_calculate_relation_set(None, None, None)
     args = get_args()
+    args.cache_dir = f"{args.cache_dir}_kv"
     os.makedirs(args.cache_dir, exist_ok=True)
     os.makedirs(args.output_dir, exist_ok=True)
 
@@ -319,7 +320,7 @@ if __name__ == '__main__':
         bar = tqdm.tqdm(total=len(dataset))
         bar.set_description("Constructing data sample set relation cache")
         for data in entity_dataset:
-            nx_g = build_nx_g(data, relation_set, y_threshold=30)
+            nx_g = build_nx_g(data, relation_set, y_threshold=30, filter_rel=False)
             data_sample_set_relation_cache.append(nx_g)
             bar.update(1)
         with open(f"{args.cache_dir}/ds_cache_linking_kv.pkl", 'wb') as f:

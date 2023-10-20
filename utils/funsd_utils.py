@@ -121,8 +121,8 @@ def load_dataset(annotation_dir, img_dir):
 
 
 def build_nx_g(datasample: DataSample, relation_set: Set[Tuple[str, str, str]],
-               y_threshold: float = None) -> nx.MultiDiGraph:
-    all_relation = calculate_relation([datasample], relation_set, y_threshold)[0]
+               y_threshold: float = None, filter_rel=True) -> nx.MultiDiGraph:
+    all_relation = calculate_relation([datasample], relation_set, y_threshold, filter_rel)[0]
     # build a networkx graph
     nx_g = nx.MultiDiGraph()
     for relation in all_relation:
