@@ -647,7 +647,10 @@ def three_stages_bottom_up_version_space_based(all_positive_paths, dataset, spec
         else:
             c2vs = defaultdict(set)
             for i, vs in enumerate(vss):
-                old_p, old_r, old_f1 = get_p_r_f1(vs.tt, vs.tf, vs.ft)
+                try:
+                    old_p, old_r, old_f1 = get_p_r_f1(vs.tt, vs.tf, vs.ft)
+                except:
+                    continue
                 for p in vs.programs:
                     cs = get_valid_cand_find_program(vs, p)
                     for c in cs:
