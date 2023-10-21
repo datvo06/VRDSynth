@@ -296,6 +296,7 @@ if __name__ == '__main__':
     args = get_args()
     args.cache_dir = f"{args.cache_dir}_kv"
     os.makedirs(args.cache_dir, exist_ok=True)
+    os.makedirs(f"{args.cache_dir}/viz", exist_ok=True)
     os.makedirs(args.output_dir, exist_ok=True)
 
     if os.path.exists(f"{args.cache_dir}/dataset.pkl"):
