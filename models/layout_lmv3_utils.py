@@ -11,7 +11,7 @@ model = AutoModelForTokenClassification.from_pretrained("nielsr/layoutlmv3-finet
 def get_word_embedding(data: DataSample):
     # Load the image
     image = Image.open(
-            data.img_fp.replace(".jpg", ".png"))
+            data.img_fp.replace(".jpg", ".png")).convert("RGB")
     encoding = processor(image, data.words, data.boxes, word_labels=[0]*len(data.boxes), 
                          return_tensors="pt")
     output = model(**encoding)
