@@ -1,5 +1,6 @@
+from random import choices
 import networkx as nx
-from typing import List, Tuple, Dict, Set, Optional
+from typing import List, Tuple, Dict, Set, Optional, Any
 from utils.funsd_utils import DataSample, load_dataset, build_nx_g
 from utils.relation_building_utils import calculate_relation_set, dummy_calculate_relation_set, calculate_relation
 import argparse
@@ -19,7 +20,25 @@ import copy
 import multiprocessing
 from multiprocessing import Pool
 from functools import lru_cache, partial
+import time
 
+
+class Logger(object):
+    def __init__(self):
+        self.dict_data = {}
+
+    def log(self, key: str, value: Any):
+        self.dict_data[key] = value
+        self.write()
+
+    def set_fp(self, fp):
+        self.fp = fp
+
+    def write(self):
+        with open(self.fp, 'w') as f:
+            json.dump(self.dict_data, f)
+
+logger = Logger()
 
 def get_all_path(nx_g, w1, w2, hops=2):
     path_set_counter = defaultdict(int)
@@ -88,13 +107,16 @@ def get_path_specs(dataset, specs: List[Tuple[int, List[List[int]]]], relation_s
     else:
         pos_relations = list(get_all_positive_relation_paths(dataset, specs, relation_set, hops=hops, data_sample_set_relation_cache=data_sample_set_relation))
         pkl.dump(pos_relations, open(f"{args.cache_dir}/all_positive_paths.pkl", 'wb'))
+    '''
     print("Start mining negative relations")
     if os.path.exists(f"{args.cache_dir}/all_negative_paths.pkl"):
         neg_relations = pkl.load(open(f"{args.cache_dir}/all_negative_paths.pkl", 'rb'))
     else:
         neg_relations = list(get_all_negative_relation(dataset, specs, relation_set, hops=hops, sampling_rate=sampling_rate, data_sample_set_relation_cache=data_sample_set_relation))
         pkl.dump(neg_relations, open(f"{args.cache_dir}/all_negative_paths.pkl", 'wb'))
-    return pos_relations, neg_relations
+    '''
+    return pos_relations
+    # return pos_relations, neg_relations
 
 
 def get_parser():
@@ -538,7 +560,9 @@ def construct_or_get_initial_programs(pos_paths, cache_fp):
         with open(cache_fp, "rb") as f:
             programs = pkl.load(f)
     else:
+        start_time = time.time()
         programs = construct_initial_program_set(pos_paths)
+        logger.log("Construct initial program set", float(time.time() - start_time))
         with open(cache_fp, "wb") as f:
             pkl.dump(programs, f)
     return programs
@@ -547,7 +571,6 @@ def construct_or_get_initial_programs(pos_paths, cache_fp):
 def three_stages_bottom_up_version_space_based(all_positive_paths, dataset, specs, data_sample_set_relation_cache, cache_dir=None):
     # STAGE 1: Build base relation spaces
     programs = construct_or_get_initial_programs(all_positive_paths, f"{cache_dir}/stage1.pkl")
-
     print("Number of programs in stage 1: ", len(programs))
     # STAGE 2: Build version space
     # Start by getting the output of each program
@@ -557,11 +580,15 @@ def three_stages_bottom_up_version_space_based(all_positive_paths, dataset, spec
             tt, tf, ft, io_to_program, all_out_mappings = pkl.load(f)
             print(len(tt), len(tf), len(ft))
     else:
+        start_time = time.time()
         bar = tqdm.tqdm(specs)
         bar.set_description("Stage 2 - Getting Program Output")
         tt, tf, ft, all_out_mappings = collect_program_execution(
                 programs, dataset,
                 data_sample_set_relation_cache)
+        end_time = time.time()
+        print("Time to collect program execution: ", end_time - start_time)
+        logger.log("Collect program execution", float(end_time - start_time))
         print(len(programs), len(tt))
         io_to_program = defaultdict(list)
         report_metrics(programs, tt, tf, ft, io_to_program)
@@ -569,6 +596,7 @@ def three_stages_bottom_up_version_space_based(all_positive_paths, dataset, spec
             with open(os.path.join(cache_dir, "stage2.pkl"), "wb") as f:
                 pkl.dump([tt, tf, ft, io_to_program, all_out_mappings], f)
 
+    ## This is simply sanity checking
     w2e = [defaultdict(set) for _ in range(len(dataset))]
     for i, data in enumerate(dataset):
         for e in data.entities:
@@ -610,6 +638,7 @@ def three_stages_bottom_up_version_space_based(all_positive_paths, dataset, spec
     print("Number of version spaces: ", len(vss))
     max_its = 10
     perfect_ps = []
+    start_time = time.time()
     for it in range(max_its):
         if cache_dir and os.path.exists(os.path.join(cache_dir, f"stage3_{it}.pkl")):
             vss, c2vs = pkl.load(open(os.path.join(cache_dir, f"stage3_{it}.pkl"), "rb"))
@@ -695,6 +724,7 @@ def three_stages_bottom_up_version_space_based(all_positive_paths, dataset, spec
                                 perfect_ps_io_value.add(io_key)
                                 with open(os.path.join(cache_dir, f"stage3_{it}_perfect_ps.pkl"), "wb") as f:
                                     pkl.dump(perfect_ps, f)
+                            logger.log(str(len(covered_tt_perfect)), (float(time.time()) - start_time, len(perfect_ps)))
                             covered_tt_perfect.update(new_tt)
                             continue
                         if new_p > old_p: 
@@ -740,8 +770,8 @@ def get_args():
     parser.add_argument('--training_dir', type=str, default='funsd_dataset/training_data', help='training directory')
     # cache_dir
     parser.add_argument('--cache_dir', type=str, default='funsd_cache', help='cache directory')
-    # output_dir
-    parser.add_argument('--output_dir', type=str, default='funsd_output', help='output directory')
+    parser.add_argument('--upper_float_thres', type=float, default=0.5, help='upper float thres')
+    parser.add_argument('--rel_type', type=str, choices=['cluster', 'default'], default='default')
     args = parser.parse_known_args()[0]
     return args
 
@@ -751,8 +781,8 @@ if __name__ == '__main__':
     args = get_args()
     
     os.makedirs(args.cache_dir, exist_ok=True)
-    os.makedirs(args.output_dir, exist_ok=True)
-
+    logger.set_fp(f"{args.cache_dir}/log.json")
+    start_time = time.time()
     if os.path.exists(f"{args.cache_dir}/dataset.pkl"):
         with open(f"{args.cache_dir}/dataset.pkl", 'rb') as f:
             dataset = pkl.load(f)
@@ -767,6 +797,11 @@ if __name__ == '__main__':
         specs = construct_entity_merging_specs(dataset)
         with open(f"{args.cache_dir}/specs.pkl", 'wb') as f:
             pkl.dump(specs, f)
+    end_time = time.time()
+    print(f"Time taken to load dataset and construct specs: {end_time - start_time}")
+    logger.log("construct spec time: ", float(end_time - start_time))
+
+    start_time = time.time()
         
     if os.path.exists(f"{args.cache_dir}/data_sample_set_relation_cache.pkl"):
         with open(f"{args.cache_dir}/data_sample_set_relation_cache.pkl", 'rb') as f:
@@ -779,21 +814,41 @@ if __name__ == '__main__':
             nx_g = build_nx_g(data_sample, relation_set, y_threshold=10)
             data_sample_set_relation_cache.append(nx_g)
             bar.update(1)
+        end_time = time.time()
+        print(f"Time taken to construct data sample set relation cache: {end_time - start_time}")
+        logger.log("construct data sample set relation cache time: ", float(end_time - start_time))
+
         with open(f"{args.cache_dir}/data_sample_set_relation_cache.pkl", 'wb') as f:
             pkl.dump(data_sample_set_relation_cache, f)
     # Now we have the data sample set relation cache
     print("Stage 1 - Constructing Program Space")
-    if os.path.exists(f"{args.cache_dir}/all_positive_paths.pkl") and os.path.exists(f"{args.cache_dir}/all_negative_paths.pkl"):
-        with open(f"{args.cache_dir}/all_positive_paths.pkl", 'rb') as f:
-            all_positive_paths = pkl.load(f)
-        with open(f"{args.cache_dir}/all_negative_paths.pkl", 'rb') as f:
-            all_negative_paths = pkl.load(f)
-    else:
-        pos_paths, neg_paths = get_path_specs(dataset, specs, relation_set=relation_set, data_sample_set_relation_cache=data_sample_set_relation_cache)
-        all_positive_paths = pos_paths
-        with open(f"{args.cache_dir}/all_positive_paths.pkl", 'wb') as f:
-            pkl.dump(all_positive_paths, f)
-        with open(f"{args.cache_dir}/all_negative_paths.pkl", 'wb') as f:
-            pkl.dump(neg_paths, f)
+    # if os.path.exists(f"{args.cache_dir}/all_positive_paths.pkl") and os.path.exists(f"{args.cache_dir}/all_negative_paths.pkl"):
+    #     with open(f"{args.cache_dir}/all_positive_paths.pkl", 'rb') as f:
+    #         all_positive_paths = pkl.load(f)
+    #     with open(f"{args.cache_dir}/all_negative_paths.pkl", 'rb') as f:
+    #         all_negative_paths = pkl.load(f)
+    # else:
+    #     pos_paths, neg_paths = get_path_specs(dataset, specs, relation_set=relation_set, data_sample_set_relation_cache=data_sample_set_relation_cache)
+    #     all_positive_paths = pos_paths
+    #     with open(f"{args.cache_dir}/all_positive_paths.pkl", 'wb') as f:
+    #         pkl.dump(all_positive_paths, f)
+    #     with open(f"{args.cache_dir}/all_negative_paths.pkl", 'wb') as f:
+    #         pkl.dump(neg_paths, f)
 
-    programs = three_stages_bottom_up_version_space_based(all_positive_paths, dataset, specs, data_sample_set_relation_cache, args.cache_dir)
+    # programs = three_stages_bottom_up_version_space_based(all_positive_paths, dataset, specs, data_sample_set_relation_cache, args.cache_dir)
+
+
+    start_time = time.time()
+    if os.path.exists(f"{args.cache_dir}/all_positive_paths.pkl"):
+        with open(f"{args.cache_dir}/all_positive_paths.pkl", 'rb') as f:
+            pos_paths = pkl.load(f)
+    else:
+        pos_paths = get_path_specs(dataset, specs, relation_set=relation_set, data_sample_set_relation_cache=data_sample_set_relation_cache)
+        end_time = time.time()
+        print(f"Time taken to construct positive paths: {end_time - start_time}")
+        logger.log("construct positive paths time: ", float(end_time - start_time))
+        with open(f"{args.cache_dir}/all_positive_paths.pkl", 'wb') as f:
+             pkl.dump(pos_paths, f)
+
+
+    programs = three_stages_bottom_up_version_space_based(pos_paths, dataset, specs, data_sample_set_relation_cache, args.cache_dir)
