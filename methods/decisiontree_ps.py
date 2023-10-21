@@ -361,11 +361,14 @@ def batch_find_program_executor(nx_g, find_programs: List[FindProgram]) -> List[
             # get the corresponding binding for word_variables and relation_variables
             word_binding = {w: subgraph[w] for w in word_vars}
             relation_binding = {r: (subgraph[w1], subgraph[w2], 0) for w1, w2, r in path}
-            # word_val = {w: nx_g.nodes[word_binding[w]] for i, w in enumerate(word_vars)}
-            # relation_val = {r: (nx_g.nodes[word_binding[w1]], nx_g.nodes[word_binding[w2]], 0) for w1, w2, r in path}
+            word_val = {w: nx_g.nodes[word_binding[w]] for i, w in enumerate(word_vars)}
+            relation_val = {r: (nx_g.nodes[word_binding[w1]], nx_g.nodes[word_binding[w2]], 0) for w1, w2, r in path}
 
             for i, f in path_to_programs[path]:
-                if f.evaluate_binding(word_binding, relation_binding, nx_g):
+                val = f.evaluate_binding(word_binding, relation_binding, nx_g)
+                print(word_val, relation_val, f, val)
+                input()
+                if val:
                     out_words[i].append((word_binding, relation_binding))
     return out_words
 
