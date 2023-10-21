@@ -74,4 +74,17 @@ if __name__ == '__main__':
             data['boxes'],
             data['img_fp'])
         img_output = viz_data_entity_mapping(new_data)
+        # Also, draw additional entity group boxes for those that does not have parent
+        c2w = defaultdict(list)
+        for w, c in ent_map:
+            c2w[c].append(w)
+        for i in range(len(data['boxes'])):
+            if i not in c2w:
+                i_group = uf.get_group(i)
+                # draw box on the group
+                box = [min([data['boxes'][j][0] for j in i_group]),
+                       min([data['boxes'][j][1] for j in i_group]),
+                       max([data['boxes'][j][2] for j in i_group]),
+                       max([data['boxes'][j][3] for j in i_group])]
+                img_output = cv2.rectangle(img_output, (box[0], box[1]), (box[2], box[3]), (0, 0, 0), 2)
         cv2.imwrite(f"{args.cache_dir_entity_linking}/inference/inference_{i}.png", img_output)
