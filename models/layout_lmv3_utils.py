@@ -1,0 +1,21 @@
+from transformers import AutoProcessor, AutoModelForTokenClassification
+from utils.funsd_utils import DataSample
+from PIL import Image
+
+
+processor = AutoProcessor.from_pretrained("nielsr/layoutlmv3-finetuned-funsd",
+                                          apply_ocr=False)
+model = AutoModelForTokenClassification.from_pretrained("nielsr/layoutlmv3-finetuned-funsd", num_labels=7)
+# These labels include [0, B-HEADER, I-HEADER, B-QUESTION, I-QUESTION, B-ANSWER, I-ANSWER]
+
+def get_word_embedding(data: DataSample):
+    # Load the image
+    image = Image.open(
+            data.img_fp.replace(".jpg", ".png"))
+    encoding = processor(image, data.words, data.boxes, word_labels=[0]*len(data.boxes), 
+                         return_tensors="pt")
+    output = model(**encoding)
+    sequence_output = output.last_hidden_state[:, :len(data.boxes)]
+    # sequence_output.shape = (1, 512, N)
+    print(sequence_output)
+    return sequence_output
