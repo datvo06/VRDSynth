@@ -304,6 +304,7 @@ def three_stages_bottom_up_version_space_based_entity_linking(pos_paths, dataset
 if __name__ == '__main__': 
     relation_set = dummy_calculate_relation_set(None, None, None)
     args = get_args()
+    LiteralReplacement['FloatConstant'] = list([FloatConstant(x) for x in np.arange(0.0, args.upper_float_thres + 0.1, 0.1)])
     logger.set_fp(f"{args.cache_dir}/log.json")
     os.makedirs(args.cache_dir, exist_ok=True)
     os.makedirs(f"{args.cache_dir}/viz", exist_ok=True)
