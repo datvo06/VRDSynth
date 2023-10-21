@@ -322,7 +322,7 @@ if __name__ == '__main__':
         data_sample_set_relation_cache = []
         bar = tqdm.tqdm(total=len(dataset))
         bar.set_description("Constructing data sample set relation cache")
-        for data in entity_dataset:
+        for i, data in enumerate(entity_dataset):
             nx_g = build_nx_g(data, relation_set, y_threshold=30, filter_rel=False)
             data_sample_set_relation_cache.append(nx_g)
             img = viz_data(data, nx_g)
