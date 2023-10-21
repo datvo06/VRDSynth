@@ -13,7 +13,7 @@ def get_word_embedding(data: DataSample):
     # Load the image
     image = Image.open(
             data.img_fp.replace(".jpg", ".png")).convert("RGB")
-    encoding = processor(image, data.words, data.boxes, word_labels=[0]*len(data.boxes), 
+    encoding = processor(image, data.words, boxes=data.boxes, word_labels=[0]*len(data.boxes), 
                          return_tensors="pt")
     print(encoding)
     output = model(**encoding)
