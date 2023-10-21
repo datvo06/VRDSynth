@@ -1,6 +1,7 @@
 from transformers import AutoProcessor, AutoModelForTokenClassification
 from utils.funsd_utils import DataSample
 from PIL import Image
+import pickle as pkl
 
 
 processor = AutoProcessor.from_pretrained("nielsr/layoutlmv3-finetuned-funsd",
@@ -20,3 +21,10 @@ def get_word_embedding(data: DataSample):
     # sequence_output.shape = (1, 512, N)
     print(sequence_output)
     return sequence_output
+
+
+if __name__ == '__main__':
+    dataset = pkl.load(open('funsd_cache_word_merging_vrdsynth_dummy_0.5/dataset.pkl', 'rb'))
+    for data in dataset:
+        get_word_embedding(data)
+        break
