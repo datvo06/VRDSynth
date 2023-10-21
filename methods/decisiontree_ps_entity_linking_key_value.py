@@ -1,6 +1,6 @@
 import networkx as nx
 from typing import List, Tuple, Dict, Set, Optional
-from utils.funsd_utils import DataSample, load_dataset, build_nx_g
+from utils.funsd_utils import DataSample, load_dataset, build_nx_g, viz_data
 from utils.relation_building_utils import calculate_relation_set, dummy_calculate_relation_set, calculate_relation
 import argparse
 import numpy as np
@@ -21,6 +21,7 @@ from multiprocessing import Pool
 from functools import lru_cache, partial
 from methods.decisiontree_ps import get_all_path, get_parser, construct_or_get_initial_programs, batch_find_program_executor, mapping2tuple, tuple2mapping, report_metrics, get_p_r_f1, get_valid_cand_find_program, add_constraint_to_find_program, get_args
 from methods.decisiontree_ps_entity_linking import SpecType
+import cv2
 
 
 
@@ -323,6 +324,8 @@ if __name__ == '__main__':
         for data in entity_dataset:
             nx_g = build_nx_g(data, relation_set, y_threshold=30, filter_rel=False)
             data_sample_set_relation_cache.append(nx_g)
+            img = viz_data(data, nx_g)
+            cv2.imwrite(f"{args.cache_dir}/viz/{i}.png", img)
             bar.update(1)
         with open(f"{args.cache_dir}/ds_cache_linking_kv.pkl", 'wb') as f:
             pkl.dump(data_sample_set_relation_cache, f)
