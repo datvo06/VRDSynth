@@ -53,7 +53,7 @@ if __name__ == '__main__':
             return_var = ps_merging[j].return_variables[0]
             for w_binding, r_binding in p_bindings:
                 wlast = w_binding[return_var]
-                uf.union(w0, wlast)
+                uf.union(w_binding[w0], wlast)
                 ucount += 1
         print(f"Union count: {ucount}")
         w2c = defaultdict(list)
@@ -62,7 +62,7 @@ if __name__ == '__main__':
             for w_binding, r_binding in p_bindings:
                 wlast = w_binding[return_var]
                 for w in uf.get_group(uf.find(wlast)):
-                    w2c[w].append(w)
+                    w2c[w_binding[w0]].append(w)
 
         ent_map = list(itertools.chain.from_iterable([[(w, c) for c in w2c[w]] for w in w2c]))
 
