@@ -162,6 +162,8 @@ def three_stages_bottom_up_version_space_based_entity_linking(pos_paths, dataset
     print("Number of version spaces: ", len(vss))
     max_its = 10
     perfect_ps = []
+    covered_tt = set()
+    covered_tt_perfect = set()
     for it in range(max_its):
         if cache_dir and os.path.exists(f"{cache_dir}/stage3_{it}_linking.pkl"):
             vss, c2vs = pkl.load(open(f"{cache_dir}/stage3_{it}_linking.pkl", "rb"))
@@ -192,8 +194,6 @@ def three_stages_bottom_up_version_space_based_entity_linking(pos_paths, dataset
             has_child = [False] * len(vss)
             big_bar = tqdm.tqdm(c2vs.items())
             big_bar.set_description("Stage 3 - Creating New Version Spaces")
-            covered_tt = set()
-            covered_tt_perfect = set()
             for c, vs_idxs in big_bar:
                 # Cache to save computation cycles
                 cache, cnt, acc = {}, 0, 0 
@@ -331,7 +331,7 @@ if __name__ == '__main__':
             img_no_rel = viz_data_no_rel(data)
             img_ent_map = viz_data_entity_mapping(data)
             cv2.imwrite(f"{args.cache_dir}/viz/{i}.png", img)
-            cv2.imwrite(f"{args.cache_dir}/viz_no_rel/{i}.png", img)
+            cv2.imwrite(f"{args.cache_dir}/viz_no_rel/{i}.png", img_no_rel)
             cv2.imwrite(f"{args.cache_dir}/viz_entity_mapping/{i}.png", img_ent_map)
             bar.update(1)
         with open(f"{args.cache_dir}/ds_cache_linking_kv.pkl", 'wb') as f:

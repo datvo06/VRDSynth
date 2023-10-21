@@ -168,6 +168,8 @@ def three_stages_bottom_up_version_space_based_same_parent(pos_paths, dataset, s
     print("Number of version spaces: ", len(vss))
     max_its = 10
     perfect_ps = []
+    covered_tt = set()
+    covered_tt_perfect = set()
     for it in range(max_its):
         if cache_dir and os.path.exists(f"{cache_dir}/stage3_{it}_same_parent.pkl"):
             vss, c2vs = pkl.load(open(f"{cache_dir}/stage3_{it}_same_parent.pkl", "rb"))
@@ -198,8 +200,6 @@ def three_stages_bottom_up_version_space_based_same_parent(pos_paths, dataset, s
             has_child = [False] * len(vss)
             big_bar = tqdm.tqdm(c2vs.items())
             big_bar.set_description("Stage 3 - Creating New Version Spaces")
-            covered_tt = set()
-            covered_tt_perfect = set()
             for c, vs_idxs in big_bar:
                 # Cache to save computation cycles
                 cache, cnt, acc = {}, 0, 0 
