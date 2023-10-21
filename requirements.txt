@@ -3,3 +3,4 @@ networkx
 scikit-learn
 matplotlib
 opencv-python
+transformers
