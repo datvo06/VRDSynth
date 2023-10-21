@@ -356,8 +356,7 @@ def batch_find_program_executor(nx_g, find_programs: List[FindProgram]) -> List[
         for w1, w2, r in path:
             nx_graph_query.add_edge(w1, w2)
 
-        gm = isomorphism.DiGraphMatcher(nx_g, nx_graph_query, node_match=None, edge_match=None)
-        print(list(gm.subgraph_isomorphisms_iter()))
+        gm = isomorphism.DiGraphMatcher(nx_g, nx_graph_query)
         for subgraph in gm.subgraph_isomorphisms_iter():
             subgraph = {v: k for k, v in subgraph.items()}
             # get the corresponding binding for word_variables and relation_variables
@@ -368,8 +367,6 @@ def batch_find_program_executor(nx_g, find_programs: List[FindProgram]) -> List[
 
             for i, f in path_to_programs[path]:
                 val = f.evaluate_binding(word_binding, relation_binding, nx_g)
-                print(word_val, relation_val, f, val)
-                input()
                 if val:
                     out_words[i].append((word_binding, relation_binding))
     return out_words
