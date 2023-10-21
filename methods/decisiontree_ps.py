@@ -345,8 +345,6 @@ def batch_find_program_executor(nx_g, find_programs: List[FindProgram]) -> List[
     # First, group programs by their path
     path_to_programs = defaultdict(list)
     for i, f in enumerate(find_programs):
-        print(f)
-        input()
         path_to_programs[tuple(f.relation_constraint)].append((i, f))
 
     out_words = [[] for _ in range(len(find_programs))]
@@ -363,6 +361,9 @@ def batch_find_program_executor(nx_g, find_programs: List[FindProgram]) -> List[
             # get the corresponding binding for word_variables and relation_variables
             word_binding = {w: subgraph[w] for w in word_vars}
             relation_binding = {r: (subgraph[w1], subgraph[w2], 0) for w1, w2, r in path}
+            # word_val = {w: nx_g.nodes[word_binding[w]] for i, w in enumerate(word_vars)}
+            # relation_val = {r: (nx_g.nodes[word_binding[w1]], nx_g.nodes[word_binding[w2]], 0) for w1, w2, r in path}
+
             for i, f in path_to_programs[path]:
                 if f.evaluate_binding(word_binding, relation_binding, nx_g):
                     out_words[i].append((word_binding, relation_binding))

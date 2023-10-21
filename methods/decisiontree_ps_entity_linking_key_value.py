@@ -85,6 +85,9 @@ def collect_program_execution_linking(programs, specs: SpecType, data_sample_set
             for w_bind in word_mappings:
                 w2otherwords[w_bind[w0]].add(w_bind[ret_var])
                 assert (i, w_bind[w0], w_bind[ret_var]) in all_word_pairs[p]
+            print(w2otherwords)
+            print(w2e)
+            input()
             for w in w2otherwords:
                 if w not in w2e: 
                     ft[p].update([(i, w, w2) for w2 in w2otherwords[w]])
@@ -93,6 +96,7 @@ def collect_program_execution_linking(programs, specs: SpecType, data_sample_set
                     tf[p].update([(i, w, w2) for w2 in w2otherwords[w] if w2 not in w2e[w]])
                     ft[p].update(w2e[w] - w2otherwords[w] - {w})
     print("Total tt: ", sum([len(tt[p]) for p in tt]))
+    input()
     return tt, ft, tf, all_out_mappings
 
 
