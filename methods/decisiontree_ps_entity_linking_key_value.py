@@ -8,7 +8,7 @@ import itertools
 import functools
 from collections import defaultdict, namedtuple
 from networkx.algorithms import constraint, isomorphism
-from utils.ps_utils import FalseValue, LiteralReplacement, Program, EmptyProgram, GrammarReplacement, FindProgram, RelationLabelConstant, RelationLabelProperty, TrueValue, WordLabelProperty, WordVariable, RelationVariable, RelationConstraint, LabelEqualConstraint, RelationLabelEqualConstraint, construct_entity_linking_specs, LabelConstant, AndConstraint, LiteralSet, Constraint, Hole, replace_hole, find_holes, SymbolicList, FilterStrategy, fill_hole, Expression
+from utils.ps_utils import FalseValue, LiteralReplacement, Program, EmptyProgram, GrammarReplacement, FindProgram, RelationLabelConstant, RelationLabelProperty, TrueValue, WordLabelProperty, WordVariable, RelationVariable, RelationConstraint, LabelEqualConstraint, RelationLabelEqualConstraint, construct_entity_linking_specs, LabelConstant, AndConstraint, LiteralSet, Constraint, Hole, replace_hole, find_holes, SymbolicList, FilterStrategy, fill_hole, Expression, FloatConstant
 from utils.visualization_script import visualize_program_with_support
 from utils.version_space import VersionSpace
 import json
@@ -19,9 +19,10 @@ import copy
 import multiprocessing
 from multiprocessing import Pool
 from functools import lru_cache, partial
-from methods.decisiontree_ps import get_all_path, get_parser, construct_or_get_initial_programs, batch_find_program_executor, mapping2tuple, tuple2mapping, report_metrics, get_p_r_f1, get_valid_cand_find_program, add_constraint_to_find_program, get_args
+from methods.decisiontree_ps import get_all_path, get_parser, construct_or_get_initial_programs, batch_find_program_executor, mapping2tuple, tuple2mapping, report_metrics, get_p_r_f1, get_valid_cand_find_program, add_constraint_to_find_program, get_args, logger
 from methods.decisiontree_ps_entity_linking import SpecType
 import cv2
+import time
 
 
 
@@ -101,7 +102,7 @@ def collect_program_execution_linking(programs, specs: SpecType, data_sample_set
 
 def three_stages_bottom_up_version_space_based_entity_linking(pos_paths, dataset, specs, data_sample_set_relation_cache, cache_dir=None):
     # STAGE 1: Build base relation spaces
-    programs = construct_or_get_initial_programs(pos_paths, f"{cache_dir}/stage1_linking.pkl")
+    programs = construct_or_get_initial_programs(pos_paths, f"{cache_dir}/stage1_linking.pkl", logger)
     print("Number of programs in stage 1: ", len(programs))
     # STAGE 2: Build version space
     # Start by getting the output of each program
@@ -112,10 +113,14 @@ def three_stages_bottom_up_version_space_based_entity_linking(pos_paths, dataset
             print(len(tt), len(tf), len(ft))
     else:
         bar = tqdm.tqdm(specs)
+        start_time = time.time()
         bar.set_description("Stage 2 - Getting Program Output")
         tt, tf, ft, all_out_mappings = collect_program_execution_linking(
                 programs, specs, 
                 data_sample_set_relation_cache)
+        end_time = time.time()
+        print("Time to collect program execution: ", end_time - start_time)
+        logger.log("Collect program execution", float(end_time - start_time))
         print(len(programs), len(tt))
         io_to_program = defaultdict(list)
         report_metrics(programs, tt, tf, ft, io_to_program)
@@ -166,6 +171,7 @@ def three_stages_bottom_up_version_space_based_entity_linking(pos_paths, dataset
     perfect_ps = []
     covered_tt = set()
     covered_tt_perfect = set()
+    start_time = time.time()
     for it in range(max_its):
         if cache_dir and os.path.exists(f"{cache_dir}/stage3_{it}_linking.pkl"):
             vss, c2vs = pkl.load(open(f"{cache_dir}/stage3_{it}_linking.pkl", "rb"))
@@ -253,6 +259,8 @@ def three_stages_bottom_up_version_space_based_entity_linking(pos_paths, dataset
                                 perfect_ps_io_value.add(io_key)
                                 with open(f"{cache_dir}/stage3_{it}_perfect_ps_linking.pkl", "wb") as f:
                                     pkl.dump(perfect_ps, f)
+
+                            logger.log(str(len(covered_tt_perfect)), (float(time.time()) - start_time, len(perfect_ps)))
                             covered_tt_perfect.update(new_tt)
                             continue
                         if new_p > old_p: 
@@ -296,13 +304,14 @@ def three_stages_bottom_up_version_space_based_entity_linking(pos_paths, dataset
 if __name__ == '__main__': 
     relation_set = dummy_calculate_relation_set(None, None, None)
     args = get_args()
-    args.cache_dir = f"{args.cache_dir}_kv"
+    logger.set_fp(f"{args.cache_dir}/log.json")
     os.makedirs(args.cache_dir, exist_ok=True)
     os.makedirs(f"{args.cache_dir}/viz", exist_ok=True)
     os.makedirs(f"{args.cache_dir}/viz_no_rel", exist_ok=True)
     os.makedirs(f"{args.cache_dir}/viz_entity_mapping", exist_ok=True)
     os.makedirs(args.output_dir, exist_ok=True)
 
+    start_time = time.time()
     if os.path.exists(f"{args.cache_dir}/dataset.pkl"):
         with open(f"{args.cache_dir}/dataset.pkl", 'rb') as f:
             dataset = pkl.load(f)
@@ -316,9 +325,13 @@ if __name__ == '__main__':
             specs, entity_dataset = pkl.load(f)
     else:
         specs, entity_dataset = construct_entity_linking_specs(dataset)
+        end_time = time.time()
+        print(f"Time taken to load dataset and construct specs: {end_time - start_time}")
+        logger.log("construct spec time: ", float(end_time - start_time))
         with open(f"{args.cache_dir}/specs_linking.pkl", 'wb') as f:
             pkl.dump((specs, entity_dataset), f)
         
+    start_time = time.time()
     if os.path.exists(f"{args.cache_dir}/ds_cache_linking_kv.pkl"):
         with open(f"{args.cache_dir}/ds_cache_linking_kv.pkl", 'rb') as f:
             data_sample_set_relation_cache = pkl.load(f)
@@ -336,6 +349,10 @@ if __name__ == '__main__':
             cv2.imwrite(f"{args.cache_dir}/viz_no_rel/{i}.png", img_no_rel)
             cv2.imwrite(f"{args.cache_dir}/viz_entity_mapping/{i}.png", img_ent_map)
             bar.update(1)
+
+        end_time = time.time()
+        print(f"Time taken to construct data sample set relation cache: {end_time - start_time}")
+        logger.log("construct data sample set relation cache time: ", float(end_time - start_time))
         with open(f"{args.cache_dir}/ds_cache_linking_kv.pkl", 'wb') as f:
             pkl.dump(data_sample_set_relation_cache, f)
 
@@ -345,7 +362,11 @@ if __name__ == '__main__':
         with open(f"{args.cache_dir}/pos_paths_linking_kv.pkl", 'rb') as f:
             pos_paths = pkl.load(f)
     else:
+        start_time = time.time()
         pos_paths = get_path_specs_linking(entity_dataset, specs, relation_set=relation_set, data_sample_set_relation_cache=data_sample_set_relation_cache, cache_dir=args.cache_dir)
+        end_time = time.time()
+        print(f"Time taken to construct positive paths: {end_time - start_time}")
+        logger.log("construct positive paths time: ", float(end_time - start_time))
         with open(f"{args.cache_dir}/pos_paths_linking_kv.pkl", 'wb') as f:
             pkl.dump(pos_paths, f)
 
