@@ -63,6 +63,7 @@ def collect_program_execution_linking(programs, specs: SpecType, data_sample_set
     all_out_mappings = defaultdict(set)
     all_word_pairs = defaultdict(set)
     for i, entity_map, _ in bar:
+        bar.set_description(f"Getting Program Output {i}")
         nx_g = data_sample_set_relation_cache[i]
         w2e = defaultdict(set)
         for w1, w2 in entity_map:
@@ -86,9 +87,6 @@ def collect_program_execution_linking(programs, specs: SpecType, data_sample_set
             for w_bind in word_mappings:
                 w2otherwords[w_bind[w0]].add(w_bind[ret_var])
                 assert (i, w_bind[w0], w_bind[ret_var]) in all_word_pairs[p]
-            print(w2otherwords)
-            print(w2e)
-            input()
             for w in w2otherwords:
                 if w not in w2e: 
                     ft[p].update([(i, w, w2) for w2 in w2otherwords[w]])
