@@ -348,22 +348,21 @@ def batch_find_program_executor(nx_g, find_programs: List[FindProgram]) -> List[
         path_to_programs[tuple(f.relation_constraint)].append((i, f))
 
     out_words = [[] for _ in range(len(find_programs))]
-    # Convert nx_g from multidigraph to digraph 
-    nx_g = nx.DiGraph(nx_g)
     for path in path_to_programs:
-        nx_graph_query = nx.DiGraph()
+        nx_graph_query = nx.MultiDiGraph()
         word_vars = path_to_programs[path][0][1].word_variables
         for w in word_vars:
             nx_graph_query.add_node(w)
         for w1, w2, r in path:
             nx_graph_query.add_edge(w1, w2)
         print(nx_graph_query.nodes(), nx_graph_query.edges())
+        print(nx_g.nodes(data=True), nx_g.edges(data=True))
         gm = isomorphism.MultiDiGraphMatcher(nx_g, nx_graph_query)
         for subgraph in gm.subgraph_isomorphisms_iter():
             subgraph = {v: k for k, v in subgraph.items()}
             # get the corresponding binding for word_variables and relation_variables
             word_binding = {w: subgraph[w] for w in word_vars}
-            relation_binding = {r: (subgraph[w1], subgraph[w2]) for w1, w2, r in path}
+            relation_binding = {r: (subgraph[w1], subgraph[w2], 0) for w1, w2, r in path}
             word_val = {w: nx_g.nodes[word_binding[w]] for i, w in enumerate(word_vars)}
             relation_val = {r: (nx_g.nodes[word_binding[w1]], nx_g.nodes[word_binding[w2]], 0) for w1, w2, r in path}
 
