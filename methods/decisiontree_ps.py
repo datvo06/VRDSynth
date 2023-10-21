@@ -555,7 +555,7 @@ def report_metrics_program(p_io_tt: Dict[Expression, set], p_io_tf: Dict[Express
     return out_dict
 
 
-def construct_or_get_initial_programs(pos_paths, cache_fp):
+def construct_or_get_initial_programs(pos_paths, cache_fp, logger=logger):
     if os.path.exists(cache_fp):
         with open(cache_fp, "rb") as f:
             programs = pkl.load(f)
@@ -639,6 +639,8 @@ def three_stages_bottom_up_version_space_based(all_positive_paths, dataset, spec
     max_its = 10
     perfect_ps = []
     start_time = time.time()
+    covered_tt = set()
+    covered_tt_perfect = set()
     for it in range(max_its):
         if cache_dir and os.path.exists(os.path.join(cache_dir, f"stage3_{it}.pkl")):
             vss, c2vs = pkl.load(open(os.path.join(cache_dir, f"stage3_{it}.pkl"), "rb"))
@@ -668,8 +670,7 @@ def three_stages_bottom_up_version_space_based(all_positive_paths, dataset, spec
             has_child = [False] * len(vss)
             big_bar = tqdm.tqdm(c2vs.items())
             big_bar.set_description("Stage 3 - Creating New Version Spaces")
-            covered_tt = set()
-            covered_tt_perfect = set()
+            
             for c, vs_idxs in big_bar:
                 # Cache to save computation cycles
                 cache, cnt, acc = {}, 0, 0 

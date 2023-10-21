@@ -20,9 +20,12 @@ import multiprocessing
 from multiprocessing import Pool
 import cv2
 from functools import lru_cache, partial
-from methods.decisiontree_ps import get_all_path, get_parser, construct_or_get_initial_programs, batch_find_program_executor, mapping2tuple, tuple2mapping, report_metrics, get_p_r_f1, get_valid_cand_find_program, add_constraint_to_find_program, get_args
+from methods.decisiontree_ps import get_all_path, get_parser, construct_or_get_initial_programs, batch_find_program_executor, mapping2tuple, tuple2mapping, report_metrics, get_p_r_f1, get_valid_cand_find_program, add_constraint_to_find_program, get_args, Logger
+import time
 
 SpecType = List[Tuple[int, List[Tuple[int, int]], List[Set[int]]]]
+
+logger = Logger()
 
 def get_all_positive_relation_paths_same_parent(specs: SpecType, relation_set, hops=2, data_sample_set_relation_cache=None):
     data_sample_set_relation = [] if data_sample_set_relation_cache is None else data_sample_set_relation_cache
@@ -104,7 +107,7 @@ def collect_program_execution_same_parent(programs, specs: SpecType, data_sample
 
 def three_stages_bottom_up_version_space_based_same_parent(pos_paths, dataset, specs, data_sample_set_relation_cache, cache_dir=None):
     # STAGE 1: Build base relation spaces
-    programs = construct_or_get_initial_programs(pos_paths, f"{cache_dir}/stage1_same_parent.pkl")
+    programs = construct_or_get_initial_programs(pos_paths, f"{cache_dir}/stage1_same_parent.pkl", logger=logger)
     print("Number of programs in stage 1: ", len(programs))
     # STAGE 2: Build version space
     # Start by getting the output of each program
@@ -114,11 +117,15 @@ def three_stages_bottom_up_version_space_based_same_parent(pos_paths, dataset, s
             tt, tf, ft, io_to_program, all_out_mappings = pkl.load(f)
             print(len(tt), len(tf), len(ft))
     else:
+        start_time = time.time()
         bar = tqdm.tqdm(specs)
         bar.set_description("Stage 2 - Getting Program Output")
         tt, tf, ft, all_out_mappings = collect_program_execution_same_parent(
                 programs, specs, 
                 data_sample_set_relation_cache)
+        end_time = time.time()
+        print("Time to collect program execution: ", end_time - start_time)
+        logger.log("Collect program execution", float(end_time - start_time))
         print(len(programs), len(tt))
         io_to_program = defaultdict(list)
         report_metrics(programs, tt, tf, ft, io_to_program)
@@ -170,6 +177,7 @@ def three_stages_bottom_up_version_space_based_same_parent(pos_paths, dataset, s
     perfect_ps = []
     covered_tt = set()
     covered_tt_perfect = set()
+    start_time = time.time()
     for it in range(max_its):
         if cache_dir and os.path.exists(f"{cache_dir}/stage3_{it}_same_parent.pkl"):
             vss, c2vs = pkl.load(open(f"{cache_dir}/stage3_{it}_same_parent.pkl", "rb"))
@@ -257,6 +265,8 @@ def three_stages_bottom_up_version_space_based_same_parent(pos_paths, dataset, s
                                 perfect_ps_io_value.add(io_key)
                                 with open(f"{cache_dir}/stage3_{it}_perfect_ps_same_parent.pkl", "wb") as f:
                                     pkl.dump(perfect_ps, f)
+
+                            logger.log(str(len(covered_tt_perfect)), (float(time.time()) - start_time, len(perfect_ps)))
                             covered_tt_perfect.update(new_tt)
                             continue
                         if new_p > old_p: 
@@ -297,15 +307,15 @@ def three_stages_bottom_up_version_space_based_same_parent(pos_paths, dataset, s
     return programs
 
 
-
-
 if __name__ == '__main__': 
     relation_set = dummy_calculate_relation_set(None, None, None)
     args = get_args()
-    args.cache_dir = f"{args.cache_dir}_same_parent"
+    LiteralReplacement['FloatConstant'] = list([FloatConstant(x) for x in np.arange(0.0, args.upper_float_thres + 0.1, 0.1)])
     os.makedirs(args.cache_dir, exist_ok=True)
     os.makedirs(f"{args.cache_dir}/viz", exist_ok=True)
     os.makedirs(args.output_dir, exist_ok=True)
+    logger.set_fp(f"{args.cache_dir}/log.json")
+    start_time = time.time()
 
     if os.path.exists(f"{args.cache_dir}/dataset.pkl"):
         with open(f"{args.cache_dir}/dataset.pkl", 'rb') as f:
@@ -320,9 +330,13 @@ if __name__ == '__main__':
             specs, entity_dataset = pkl.load(f)
     else:
         specs, entity_dataset = construct_entity_linking_specs(dataset)
+        end_time = time.time()
+        print(f"Time taken to load dataset and construct specs: {end_time - start_time}")
+        logger.log("construct spec time: ", float(end_time - start_time))
         with open(f"{args.cache_dir}/specs_linking.pkl", 'wb') as f:
             pkl.dump((specs, entity_dataset), f)
         
+    start_time = time.time()
     if os.path.exists(f"{args.cache_dir}/ds_cache_linking.pkl"):
         with open(f"{args.cache_dir}/ds_cache_linking.pkl", 'rb') as f:
             data_sample_set_relation_cache = pkl.load(f)
@@ -339,13 +353,21 @@ if __name__ == '__main__':
         with open(f"{args.cache_dir}/ds_cache_linking.pkl", 'wb') as f:
             pkl.dump(data_sample_set_relation_cache, f)
 
+        end_time = time.time()
+        print(f"Time taken to construct data sample set relation cache: {end_time - start_time}")
+        logger.log("construct data sample set relation cache time: ", float(end_time - start_time))
+
     # Now we have the data sample set relation cache
     print("Stage 1 - Constructing Program Space")
     if os.path.exists(f"{args.cache_dir}/pos_paths_linking.pkl"):
         with open(f"{args.cache_dir}/pos_paths_linking.pkl", 'rb') as f:
             pos_paths = pkl.load(f)
     else:
+        start_time = time.time()
         pos_paths = get_path_specs_same_parent(entity_dataset, specs, relation_set=relation_set, data_sample_set_relation_cache=data_sample_set_relation_cache, cache_dir=args.cache_dir)
+        end_time = time.time()
+        print(f"Time taken to construct positive paths: {end_time - start_time}")
+        logger.log("construct positive paths time: ", float(end_time - start_time))
         with open(f"{args.cache_dir}/pos_paths_linking.pkl", 'wb') as f:
             pkl.dump(pos_paths, f)
 
