@@ -348,8 +348,8 @@ def batch_find_program_executor(nx_g, find_programs: List[FindProgram]) -> List[
         path_to_programs[tuple(f.relation_constraint)].append((i, f))
 
     out_words = [[] for _ in range(len(find_programs))]
-    print("Len of path_to_programs", len(path_to_programs))
     for path in path_to_programs:
+        print(path)
         nx_graph_query = nx.MultiDiGraph()
         word_vars = path_to_programs[path][0][1].word_variables
         for w in word_vars:
