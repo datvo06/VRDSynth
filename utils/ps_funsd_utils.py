@@ -10,6 +10,7 @@ import tqdm
 import cv2
 import glob
 import itertools
+import os
 
 
 # Implementing inference and measurement
@@ -22,6 +23,7 @@ if __name__ == '__main__':
     parser.add_argument('--training_dir', type=str, default='funsd_dataset/training_data', help='training directory')
     parser.add_argument('--cache_dir', type=str, default='funsd_cache', help='cache directory')
     args = parser.parse_args()
+    os.makedirs(f"{args.cache_dir}/inference/", exist_ok=True)
 
     with open(f"{args.cache_dir}/dataset.pkl", 'rb') as f:
         dataset = pkl.load(f)
@@ -91,5 +93,5 @@ if __name__ == '__main__':
             elif label == 'answer': # red
                 color = (0, 0, 255)
             cv2.rectangle(img, (box[0], box[1]), (box[2], box[3]), color)
-        cv2.imwrite(f"{args.cache_dir}/inference_{i}.png", img)
+        cv2.imwrite(f"{args.cache_dir}/inference/inference_{i}.png", img)
 
