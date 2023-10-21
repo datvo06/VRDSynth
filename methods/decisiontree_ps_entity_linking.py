@@ -299,6 +299,7 @@ def three_stages_bottom_up_version_space_based_same_parent(pos_paths, dataset, s
 
 
 if __name__ == '__main__': 
+    relation_set = dummy_calculate_relation_set(None, None, None)
     args = get_args()
     args.cache_dir = f"{args.cache_dir}_same_parent"
     os.makedirs(args.cache_dir, exist_ok=True)
