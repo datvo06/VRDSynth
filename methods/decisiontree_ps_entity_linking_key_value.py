@@ -81,7 +81,11 @@ def collect_program_execution_linking(programs, specs: SpecType, data_sample_set
                 all_out_mappings[p].add((i, mapping2tuple(mapping)))
                 all_word_pairs[p].add((i, mapping[0][w0], mapping[0][wret]))
         for (word_mappings, p) in zip(word_mappingss, programs):
-            print(word_mappings if word_mappings else "None")
+            next_inp = False
+            if word_mappings:
+                print(word_mappings)
+                input()
+                next_inp = True
             w2otherwords = defaultdict(set)
             ret_var = p.return_variables[0]
             # Turn off return var to return every mapping
@@ -90,7 +94,8 @@ def collect_program_execution_linking(programs, specs: SpecType, data_sample_set
                 assert (i, w_bind[w0], w_bind[ret_var]) in all_word_pairs[p]
             print(w2otherwords)
             print(w2e)
-            input()
+            if next_inp:
+                input()
             for w in w2otherwords:
                 if w not in w2e: 
                     ft[p].update([(i, w, w2) for w2 in w2otherwords[w]])
