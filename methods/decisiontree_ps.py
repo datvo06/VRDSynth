@@ -345,6 +345,8 @@ def batch_find_program_executor(nx_g, find_programs: List[FindProgram]) -> List[
     # First, group programs by their path
     path_to_programs = defaultdict(list)
     for i, f in enumerate(find_programs):
+        print(f)
+        input()
         path_to_programs[tuple(f.relation_constraint)].append((i, f))
 
     out_words = [[] for _ in range(len(find_programs))]
