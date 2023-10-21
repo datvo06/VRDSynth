@@ -300,6 +300,7 @@ def three_stages_bottom_up_version_space_based_same_parent(pos_paths, dataset, s
 
 if __name__ == '__main__': 
     args = get_args()
+    args.cache_dir = f"{args.cache_dir}_same_parent"
     os.makedirs(args.cache_dir, exist_ok=True)
     os.makedirs(args.output_dir, exist_ok=True)
 
@@ -339,8 +340,8 @@ if __name__ == '__main__':
         with open(f"{args.cache_dir}/pos_paths_linking.pkl", 'rb') as f:
             pos_paths = pkl.load(f)
     else:
-        pos_paths = get_path_specs_same_parent(dataset, specs, relation_set=relation_set, data_sample_set_relation_cache=data_sample_set_relation_cache, cache_dir=args.cache_dir)
+        pos_paths = get_path_specs_same_parent(entity_dataset, specs, relation_set=relation_set, data_sample_set_relation_cache=data_sample_set_relation_cache, cache_dir=args.cache_dir)
         with open(f"{args.cache_dir}/pos_paths_linking.pkl", 'wb') as f:
             pkl.dump(pos_paths, f)
 
-    programs = three_stages_bottom_up_version_space_based_same_parent(pos_paths, dataset, specs, data_sample_set_relation_cache, args.cache_dir)
+    programs = three_stages_bottom_up_version_space_based_same_parent(pos_paths, entity_dataset, specs, data_sample_set_relation_cache, args.cache_dir)
