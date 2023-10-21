@@ -310,7 +310,6 @@ if __name__ == '__main__':
     os.makedirs(f"{args.cache_dir}/viz", exist_ok=True)
     os.makedirs(f"{args.cache_dir}/viz_no_rel", exist_ok=True)
     os.makedirs(f"{args.cache_dir}/viz_entity_mapping", exist_ok=True)
-    os.makedirs(args.output_dir, exist_ok=True)
 
     start_time = time.time()
     if os.path.exists(f"{args.cache_dir}/dataset.pkl"):

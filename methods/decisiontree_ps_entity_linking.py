@@ -312,7 +312,6 @@ if __name__ == '__main__':
     LiteralReplacement['FloatConstant'] = list([FloatConstant(x) for x in np.arange(0.0, args.upper_float_thres + 0.1, 0.1)])
     os.makedirs(args.cache_dir, exist_ok=True)
     os.makedirs(f"{args.cache_dir}/viz", exist_ok=True)
-    os.makedirs(args.output_dir, exist_ok=True)
     logger.set_fp(f"{args.cache_dir}/log.json")
     start_time = time.time()
 
