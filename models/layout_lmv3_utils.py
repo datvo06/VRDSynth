@@ -14,6 +14,7 @@ def get_word_embedding(data: DataSample):
             data.img_fp.replace(".jpg", ".png")).convert("RGB")
     encoding = processor(image, data.words, data.boxes, word_labels=[0]*len(data.boxes), 
                          return_tensors="pt")
+    print(encoding)
     output = model(**encoding)
     sequence_output = output.last_hidden_state[:, :len(data.boxes)]
     # sequence_output.shape = (1, 512, N)
