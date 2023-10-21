@@ -69,7 +69,6 @@ def collect_program_execution_linking(programs, specs: SpecType, data_sample_set
         for w1, w2 in entity_map:
             w2e[w1].add(w2)
         programs = programs
-        print("Here")
         out_mappingss = batch_find_program_executor(nx_g, programs)
         word_mappingss = list([list([om[0] for om in oms]) for oms in out_mappingss])
         assert len(out_mappingss) == len(programs), len(out_mappingss)
@@ -81,21 +80,12 @@ def collect_program_execution_linking(programs, specs: SpecType, data_sample_set
                 all_out_mappings[p].add((i, mapping2tuple(mapping)))
                 all_word_pairs[p].add((i, mapping[0][w0], mapping[0][wret]))
         for (word_mappings, p) in zip(word_mappingss, programs):
-            next_inp = False
-            if word_mappings:
-                print(word_mappings)
-                input()
-                next_inp = True
             w2otherwords = defaultdict(set)
             ret_var = p.return_variables[0]
             # Turn off return var to return every mapping
             for w_bind in word_mappings:
                 w2otherwords[w_bind[w0]].add(w_bind[ret_var])
                 assert (i, w_bind[w0], w_bind[ret_var]) in all_word_pairs[p]
-            print(w2otherwords)
-            print(w2e)
-            if next_inp:
-                input()
             for w in w2otherwords:
                 if w not in w2e: 
                     ft[p].update([(i, w, w2) for w2 in w2otherwords[w]])
