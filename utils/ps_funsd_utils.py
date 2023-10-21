@@ -50,6 +50,7 @@ if __name__ == '__main__':
         words = []
         label = []
         i = 0
+        '''
         while i < len(uf.groups()):
             groups = uf.groups()
             changed = True 
@@ -69,6 +70,7 @@ if __name__ == '__main__':
                         new_box = np.array([np.min(group_box[:, 0]), np.min(group_box[:, 1]), np.max(group_box[:, 2]), np.max(group_box[:, 3])])
                         break
             i += 1
+        '''
         for group in uf.groups():
             group_box = np.array(list([data['boxes'][j] for j in group]))
             new_box = np.array([np.min(group_box[:, 0]), np.min(group_box[:, 1]), np.max(group_box[:, 2]), np.max(group_box[:, 3])])
