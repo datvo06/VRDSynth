@@ -367,10 +367,8 @@ def batch_find_program_executor(nx_g, find_programs: List[FindProgram]) -> List[
 
             for i, f in path_to_programs[path]:
                 val = f.evaluate_binding(word_binding, relation_binding, nx_g)
-                print(word_val, relation_val, f, val)
                 if val:
                     out_words[i].append((word_binding, relation_binding))
-                    input()
     return out_words
 
 
