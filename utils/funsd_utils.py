@@ -5,6 +5,7 @@ import glob
 from utils.relation_building_utils import calculate_relation_set, dummy_calculate_relation_set, calculate_relation
 import networkx as nx
 import numpy as np
+import cv2
 
 
 Bbox = namedtuple('Bbox', ['x0', 'y0', 'x1', 'y1'])
@@ -158,3 +159,47 @@ def build_nx_g(datasample: DataSample, relation_set: Set[Tuple[str, str, str]],
         n['y1'] = (n['y1'] - min_coord_y) / (max_coord_y - min_coord_y)
     return nx_g
 
+
+def viz_data(data, nx_g):
+    img = cv2.imread(data.img_fp.replace('.jpg', '.png'))
+    for i in range(len(data['boxes'])):
+        # 1. Crop the box
+        box = data['boxes'][i]
+        cropped_img = img[box[1]:box[3], box[0]:box[2]]
+        # 2. Draw the box
+        # If answer, green
+        if data['labels'][i] == 'answer':
+            color = (0, 255, 0)
+            color_edge = (0, 128, 0)
+        elif data['labels'][i] == 'question':
+            # question: blue
+            color = (255, 0, 0)
+            color_edge = (128, 0, 0)
+        elif data['labels'][i] == 'header':
+            color = (0, 255, 255)
+            color_edge = (0, 128, 128)
+        else:
+            color = (255, 255, 255)
+            color_edge = (128, 128, 128)
+        colored_rect = np.zeros(cropped_img.shape, dtype=np.uint8)
+        colored_rect[:] = color
+        alpha = 0.5
+        res = cv2.addWeighted(cropped_img, alpha, cropped_img, 1 - alpha, 0, colored_rect)
+        img[box[1]:box[3], box[0]:box[2]] = res
+        # Draw box edge
+        cv2.rectangle(img, (box[0], box[1]), (box[2], box[3]), color_edge, 2)
+    # Draw the relation
+    for relation in nx_g.edges(data=True):
+        # label is the index of max projection
+        label = relation[2]['lbl']
+        # top and down: blue
+        # left and right: red
+        if label in [0, 1]:
+            color = (255, 0, 0)
+        else:
+            color = (0, 0, 255)
+        i, j = relation[:2]
+        center_i = (int((data['boxes'][i][0] + data['boxes'][i][2]) / 2), int((data['boxes'][i][1] + data['boxes'][i][3]) / 2))
+        center_j = (int((data['boxes'][j][0] + data['boxes'][j][2]) / 2), int((data['boxes'][j][1] + data['boxes'][j][3]) / 2))
+        cv2.line(img, center_i, center_j, color, 2)
+    return img
