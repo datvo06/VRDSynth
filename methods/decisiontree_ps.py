@@ -360,7 +360,7 @@ def batch_find_program_executor(nx_g, find_programs: List[FindProgram]) -> List[
             nx_graph_query.add_node(w)
         for w1, w2, r in path:
             nx_graph_query.add_edge(w1, w2)
-        gm = isomorphism.DiGraphMatcher(nx_g_removed_attrib, nx_graph_query)
+        gm = isomorphism.GraphMatcher(nx_g_removed_attrib, nx_graph_query)
         for subgraph in gm.subgraph_isomorphisms_iter():
             subgraph = {v: k for k, v in subgraph.items()}
             # get the corresponding binding for word_variables and relation_variables
