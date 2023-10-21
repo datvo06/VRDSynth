@@ -63,11 +63,12 @@ def collect_program_execution_linking(programs, specs: SpecType, data_sample_set
     all_out_mappings = defaultdict(set)
     all_word_pairs = defaultdict(set)
     for i, entity_map, _ in bar:
+        nx_g = data_sample_set_relation_cache[i]
         w2e = defaultdict(set)
         for w1, w2 in entity_map:
             w2e[w1].add(w2)
-        nx_g = data_sample_set_relation_cache[i]
         programs = programs
+        print("Here")
         out_mappingss = batch_find_program_executor(nx_g, programs)
         word_mappingss = list([list([om[0] for om in oms]) for oms in out_mappingss])
         assert len(out_mappingss) == len(programs), len(out_mappingss)
