@@ -356,9 +356,10 @@ def batch_find_program_executor(nx_g, find_programs: List[FindProgram]) -> List[
         for w1, w2, r in path:
             nx_graph_query.add_edge(w1, w2)
         gm = isomorphism.MultiDiGraphMatcher(nx_g, nx_graph_query)
+        print(nx_graph_query, nx_g)
+        input()
         for subgraph in gm.subgraph_isomorphisms_iter():
             subgraph = {v: k for k, v in subgraph.items()}
-            print(subgraph)
             # get the corresponding binding for word_variables and relation_variables
             word_binding = {w: subgraph[w] for w in word_vars}
             relation_binding = {r: (subgraph[w1], subgraph[w2], 0) for w1, w2, r in path}
