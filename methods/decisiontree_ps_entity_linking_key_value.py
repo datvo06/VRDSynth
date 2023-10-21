@@ -1,6 +1,6 @@
 import networkx as nx
 from typing import List, Tuple, Dict, Set, Optional
-from utils.funsd_utils import DataSample, load_dataset, build_nx_g, viz_data
+from utils.funsd_utils import DataSample, load_dataset, build_nx_g, viz_data, viz_data_no_rel, viz_data_entity_mapping
 from utils.relation_building_utils import calculate_relation_set, dummy_calculate_relation_set, calculate_relation
 import argparse
 import numpy as np
@@ -297,6 +297,8 @@ if __name__ == '__main__':
     args.cache_dir = f"{args.cache_dir}_kv"
     os.makedirs(args.cache_dir, exist_ok=True)
     os.makedirs(f"{args.cache_dir}/viz", exist_ok=True)
+    os.makedirs(f"{args.cache_dir}/viz_no_rel", exist_ok=True)
+    os.makedirs(f"{args.cache_dir}/viz_entity_mapping", exist_ok=True)
     os.makedirs(args.output_dir, exist_ok=True)
 
     if os.path.exists(f"{args.cache_dir}/dataset.pkl"):
@@ -326,7 +328,11 @@ if __name__ == '__main__':
             nx_g = build_nx_g(data, relation_set, y_threshold=30, filter_rel=False)
             data_sample_set_relation_cache.append(nx_g)
             img = viz_data(data, nx_g)
+            img_no_rel = viz_data_no_rel(data)
+            img_ent_map = viz_data_entity_mapping(data)
             cv2.imwrite(f"{args.cache_dir}/viz/{i}.png", img)
+            cv2.imwrite(f"{args.cache_dir}/viz_no_rel/{i}.png", img)
+            cv2.imwrite(f"{args.cache_dir}/viz_entity_mapping/{i}.png", img_ent_map)
             bar.update(1)
         with open(f"{args.cache_dir}/ds_cache_linking_kv.pkl", 'wb') as f:
             pkl.dump(data_sample_set_relation_cache, f)
