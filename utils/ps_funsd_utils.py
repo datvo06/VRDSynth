@@ -49,7 +49,6 @@ if __name__ == '__main__':
         boxes = []
         words = []
         label = []
-        i = 0
         '''
         while i < len(uf.groups()):
             groups = uf.groups()
