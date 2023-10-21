@@ -348,9 +348,11 @@ def batch_find_program_executor(nx_g, find_programs: List[FindProgram]) -> List[
         path_to_programs[tuple(f.relation_constraint)].append((i, f))
 
     out_words = [[] for _ in range(len(find_programs))]
-    nx_g_removed_attrib = nx_g.copy()
-    for node in nx_g_removed_attrib.nodes:
-        nx_g_removed_attrib.nodes[node].pop('label', None)
+    nx_g_removed_attrib = nx.MultiDiGraph()
+    for u in nx_g.nodes():
+        nx_g_removed_attrib.add_node(u)
+    for u, v, k, d in nx_g.edges(data=True, keys=True):
+        nx_g_removed_attrib.add_edge(u, v, k)
     for path in path_to_programs:
         nx_graph_query = nx.MultiDiGraph()
         word_vars = path_to_programs[path][0][1].word_variables
