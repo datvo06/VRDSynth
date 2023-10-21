@@ -348,6 +348,9 @@ def batch_find_program_executor(nx_g, find_programs: List[FindProgram]) -> List[
         path_to_programs[tuple(f.relation_constraint)].append((i, f))
 
     out_words = [[] for _ in range(len(find_programs))]
+    nx_g_removed_attrib = nx_g.copy()
+    for node in nx_g_removed_attrib.nodes:
+        nx_g_removed_attrib.nodes[node].pop('label', None)
     for path in path_to_programs:
         nx_graph_query = nx.MultiDiGraph()
         word_vars = path_to_programs[path][0][1].word_variables
@@ -355,9 +358,7 @@ def batch_find_program_executor(nx_g, find_programs: List[FindProgram]) -> List[
             nx_graph_query.add_node(w)
         for w1, w2, r in path:
             nx_graph_query.add_edge(w1, w2)
-        print(nx_graph_query.nodes(), nx_graph_query.edges())
-        print(nx_g.nodes(data=True), nx_g.edges(data=True))
-        gm = isomorphism.MultiDiGraphMatcher(nx_g, nx_graph_query)
+        gm = isomorphism.MultiDiGraphMatcher(nx_g_removed_attrib, nx_graph_query)
         for subgraph in gm.subgraph_isomorphisms_iter():
             subgraph = {v: k for k, v in subgraph.items()}
             # get the corresponding binding for word_variables and relation_variables
