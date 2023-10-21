@@ -1,6 +1,6 @@
 import networkx as nx
 from typing import List, Tuple, Dict, Set, Optional
-from utils.funsd_utils import DataSample, load_dataset, build_nx_g
+from utils.funsd_utils import DataSample, load_dataset, build_nx_g, viz_data
 from utils.relation_building_utils import calculate_relation_set, dummy_calculate_relation_set, calculate_relation
 import argparse
 import numpy as np
@@ -18,6 +18,7 @@ import tqdm
 import copy
 import multiprocessing
 from multiprocessing import Pool
+import cv2
 from functools import lru_cache, partial
 from methods.decisiontree_ps import get_all_path, get_parser, construct_or_get_initial_programs, batch_find_program_executor, mapping2tuple, tuple2mapping, report_metrics, get_p_r_f1, get_valid_cand_find_program, add_constraint_to_find_program, get_args
 
@@ -303,6 +304,7 @@ if __name__ == '__main__':
     args = get_args()
     args.cache_dir = f"{args.cache_dir}_same_parent"
     os.makedirs(args.cache_dir, exist_ok=True)
+    os.makedirs(f"{args.cache_dir}/viz", exist_ok=True)
     os.makedirs(args.output_dir, exist_ok=True)
 
     if os.path.exists(f"{args.cache_dir}/dataset.pkl"):
@@ -328,9 +330,11 @@ if __name__ == '__main__':
         data_sample_set_relation_cache = []
         bar = tqdm.tqdm(total=len(dataset))
         bar.set_description("Constructing data sample set relation cache")
-        for data in entity_dataset:
+        for i, data in enumerate(entity_dataset):
             nx_g = build_nx_g(data, relation_set, y_threshold=10)
             data_sample_set_relation_cache.append(nx_g)
+            img = viz_data(data, nx_g)
+            cv2.imwrite(f"{args.cache_dir}/viz/{i}.png", img)
             bar.update(1)
         with open(f"{args.cache_dir}/ds_cache_linking.pkl", 'wb') as f:
             pkl.dump(data_sample_set_relation_cache, f)
