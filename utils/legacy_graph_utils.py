@@ -270,6 +270,13 @@ class Graph():
         print(len(self.es))
 
     def build_edges(self):
+        cell_list_top_down = sorted(self.nodes, key=lambda cell: cell.y)
+        cell_list_left_right = sorted(self.nodes, key=lambda cell: cell.x)
+           # 1.1 Check this cell with every cell to the right of it
+           # TODO: More effective iteration algo e.g: cached collisions matrix
+        self._build_lr_edges(cell_list_top_down)
+           # 2. top-down
+        self._build_td_edges_1(cell_list_left_right)
         # clean left-right edges
         self._clean_lr_edges()
         # clean top-bot edges
