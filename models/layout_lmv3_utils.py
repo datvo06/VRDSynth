@@ -25,7 +25,7 @@ def get_word_embedding(data: DataSample):
     width, height = image.size
     encoding = processor(image, data.words, boxes=list(normalize_bbox(b, width, height) for b in data.boxes), word_labels=[0]*len(data.boxes), 
                          return_tensors="pt")
-    print(encoding['input_ids'].shape)
+    print(encoding['input_ids'].shape, len(data.words))
     output = model(**encoding, output_hidden_states=True)
     sequence_output = output.hidden_states[-1][:, 1:(len(data.boxes)+1)]
     # sequence_output.shape = (1, 768, N)
