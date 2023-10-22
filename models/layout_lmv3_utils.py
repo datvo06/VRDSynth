@@ -50,6 +50,7 @@ def get_word_embedding(data: DataSample):
         # sequence_output.shape = (1, N, 768)
         all_seq_output.append(sequence_output)
     sequence_output = torch.cat(all_seq_output, dim=1)
+    print(sequence_output.shape)
     # Aggregate per-word embedding
     word_embs = [[] for _ in range(len(data.words))]
     tot_toks = 0

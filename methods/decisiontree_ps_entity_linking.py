@@ -371,9 +371,9 @@ if __name__ == '__main__':
                 end_time = time.time()
                 print(f"Time taken to get word embedding: {end_time - start_time}")
                 logger.log("get word embedding time: ", float(end_time - start_time))
-            for nx_g in data_sample_set_relation_cache:
+            for i, nx_g in enumerate(data_sample_set_relation_cache):
                 for w in sorted(nx_g.nodes()):
-                    nx_g.nodes[w]['emb'] = all_embs[w]
+                    nx_g.nodes[w]['emb'] = all_embs[i][w]
 
     # Now we have the data sample set relation cache
     print("Stage 1 - Constructing Program Space")
