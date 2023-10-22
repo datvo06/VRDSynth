@@ -53,9 +53,10 @@ class Entity(object):
     threshhold_really_horizontal = 2.0
     threshold_really_vertical = 0.2
 
-    def __init__(self, x, y, w, h):
+    def __init__(self, i, x, y, w, h):
         self.x, self.y, self.w, self.h = x, y, w, h
         self.lefts, self.rights, self.tops, self.bottoms = [], [], [], []
+        self.index = i
 
     def get_bb(self):
         return (self.x, self.y, self.w, self.h)
@@ -259,7 +260,7 @@ class Graph():
     ]
 
     def __init__(self, locs):
-        self.org_items = list([Entity(*loc) for loc in locs])
+        self.org_items = list([Entity(i, *loc) for i, loc in enumerate(locs)])
         self.nodes = self.org_items
         self.es = []
         self.build_edges()
@@ -475,7 +476,7 @@ class Graph():
 def from_funsd_datasample(data):
     customized_loc = [(b[0], b[1], b[2] - b[0], b[3] - b[1]) for b in data['boxes']]
     g = Graph(customized_loc)
-    return g.es
+    return [(e1.index, e2.index, lbl) for (e1, e2, lbl) in g.es]
 
 
 def build_nx_g_legacy(data):
