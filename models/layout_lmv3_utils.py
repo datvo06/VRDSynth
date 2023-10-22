@@ -36,6 +36,7 @@ def get_word_embedding(data: DataSample):
             seps.append(i)
             curr = i
     chunks.append(word_tokens[curr:])
+    seps.append(len(word_tokens))
     all_seq_output = []
     init_idx = 0
     for chunk, sep in zip(chunks, seps):

@@ -95,7 +95,6 @@ def collect_program_execution_linking(programs, specs: SpecType, data_sample_set
                     tf[p].update([(i, w, w2) for w2 in w2otherwords[w] if w2 not in w2e[w]])
                     ft[p].update(w2e[w] - w2otherwords[w] - {w})
     print("Total tt: ", sum([len(tt[p]) for p in tt]))
-    input()
     return tt, ft, tf, all_out_mappings
 
 
