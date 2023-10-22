@@ -1,14 +1,13 @@
 # Running
 ```sh
 # VRDSynth, Default Relation, 1.0 Float Threashold, Does not Use Semantic
-approach=vrdsynth;rel_type=default;thres=1.0;python -m methods.decisiontree_ps --upper_float_thres ${thres} --cache_dir funsd_cache_word_merging_${approach}_${rel_type}_${thres}_false
+approach=vrdsynth;rel_type=default;thres=1.0;python -m methods.decisiontree_ps --upper_float_thres ${thres} --rel_type=${rel_type} --cache_dir funsd_cache_word_merging_${approach}_${rel_type}_${thres}_false
 
 # VRDSynth, Default Relation, 0.5 Float Threashold, Does not Use Semantic
 approach=vrdsynth;rel_type=default;thres=0.5;python -m methods.decisiontree_ps --upper_float_thres ${thres} --cache_dir funsd_cache_word_merging_${approach}_${rel_type}_${thres}_false
 
 # VRDSynth for word merging, Default relation, 1.0 Float Threashold, Does not Use Semantic
 approach=vrdsynth;rel_type=defaut;thres=1.0;python -m methods.decisiontree_ps_entity_linking --upper_float_thres ${thres} --cache_dir funsd_cache_key_group_merging_${approach}_${rel_type}_${thres}_false
-
 
 # VRDSynth for word merging, Default relation, 0.5 Float Threashold, Does not Use Semantic
 approach=vrdsynth;rel_type=defaut;thres=0.5;python -m methods.decisiontree_ps_entity_linking --upper_float_thres ${thres} --cache_dir funsd_cache_key_group_merging_${approach}_${rel_type}_${thres}_false
