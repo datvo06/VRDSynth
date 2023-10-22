@@ -40,9 +40,8 @@ def get_word_embedding(data: DataSample):
             word_embs[i].append(sequence_output[0, tot_toks+j].squeeze().detach().numpy())
         tot_toks += len(word_tokens[i])
         # word_embs[i] = np.mean(word_embs[i], axis=0)
-        print(word_embs[i][0].shape)
     # perform per-word average pooling
-    word_embs = [np.mean(np.array(emb), axis=0) for emb in word_embs]
+    word_embs = [np.mean(np.array(emb), axis=0) if emb else np.array([0] * 768) for emb in word_embs]
     print(len(word_embs), word_embs[0].shape)
     return word_embs
 
