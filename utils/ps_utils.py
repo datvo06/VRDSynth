@@ -1,3 +1,4 @@
+from sqlalchemy import all_
 from utils.funsd_utils import DataSample, Bbox
 from utils.algorithms import UnionFind
 from typing import List, Tuple
@@ -1438,9 +1439,11 @@ def fill_hole(hole, max_depth=3, filter_strategy: FilterStrategy=None) -> list:
     for i in range(len(all_programs)):
         if all_programs[i].reduce()[0]:
             all_programs[i] = all_programs[i].reduce()[1]
-    if filter_strategy is not None:
+    if filter_strategy is not None and all_programs and not isinstance(all_programs[0], list):
         all_programs = [p for p in all_programs if filter_strategy.check_valid(p)]
-    return list(set(all_programs))
+        return list(set(all_programs))
+    else:
+        return all_programs
 
 
 def test_find_hole():
