@@ -29,18 +29,15 @@ def get_word_embedding(data: DataSample):
     encoding = processor(image, data.words, boxes=list(normalize_bbox(b, width, height) for b in data.boxes), word_labels=[0]*len(data.boxes), 
                          return_tensors="pt")
     word_tokens = [tokenizer.tokenize(word) for word in data.words]
-    print("tot len word token: ", sum(len(t) for t in word_tokens))
-    print(encoding['input_ids'].shape, len(data.words))
     output = model(**encoding, output_hidden_states=True)
     sequence_output = output.hidden_states[-1][:, 1:(encoding['input_ids'].shape[1]-1)]
     # sequence_output.shape = (1, 768, N)
-    print(output.hidden_states[-1].shape, sequence_output.shape, len(data.boxes))
     # Aggregate per-word embedding
     word_embs = [[] for _ in range(len(data.words))]
     tot_toks = 0
     for i in range(len(data.words)):
         for j in range(len(word_tokens[i])):
-            word_embs[i].append(sequence_output[0, :, tot_toks+j].squeeze().detach().numpy())
+            word_embs[i].append(sequence_output[0, tot_toks+j].squeeze().detach().numpy())
         tot_toks += len(word_tokens[i])
         # word_embs[i] = np.mean(word_embs[i], axis=0)
         print(word_embs[i][0].shape)
