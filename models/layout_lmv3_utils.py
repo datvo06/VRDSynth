@@ -28,21 +28,20 @@ def get_word_embedding(data: DataSample):
     width, height = image.size
     # Split words by max length
     word_tokens = [tokenizer.tokenize(word) for word in data.words]
-    chunks, seps = [[]], []
+    seps = []
     curr = 0
     for i, word in enumerate(word_tokens):
         if curr + len(word) < 510:
-            chunks[-1].append(word)
             curr += len(word)
         else:
-            chunks.append([word])
             seps.append(i)
             curr = 0
     seps.append(len(word_tokens))
     all_seq_output = []
     init_idx = 0
-    for chunk, sep in zip(chunks, seps):
+    for sep in seps:
         chunk_boxes = data.boxes[init_idx:sep]
+        chunk = data.words[init_idx:sep]
         init_idx = sep
         assert len(chunk_boxes) == len(chunk), (len(chunk_boxes), len(chunk))
         encoding = processor(image, chunk, boxes=list(normalize_bbox(b, width, height) for b in chunk_boxes), word_labels=[0]*len(chunk_boxes), return_tensors="pt")
