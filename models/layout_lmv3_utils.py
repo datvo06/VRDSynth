@@ -28,7 +28,7 @@ def get_word_embedding(data: DataSample):
     output = model(**encoding, output_hidden_states=True)
     sequence_output = output.hidden_states[-1][:, 1:(len(data.boxes)+1)]
     # sequence_output.shape = (1, 512, N)
-    print(sequence_output.shape)
+    print(output.hidden_states[-1].shape, sequence_output.shape, len(data.boxes))
     return sequence_output
 
 
