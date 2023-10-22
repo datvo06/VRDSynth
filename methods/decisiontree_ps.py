@@ -808,7 +808,7 @@ def setup_grammar(args):
     else:
         args.build_nx_g = lambda data_sample: build_nx_g_legacy(data_sample)
         # Also, remove all the proj from 
-    LiteralReplacement['RelationPropertyConstant'] =  [RelationPropertyConstant('mag'), *[RelationPropertyConstant(f'proj{i}') for i in range(len(args.relation_set))]]
+        LiteralReplacement['RelationPropertyConstant'] =  [RelationPropertyConstant('mag')]
     return args
 
 
