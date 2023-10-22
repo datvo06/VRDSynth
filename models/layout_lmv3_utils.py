@@ -3,6 +3,7 @@ from utils.funsd_utils import DataSample
 from PIL import Image
 import pickle as pkl
 import numpy as np
+import torch
 
 
 processor = AutoProcessor.from_pretrained("nielsr/layoutlmv3-finetuned-funsd",
@@ -25,12 +26,23 @@ def get_word_embedding(data: DataSample):
     image = Image.open(
             data.img_fp.replace(".jpg", ".png")).convert("RGB")
     width, height = image.size
-    encoding = processor(image, data.words, boxes=list(normalize_bbox(b, width, height) for b in data.boxes), word_labels=[0]*len(data.boxes), 
-                         return_tensors="pt")
+    # Split words by max length
     word_tokens = [tokenizer.tokenize(word) for word in data.words]
-    output = model(**encoding, output_hidden_states=True)
-    sequence_output = output.hidden_states[-1][:, 1:(encoding['input_ids'].shape[1]-1)]
-    # sequence_output.shape = (1, N, 768)
+    chunks = []
+    curr = 0
+    for i, word in enumerate(word_tokens):
+        if curr + len(word) > 510:
+            chunks.append(word_tokens[curr:i])
+            curr = i
+    chunks.append(word_tokens[curr:])
+    all_seq_output = []
+    for chunk in chunks:
+        encoding = processor(image, data.words, boxes=list(normalize_bbox(b, width, height) for b in data.boxes), word_labels=[0]*len(data.boxes), return_tensors="pt")
+        output = model(**encoding, output_hidden_states=True)
+        sequence_output = output.hidden_states[-1][:, 1:(encoding['input_ids'].shape[1]-1)]
+        # sequence_output.shape = (1, N, 768)
+        all_seq_output.append(sequence_output)
+    sequence_output = torch.cat(all_seq_output, dim=1)
     # Aggregate per-word embedding
     word_embs = [[] for _ in range(len(data.words))]
     tot_toks = 0
