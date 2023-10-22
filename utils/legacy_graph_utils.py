@@ -475,17 +475,7 @@ class Graph():
 def from_funsd_datasample(data):
     customized_loc = [(b[0], b[1], b[2] - b[0], b[3] - b[1]) for b in data['boxes']]
     g = Graph(customized_loc)
-    adj = g.adj
-    # adj: (num_nodes, num_edge_labels, num_nodes)
-    # Convert adj to sparse matrix by nonzeros
-    list_edges = []
-    for etype in range(adj.shape[1]):
-        for i in range(adj.shape[0]):
-            for j in range(adj.shape[2]):
-                if adj[i, etype, j] > 0:
-                    list_edges.append((i, j, etype))
-
-    return list_edges
+    return g.es
 
 
 def build_nx_g_legacy(data):
