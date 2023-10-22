@@ -384,7 +384,7 @@ def batch_find_program_executor(nx_g, find_programs: List[FindProgram]) -> List[
 
         print(nx_g.nodes(), nx_g.edges())
         gm = isomorphism.GraphMatcher(nx_g, nx_graph_query)
-        print(nx_graph_query.nodes(), nx_graph_query.edges(), gm.subgraph_is_isomorphic(), gm.subgraph_is_isomorphic())
+        print(nx_graph_query.nodes(), nx_graph_query.edges(), gm.subgraph_is_isomorphic(), gm.subgraph_is_monomorphic())
         input()
         for subgraph in gm.subgraph_isomorphisms_iter():
             subgraph = {v: k for k, v in subgraph.items()}
