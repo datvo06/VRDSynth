@@ -1,6 +1,8 @@
 from random import choices
 import networkx as nx
 from typing import List, Tuple, Dict, Set, Optional, Any
+
+from transformers.models import layoutlmv3
 from utils.funsd_utils import DataSample, load_dataset, build_nx_g
 from utils.relation_building_utils import calculate_relation_set, dummy_calculate_relation_set, calculate_relation
 import argparse
@@ -9,7 +11,7 @@ import itertools
 import functools
 from collections import defaultdict, namedtuple
 from networkx.algorithms import constraint, isomorphism
-from utils.ps_utils import FalseValue, LiteralReplacement, Program, EmptyProgram, GrammarReplacement, FindProgram, RelationLabelConstant, RelationLabelProperty, TrueValue, WordLabelProperty, WordVariable, RelationVariable, RelationConstraint, LabelEqualConstraint, RelationLabelEqualConstraint, construct_entity_merging_specs, SpecIterator, LabelConstant, AndConstraint, LiteralSet, Constraint, GrammarReplacement, Hole, replace_hole, find_holes, SymbolicList, FilterStrategy, fill_hole, Expression, FloatConstant
+from utils.ps_utils import FalseValue, LiteralReplacement, Program, EmptyProgram, GrammarReplacement, FindProgram, RelationLabelConstant, RelationLabelProperty, TrueValue, WordLabelProperty, WordVariable, RelationVariable, RelationConstraint, LabelEqualConstraint, RelationLabelEqualConstraint, construct_entity_merging_specs, SpecIterator, LabelConstant, AndConstraint, LiteralSet, Constraint, GrammarReplacement, Hole, replace_hole, find_holes, SymbolicList, FilterStrategy, fill_hole, Expression, FloatConstant, RelationPropertyConstant, SemDist
 from utils.visualization_script import visualize_program_with_support
 from utils.version_space import VersionSpace
 import json
@@ -776,12 +778,14 @@ def get_args():
     parser.add_argument('--cache_dir', type=str, default='funsd_cache', help='cache directory')
     parser.add_argument('--upper_float_thres', type=float, default=0.5, help='upper float thres')
     parser.add_argument('--rel_type', type=str, choices=['cluster', 'default'], default='default')
+    # use sem store true
+    parser.add_argument('--use_sem', action='store_true', help='use semantic information')
+    parser.add_argument('--model', type=str, choices=['layoutlmv3'], default='layoutlmv3')
     args = parser.parse_known_args()[0]
     return args
 
 
 if __name__ == '__main__': 
-    relation_set = dummy_calculate_relation_set(None, None, None)
     args = get_args()
     LiteralReplacement['FloatConstant'] = list([FloatConstant(x) for x in np.arange(0.0, args.upper_float_thres + 0.1, 0.1)])
     
@@ -795,6 +799,18 @@ if __name__ == '__main__':
         dataset = load_dataset(f"{args.training_dir}/annotations/", f"{args.training_dir}/images/")
         with open(f"{args.cache_dir}/dataset.pkl", 'wb') as f:
             pkl.dump(dataset, f)
+
+    if args.rel_type == 'default':
+        relation_set = dummy_calculate_relation_set(None, None, None)
+    else:
+        if os.path.exists(f"{args.cache_dir}/relation_set.pkl"):
+            relation_set = pkl.load(open('{args.cache_dir}/relation_set.pkl', 'rb'))
+        else:
+            relation_set = calculate_relation_set(dataset, 5, 10)
+            pkl.dump(relation_set, open(f"{args.cache_dir}/relation_set.pkl", 'wb'))
+            LiteralReplacement['RelationPropertyConstant'] =  [RelationPropertyConstant('mag'), *[RelationPropertyConstant(f'proj{i}') for i in range(10)]],
+
+
     if os.path.exists(f"{args.cache_dir}/specs.pkl"):
         with open(f"{args.cache_dir}/specs.pkl", 'rb') as f:
             specs = pkl.load(f)
@@ -805,6 +821,7 @@ if __name__ == '__main__':
     end_time = time.time()
     print(f"Time taken to load dataset and construct specs: {end_time - start_time}")
     logger.log("construct spec time: ", float(end_time - start_time))
+
 
     start_time = time.time()
         
@@ -825,24 +842,29 @@ if __name__ == '__main__':
 
         with open(f"{args.cache_dir}/data_sample_set_relation_cache.pkl", 'wb') as f:
             pkl.dump(data_sample_set_relation_cache, f)
+
+    if args.use_sem:
+        GrammarReplacement['FloatValue'].append(SemDist)
+        assert args.model in ['layoutlmv3']
+        if args.model == 'layoutlmv3':
+            if os.path.exists(f"{args.cache_dir}/embs_layoutlmv3.pkl"):
+                with open(f"{args.cache_dir}/embs_layoutlmv3.pkl", 'rb') as f:
+                    embs = pkl.load(f)
+            else:
+                from models.layout_lmv3_utils import get_word_embedding
+                start_time = time.time()
+                all_embs = []
+                for data in dataset:
+                    all_embs.append(get_word_embedding(data))
+                end_time = time.time()
+                print(f"Time taken to get word embedding: {end_time - start_time}")
+                logger.log("get word embedding time: ", float(end_time - start_time))
+                for nx_g in data_sample_set_relation_cache:
+                    for w in sorted(nx_g.nodes()):
+                        nx_g.nodes[w]['emb'] = all_embs[w]
+
     # Now we have the data sample set relation cache
     print("Stage 1 - Constructing Program Space")
-    # if os.path.exists(f"{args.cache_dir}/all_positive_paths.pkl") and os.path.exists(f"{args.cache_dir}/all_negative_paths.pkl"):
-    #     with open(f"{args.cache_dir}/all_positive_paths.pkl", 'rb') as f:
-    #         all_positive_paths = pkl.load(f)
-    #     with open(f"{args.cache_dir}/all_negative_paths.pkl", 'rb') as f:
-    #         all_negative_paths = pkl.load(f)
-    # else:
-    #     pos_paths, neg_paths = get_path_specs(dataset, specs, relation_set=relation_set, data_sample_set_relation_cache=data_sample_set_relation_cache)
-    #     all_positive_paths = pos_paths
-    #     with open(f"{args.cache_dir}/all_positive_paths.pkl", 'wb') as f:
-    #         pkl.dump(all_positive_paths, f)
-    #     with open(f"{args.cache_dir}/all_negative_paths.pkl", 'wb') as f:
-    #         pkl.dump(neg_paths, f)
-
-    # programs = three_stages_bottom_up_version_space_based(all_positive_paths, dataset, specs, data_sample_set_relation_cache, args.cache_dir)
-
-
     start_time = time.time()
     if os.path.exists(f"{args.cache_dir}/all_positive_paths.pkl"):
         with open(f"{args.cache_dir}/all_positive_paths.pkl", 'rb') as f:

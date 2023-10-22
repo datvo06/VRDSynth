@@ -5,7 +5,6 @@ import pickle as pkl
 import numpy as np
 
 
-
 processor = AutoProcessor.from_pretrained("nielsr/layoutlmv3-finetuned-funsd",
                                           apply_ocr=False)
 config = AutoConfig.from_pretrained("nielsr/layoutlmv3-finetuned-funsd")
@@ -31,7 +30,7 @@ def get_word_embedding(data: DataSample):
     word_tokens = [tokenizer.tokenize(word) for word in data.words]
     output = model(**encoding, output_hidden_states=True)
     sequence_output = output.hidden_states[-1][:, 1:(encoding['input_ids'].shape[1]-1)]
-    # sequence_output.shape = (1, 768, N)
+    # sequence_output.shape = (1, N, 768)
     # Aggregate per-word embedding
     word_embs = [[] for _ in range(len(data.words))]
     tot_toks = 0
@@ -42,7 +41,6 @@ def get_word_embedding(data: DataSample):
         # word_embs[i] = np.mean(word_embs[i], axis=0)
     # perform per-word average pooling
     word_embs = [np.mean(np.array(emb), axis=0) if emb else np.array([0] * 768) for emb in word_embs]
-    print(len(word_embs), word_embs[0].shape)
     return word_embs
 
 
@@ -50,4 +48,3 @@ if __name__ == '__main__':
     dataset = pkl.load(open('funsd_cache_word_merging_vrdsynth_dummy_0.5/dataset.pkl', 'rb'))
     for data in dataset:
         get_word_embedding(data)
-        break

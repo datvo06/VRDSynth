@@ -7,6 +7,8 @@ import networkx as nx
 from networkx import isomorphism
 import copy
 from functools import lru_cache
+import numpy as np
+from scipy.spatial.distance import cosine
 
 
 def construct_entity_merging_specs(dataset: List[DataSample]):
@@ -332,7 +334,7 @@ class RelationConstraint(Expression):
     def __eq__(self, other):
         return self.w1 == other.w1 and self.w2 == other.w2 and self.r == other.r
 
-    
+
 
 class FindProgram(Program):
     def __init__(self, word_variables, relation_variables, relation_constraints, constraint, return_variables):
@@ -469,6 +471,50 @@ class FloatConstant(FloatValue, Literal):
 
     def __str__(self):
         return str(self.value)
+
+
+class SemDist(FloatValue):
+    def __init__(self, w1, w2):
+        self.w1 = w1
+        self.w2 = w2
+
+
+    @staticmethod
+    def get_arg_type():
+        return [WordVariable, WordVariable]
+
+    @staticmethod
+    def type_name():
+        return 'SemDist'
+
+    def get_args(self):
+        return [self.w1, self.w2]
+
+
+    def __eq__(self, other):
+        return isinstance(other, SemDist) and ((self.w1 == other.w1 and self.w2 == other.w2) or
+                                               (self.w2 == other.w1 and self.w1 == other.w2))
+
+    def __str__(self):
+        return f"SemDist({self.w1}, {self.w2})"
+
+    def __hash__(self):
+        return hash(str(self))
+
+    def evaluate(self, word_binding, relation_binding, nx_g):
+        emb1 = nx_g.nodes[word_binding[self.w1]]['emb']
+        emb2 = nx_g.nodes[word_binding[self.w2]]['emb']
+        # If both emb1 and emb2 is not zero vector
+        if np.linalg.norm(emb1) > 0 and np.linalg.norm(emb2) > 0:
+            return 1 - cosine(emb1, emb2)
+        else:
+            return 1
+
+    def reduce(self):
+        if self.w1 == self.w2:
+            return True, FloatConstant(0)
+        else:
+            return False, self
 
 
 class FalseValue(BoolValue, Literal):

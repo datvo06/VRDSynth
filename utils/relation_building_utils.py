@@ -1,11 +1,12 @@
 import numpy as np
 from sklearn.metrics import pairwise_distances_argmin
 from collections import namedtuple
-from typing import List, Tuple
+from typing import List, Tuple, Union, Any
 from datasets import Dataset
 from sklearn.neighbors import NearestNeighbors
 from utils.algorithms import UnionFind
 import numpy as np
+import tqdm
 
 BoxRel = namedtuple('BoxRel', ['i', 'j', 'mag', 'projs'])
 
@@ -65,7 +66,7 @@ class AngleKMeans:
         return pairwise_distances_argmin(X, self.centers_, metric=angle_dist)
 
 
-def calculate_relation_set(dataset: Dataset, k: int, clusters: int) -> List[Tuple[float, float]]:
+def calculate_relation_set(dataset: Union[Dataset, List[Any]], k: int, clusters: int) -> List[Tuple[float, float]]:
     """ Calculate the relation set using all samples in the dataset """
     # First, use knn to find the k nearest neighbors
     knn_rels = []
