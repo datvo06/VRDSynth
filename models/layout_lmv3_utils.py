@@ -28,17 +28,18 @@ def get_word_embedding(data: DataSample):
     width, height = image.size
     # Split words by max length
     word_tokens = [tokenizer.tokenize(word) for word in data.words]
-    chunks, sep = [], []
+    chunks, seps = [], []
     curr = 0
     for i, word in enumerate(word_tokens):
         if curr + len(word) > 510:
             chunks.append(word_tokens[curr:i])
-            sep.append(i)
+            seps.append(i)
             curr = i
     chunks.append(word_tokens[curr:])
     all_seq_output = []
-    for chunk in chunks:
-        chunk_boxes = [data.boxes[i] for i in range(len(data.boxes)) if i in range(chunk[0], chunk[-1] + 1)]
+    init_idx = 0
+    for chunk, sep in zip(chunks, seps):
+        chunk_boxes = data.boxes[init_idx:sep]
         encoding = processor(image, data.words, boxes=list(normalize_bbox(b, width, height) for b in chunk_boxes), word_labels=[0]*len(chunk_boxes), return_tensors="pt")
         output = model(**encoding, output_hidden_states=True)
         sequence_output = output.hidden_states[-1][:, 1:(encoding['input_ids'].shape[1]-1)]
