@@ -724,7 +724,7 @@ def three_stages_bottom_up_version_space_based(all_positive_paths, dataset, spec
                         if io_key in new_io_to_vs:
                             continue
                         new_program = add_constraint_to_find_program(vss[vs_idx].programs[0], c)
-                        if new_p == 1.0 and (new_tt - covered_tt_perfect):
+                        if new_p >= 1.0 and (new_tt - covered_tt_perfect):
                             if io_key not in perfect_ps_io_value:
                                 perfect_ps.append(new_program)
                                 perfect_ps_io_value.add(io_key)
