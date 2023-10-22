@@ -343,11 +343,11 @@ class Graph():
             remove_edges = []
             for c in removes:
                 c.rights.remove(cell)
-                for e in self.es:
-                    if e.start == c and e.end == cell and e.label == self.edge_labels.index('lr'):
-                        remove_edges.append(e)
-                    if e.start == cell and e.end == c and e.label == self.edge_labels.index('rl'):
-                        remove_edges.append(e)
+                for i, j, lbl in self.es:
+                    if i == c and j == cell and lbl == self.edge_labels.index('lr'):
+                        remove_edges.append((i, j, lbl))
+                    if i == cell and j == c and lbl == self.edge_labels.index('rl'):
+                        remove_edges.append((i, j, lbl))
             [self.es.remove(e) for e in remove_edges]
 
             cell.lefts = real_lefts
@@ -410,11 +410,11 @@ class Graph():
             rm_es = []
             for c in rms:
                 c.bottoms.remove(cell)
-                for e in self.es:
-                    if e.start == c and e.end == cell and e.label == self.edge_labels.index('tb'):
-                        rm_es.append(e)
-                    if e.start == cell and e.end == c and e.label == self.edge_labels.index('bt'):
-                        rm_es.append(e)
+                for (i, j, lbl) in self.es:
+                    if i == c and j == cell and lbl == self.edge_labels.index('tb'):
+                        rm_es.append((i, j, lbl))
+                    if i == cell and j == c and lbl == self.edge_labels.index('bt'):
+                        rm_es.append((i, j, lbl))
             [self.es.remove(e) for e in rm_es]
 
             cell.tops = real_tops
