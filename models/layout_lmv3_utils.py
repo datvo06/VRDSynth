@@ -33,11 +33,11 @@ def get_word_embedding(data: DataSample):
     for i, word in enumerate(word_tokens):
         if curr + len(word) < 510:
             chunks[-1].append(word)
-            curr = i
+            curr += len(word)
         else:
             chunks.append([word])
             seps.append(curr)
-            curr = i
+            curr = 0
     seps.append(len(word_tokens))
     all_seq_output = []
     init_idx = 0
