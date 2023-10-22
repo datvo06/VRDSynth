@@ -379,7 +379,7 @@ def batch_find_program_executor(nx_g, find_programs: List[FindProgram]) -> List[
         for w in word_vars:
             nx_graph_query.add_node(w)
         for w1, w2, r in path:
-            nx_graph_query.add_edge(w1, w2)
+            nx_graph_query.add_edge(w1, w2, key=0)
 
         print(nx_graph_query.nodes(), nx_graph_query.edges())
         input()
