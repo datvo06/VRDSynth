@@ -376,16 +376,14 @@ def batch_find_program_executor(nx_g, find_programs: List[FindProgram]) -> List[
     for path in path_to_programs:
         nx_graph_query = nx.MultiDiGraph()
         word_vars = path_to_programs[path][0][1].word_variables
-        w2idx = {}
-        for i, w in enumerate(word_vars):
-            w2idx[w] = i
-            nx_graph_query.add_node(i)
+        for w in word_vars:
+            nx_graph_query.add_node(w)
         for w1, w2, r in path:
-            nx_graph_query.add_edge(w2idx[w1], w2idx[w2], key=0)
+            nx_graph_query.add_edge(w1, w2, key=0)
 
 
-        gm = isomorphism.DiGraphMatcher(nx_g, nx_graph_query)
         print(nx_g.nodes(), nx_g.edges())
+        gm = isomorphism.GraphMatcher(nx_g, nx_graph_query)
         print(nx_graph_query.nodes(), nx_graph_query.edges(), gm.subgraph_is_isomorphic(), gm.subgraph_is_isomorphic())
         input()
         for subgraph in gm.subgraph_isomorphisms_iter():
