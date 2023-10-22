@@ -8,7 +8,7 @@ import itertools
 import functools
 from collections import defaultdict, namedtuple
 from networkx.algorithms import constraint, isomorphism
-from utils.ps_utils import FalseValue, LiteralReplacement, Program, EmptyProgram, GrammarReplacement, FindProgram, RelationLabelConstant, RelationLabelProperty, TrueValue, WordLabelProperty, WordVariable, RelationVariable, RelationConstraint, LabelEqualConstraint, RelationLabelEqualConstraint, construct_entity_linking_specs, LabelConstant, AndConstraint, LiteralSet, Constraint, Hole, replace_hole, find_holes, SymbolicList, FilterStrategy, fill_hole, Expression, FloatConstant
+from utils.ps_utils import FalseValue, LiteralReplacement, Program, GrammarReplacement, FindProgram, RelationLabelConstant, RelationLabelProperty, TrueValue, WordLabelProperty, WordVariable, RelationVariable, RelationConstraint, LabelEqualConstraint, RelationLabelEqualConstraint, construct_entity_linking_specs, LabelConstant, AndConstraint, LiteralSet, Constraint, Hole, replace_hole, find_holes, SymbolicList, FilterStrategy, fill_hole, Expression, FloatConstant
 from utils.visualization_script import visualize_program_with_support
 from utils.version_space import VersionSpace
 import json
@@ -19,7 +19,7 @@ import copy
 import multiprocessing
 from multiprocessing import Pool
 from functools import lru_cache, partial
-from methods.decisiontree_ps import get_all_path, get_parser, construct_or_get_initial_programs, batch_find_program_executor, mapping2tuple, tuple2mapping, report_metrics, get_p_r_f1, get_valid_cand_find_program, add_constraint_to_find_program, get_args, logger
+from methods.decisiontree_ps import get_all_path, get_parser, construct_or_get_initial_programs, batch_find_program_executor, mapping2tuple, tuple2mapping, report_metrics, get_p_r_f1, get_valid_cand_find_program, add_constraint_to_find_program, get_args, logger, setup_grammar
 from methods.decisiontree_ps_entity_linking import SpecType
 import cv2
 import time
@@ -304,12 +304,12 @@ def three_stages_bottom_up_version_space_based_entity_linking(pos_paths, dataset
 if __name__ == '__main__': 
     relation_set = dummy_calculate_relation_set(None, None, None)
     args = get_args()
-    LiteralReplacement['FloatConstant'] = list([FloatConstant(x) for x in np.arange(0.0, args.upper_float_thres + 0.1, 0.1)])
     logger.set_fp(f"{args.cache_dir}/log.json")
     os.makedirs(args.cache_dir, exist_ok=True)
     os.makedirs(f"{args.cache_dir}/viz", exist_ok=True)
     os.makedirs(f"{args.cache_dir}/viz_no_rel", exist_ok=True)
     os.makedirs(f"{args.cache_dir}/viz_entity_mapping", exist_ok=True)
+    args = setup_grammar(args)
 
     start_time = time.time()
     if os.path.exists(f"{args.cache_dir}/dataset.pkl"):
@@ -340,7 +340,7 @@ if __name__ == '__main__':
         bar = tqdm.tqdm(total=len(dataset))
         bar.set_description("Constructing data sample set relation cache")
         for i, data in enumerate(entity_dataset):
-            nx_g = build_nx_g(data, relation_set, y_threshold=30)
+            nx_g = build_nx_g(data, args.relation_set, y_threshold=30)
             data_sample_set_relation_cache.append(nx_g)
             img = viz_data(data, nx_g)
             img_no_rel = viz_data_no_rel(data)
@@ -356,6 +356,24 @@ if __name__ == '__main__':
         with open(f"{args.cache_dir}/ds_cache_linking_kv.pkl", 'wb') as f:
             pkl.dump(data_sample_set_relation_cache, f)
 
+    if args.use_sem:
+        assert args.model in ['layoutlmv3']
+        if args.model == 'layoutlmv3':
+            if os.path.exists(f"{args.cache_dir}/embs_layoutlmv3.pkl"):
+                with open(f"{args.cache_dir}/embs_layoutlmv3.pkl", 'rb') as f:
+                    all_embs = pkl.load(f)
+            else:
+                from models.layout_lmv3_utils import get_word_embedding
+                start_time = time.time()
+                all_embs = []
+                for data in entity_dataset:
+                    all_embs.append(get_word_embedding(data))
+                end_time = time.time()
+                print(f"Time taken to get word embedding: {end_time - start_time}")
+                logger.log("get word embedding time: ", float(end_time - start_time))
+            for nx_g in data_sample_set_relation_cache:
+                for w in sorted(nx_g.nodes()):
+                    nx_g.nodes[w]['emb'] = all_embs[w]
     # Now we have the data sample set relation cache
     print("Stage 1 - Constructing Program Space")
     if os.path.exists(f"{args.cache_dir}/pos_paths_linking_kv.pkl"):
@@ -363,7 +381,7 @@ if __name__ == '__main__':
             pos_paths = pkl.load(f)
     else:
         start_time = time.time()
-        pos_paths = get_path_specs_linking(entity_dataset, specs, relation_set=relation_set, data_sample_set_relation_cache=data_sample_set_relation_cache, cache_dir=args.cache_dir)
+        pos_paths = get_path_specs_linking(entity_dataset, specs, relation_set=args.relation_set, data_sample_set_relation_cache=data_sample_set_relation_cache, cache_dir=args.cache_dir)
         end_time = time.time()
         print(f"Time taken to construct positive paths: {end_time - start_time}")
         logger.log("construct positive paths time: ", float(end_time - start_time))

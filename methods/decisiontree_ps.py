@@ -785,9 +785,25 @@ def get_args():
     return args
 
 
+def setup_grammar(args):
+    LiteralReplacement['FloatConstant'] = list([FloatConstant(x) for x in np.arange(0.0, args.upper_float_thres + 0.1, 0.1)])
+    if args.use_sem:
+        GrammarReplacement['FloatValue'].append(SemDist)
+    if args.rel_type == 'default':
+        relation_set = dummy_calculate_relation_set(None, None, None)
+    else:
+        if os.path.exists(f"{args.cache_dir}/relation_set.pkl"):
+            relation_set = pkl.load(open('{args.cache_dir}/relation_set.pkl', 'rb'))
+        else:
+            relation_set = calculate_relation_set(dataset, 5, 10)
+            pkl.dump(relation_set, open(f"{args.cache_dir}/relation_set.pkl", 'wb'))
+    args.relation_set = relation_set
+    LiteralReplacement['RelationPropertyConstant'] =  [RelationPropertyConstant('mag'), *[RelationPropertyConstant(f'proj{i}') for i in range(len(args.relation_set))]],
+    return args
+
+
 if __name__ == '__main__': 
     args = get_args()
-    LiteralReplacement['FloatConstant'] = list([FloatConstant(x) for x in np.arange(0.0, args.upper_float_thres + 0.1, 0.1)])
     
     os.makedirs(args.cache_dir, exist_ok=True)
     logger.set_fp(f"{args.cache_dir}/log.json")
@@ -800,16 +816,7 @@ if __name__ == '__main__':
         with open(f"{args.cache_dir}/dataset.pkl", 'wb') as f:
             pkl.dump(dataset, f)
 
-    if args.rel_type == 'default':
-        relation_set = dummy_calculate_relation_set(None, None, None)
-    else:
-        if os.path.exists(f"{args.cache_dir}/relation_set.pkl"):
-            relation_set = pkl.load(open('{args.cache_dir}/relation_set.pkl', 'rb'))
-        else:
-            relation_set = calculate_relation_set(dataset, 5, 10)
-            pkl.dump(relation_set, open(f"{args.cache_dir}/relation_set.pkl", 'wb'))
-            LiteralReplacement['RelationPropertyConstant'] =  [RelationPropertyConstant('mag'), *[RelationPropertyConstant(f'proj{i}') for i in range(10)]],
-
+    args = setup_grammar(args)
 
     if os.path.exists(f"{args.cache_dir}/specs.pkl"):
         with open(f"{args.cache_dir}/specs.pkl", 'rb') as f:
@@ -833,7 +840,7 @@ if __name__ == '__main__':
         bar = tqdm.tqdm(total=len(dataset))
         bar.set_description("Constructing data sample set relation cache")
         for data_sample in dataset:
-            nx_g = build_nx_g(data_sample, relation_set, y_threshold=10)
+            nx_g = build_nx_g(data_sample, args.relation_set, y_threshold=10)
             data_sample_set_relation_cache.append(nx_g)
             bar.update(1)
         end_time = time.time()
@@ -844,12 +851,11 @@ if __name__ == '__main__':
             pkl.dump(data_sample_set_relation_cache, f)
 
     if args.use_sem:
-        GrammarReplacement['FloatValue'].append(SemDist)
         assert args.model in ['layoutlmv3']
         if args.model == 'layoutlmv3':
             if os.path.exists(f"{args.cache_dir}/embs_layoutlmv3.pkl"):
                 with open(f"{args.cache_dir}/embs_layoutlmv3.pkl", 'rb') as f:
-                    embs = pkl.load(f)
+                    all_embs = pkl.load(f)
             else:
                 from models.layout_lmv3_utils import get_word_embedding
                 start_time = time.time()
@@ -859,9 +865,9 @@ if __name__ == '__main__':
                 end_time = time.time()
                 print(f"Time taken to get word embedding: {end_time - start_time}")
                 logger.log("get word embedding time: ", float(end_time - start_time))
-                for nx_g in data_sample_set_relation_cache:
-                    for w in sorted(nx_g.nodes()):
-                        nx_g.nodes[w]['emb'] = all_embs[w]
+            for nx_g in data_sample_set_relation_cache:
+                for w in sorted(nx_g.nodes()):
+                    nx_g.nodes[w]['emb'] = all_embs[w]
 
     # Now we have the data sample set relation cache
     print("Stage 1 - Constructing Program Space")
@@ -870,7 +876,7 @@ if __name__ == '__main__':
         with open(f"{args.cache_dir}/all_positive_paths.pkl", 'rb') as f:
             pos_paths = pkl.load(f)
     else:
-        pos_paths = get_path_specs(dataset, specs, relation_set=relation_set, data_sample_set_relation_cache=data_sample_set_relation_cache)
+        pos_paths = get_path_specs(dataset, specs, relation_set=args.relation_set, data_sample_set_relation_cache=data_sample_set_relation_cache)
         end_time = time.time()
         print(f"Time taken to construct positive paths: {end_time - start_time}")
         logger.log("construct positive paths time: ", float(end_time - start_time))
