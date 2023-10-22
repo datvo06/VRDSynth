@@ -798,7 +798,7 @@ def setup_grammar(args):
             relation_set = calculate_relation_set(dataset, 5, 10)
             pkl.dump(relation_set, open(f"{args.cache_dir}/relation_set.pkl", 'wb'))
     args.relation_set = relation_set
-    LiteralReplacement['RelationPropertyConstant'] =  [RelationPropertyConstant('mag'), *[RelationPropertyConstant(f'proj{i}') for i in range(len(args.relation_set))]],
+    LiteralReplacement['RelationPropertyConstant'] =  [RelationPropertyConstant('mag'), *[RelationPropertyConstant(f'proj{i}') for i in range(len(args.relation_set))]]
     return args
 
 
