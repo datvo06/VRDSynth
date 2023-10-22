@@ -215,9 +215,6 @@ def get_nearest_line(cr_line, list_lines, dr='l', thresh=50000):
     ret = None
     dt = thresh
     for line in list_lines:
-        text = line.get_text()
-        if text == '':
-            continue
         loc = line.get_bb()
         if dr in {'r', 'l'}:
             if _get_v_intersec(loc, line_loc) <= 0.3 * _get_v_union(loc, line_loc):
