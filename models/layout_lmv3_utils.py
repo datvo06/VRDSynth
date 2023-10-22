@@ -45,7 +45,7 @@ def get_word_embedding(data: DataSample):
         chunk_boxes = data.boxes[init_idx:sep]
         init_idx = sep
         assert len(chunk_boxes) == len(chunk), (len(chunk_boxes), len(chunk))
-        encoding = processor(image, data.words, boxes=list(normalize_bbox(b, width, height) for b in chunk_boxes), word_labels=[0]*len(chunk_boxes), return_tensors="pt")
+        encoding = processor(image, chunk, boxes=list(normalize_bbox(b, width, height) for b in chunk_boxes), word_labels=[0]*len(chunk_boxes), return_tensors="pt")
         output = model(**encoding, output_hidden_states=True)
         sequence_output = output.hidden_states[-1][:, 1:(encoding['input_ids'].shape[1]-1)]
         # sequence_output.shape = (1, N, 768)
