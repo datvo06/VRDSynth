@@ -1,4 +1,4 @@
-from transformers import AutoProcessor, AutoModelForTokenClassification, AutoConfig
+from transformers import AutoProcessor, AutoModelForTokenClassification, AutoConfig, AutoTokenizer
 from utils.funsd_utils import DataSample
 from PIL import Image
 import pickle as pkl
@@ -7,8 +7,9 @@ import pickle as pkl
 processor = AutoProcessor.from_pretrained("nielsr/layoutlmv3-finetuned-funsd",
                                           apply_ocr=False)
 config = AutoConfig.from_pretrained("nielsr/layoutlmv3-finetuned-funsd")
+tokenizer = AutoTokenizer.from_pretrained("nielsr/layoutlmv3-finetuned-funsd")
 model = AutoModelForTokenClassification.from_pretrained("nielsr/layoutlmv3-finetuned-funsd", num_labels=7)
-# These labels include [0, B-HEADER, I-HEADER, B-QUESTION, I-QUESTION, B-ANSWER, I-ANSWER]
+# These labels include [B-HEADER, I-HEADER, B-QUESTION, I-QUESTION, B-ANSWER, I-ANSWER, I-other]
 
 def normalize_bbox(bbox, width, height):
      return [
@@ -25,6 +26,8 @@ def get_word_embedding(data: DataSample):
     width, height = image.size
     encoding = processor(image, data.words, boxes=list(normalize_bbox(b, width, height) for b in data.boxes), word_labels=[0]*len(data.boxes), 
                          return_tensors="pt")
+    word_tokens = [tokenizer.tokenize(word) for word in data.words]
+    print("tot len word token: ", sum(len(t) for t in word_tokens))
     print(encoding['input_ids'].shape, len(data.words))
     output = model(**encoding, output_hidden_states=True)
     sequence_output = output.hidden_states[-1][:, 1:(len(data.boxes)+1)]
