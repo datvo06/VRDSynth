@@ -383,7 +383,7 @@ def batch_find_program_executor(nx_g, find_programs: List[FindProgram]) -> List[
 
 
         gm = isomorphism.DiGraphMatcher(nx_g, nx_graph_query)
-        print(nx_g.nodes(), nx_g.edges()
+        print(nx_g.nodes(), nx_g.edges())
         print(nx_graph_query.nodes(), nx_graph_query.edges(), gm.subgraph_is_isomorphic(), gm.subgraph_is_isomorphic())
         input()
         for subgraph in gm.subgraph_isomorphisms_iter():
