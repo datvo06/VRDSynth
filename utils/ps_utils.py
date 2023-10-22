@@ -1,4 +1,3 @@
-from sqlalchemy import all_
 from utils.funsd_utils import DataSample, Bbox
 from utils.algorithms import UnionFind
 from typing import List, Tuple
