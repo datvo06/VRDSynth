@@ -2,6 +2,8 @@ from transformers import AutoProcessor, AutoModelForTokenClassification, AutoCon
 from utils.funsd_utils import DataSample
 from PIL import Image
 import pickle as pkl
+import numpy as np
+
 
 
 processor = AutoProcessor.from_pretrained("nielsr/layoutlmv3-finetuned-funsd",
@@ -30,10 +32,20 @@ def get_word_embedding(data: DataSample):
     print("tot len word token: ", sum(len(t) for t in word_tokens))
     print(encoding['input_ids'].shape, len(data.words))
     output = model(**encoding, output_hidden_states=True)
-    sequence_output = output.hidden_states[-1][:, 1:(len(data.boxes)+1)]
+    sequence_output = output.hidden_states[-1][:, 1:(encoding['input_ids'].shape[1]-1)]
     # sequence_output.shape = (1, 768, N)
     print(output.hidden_states[-1].shape, sequence_output.shape, len(data.boxes))
-    return sequence_output
+    # Aggregate per-word embedding
+    word_embs = [[] for _ in range(len(data.words))]
+    tot_toks = 0
+    for i in range(len(data.words)):
+        for j in range(len(word_tokens[i])):
+            word_embs[i].append(sequence_output[0, :, tot_toks+j].detach().numpy())
+        tot_toks += len(word_tokens[i])
+    # perform per-word average pooling
+    word_embs = [np.mean(np.array(emb), axis=0) for emb in word_embs]
+    print(len(word_embs), word_embs[0].shape)
+    return word_embs
 
 
 if __name__ == '__main__':
