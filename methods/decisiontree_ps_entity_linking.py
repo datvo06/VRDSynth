@@ -1,6 +1,6 @@
 import networkx as nx
 from typing import List, Tuple, Dict, Set, Optional
-from utils.funsd_utils import DataSample, load_dataset, build_nx_g, viz_data
+from utils.funsd_utils import DataSample, load_dataset, viz_data
 from utils.relation_building_utils import calculate_relation_set, dummy_calculate_relation_set, calculate_relation
 import argparse
 import numpy as np
@@ -344,7 +344,7 @@ if __name__ == '__main__':
         bar = tqdm.tqdm(total=len(dataset))
         bar.set_description("Constructing data sample set relation cache")
         for i, data in enumerate(entity_dataset):
-            nx_g = build_nx_g(data, args.relation_set, y_threshold=10)
+            nx_g = args.build_nx_g(data)
             data_sample_set_relation_cache.append(nx_g)
             img = viz_data(data, nx_g)
             cv2.imwrite(f"{args.cache_dir}/viz/{i}.png", img)
