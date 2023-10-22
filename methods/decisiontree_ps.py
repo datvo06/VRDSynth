@@ -5,13 +5,14 @@ from typing import List, Tuple, Dict, Set, Optional, Any
 from transformers.models import layoutlmv3
 from utils.funsd_utils import DataSample, load_dataset, build_nx_g
 from utils.relation_building_utils import calculate_relation_set, dummy_calculate_relation_set, calculate_relation
+from utils.legacy_graph_utils import build_nx_g_legacy
 import argparse
 import numpy as np
 import itertools
 import functools
 from collections import defaultdict, namedtuple
 from networkx.algorithms import constraint, isomorphism
-from utils.ps_utils import FalseValue, LiteralReplacement, Program, EmptyProgram, GrammarReplacement, FindProgram, RelationLabelConstant, RelationLabelProperty, TrueValue, WordLabelProperty, WordVariable, RelationVariable, RelationConstraint, LabelEqualConstraint, RelationLabelEqualConstraint, construct_entity_merging_specs, SpecIterator, LabelConstant, AndConstraint, LiteralSet, Constraint, GrammarReplacement, Hole, replace_hole, find_holes, SymbolicList, FilterStrategy, fill_hole, Expression, FloatConstant, RelationPropertyConstant, SemDist
+from utils.ps_utils import FalseValue, LiteralReplacement, Program, EmptyProgram, GrammarReplacement, FindProgram, RelationLabelConstant, RelationLabelProperty, TrueValue, WordLabelProperty, WordVariable, RelationVariable, RelationConstraint, LabelEqualConstraint, RelationLabelEqualConstraint, construct_entity_merging_specs, SpecIterator, LabelConstant, AndConstraint, LiteralSet, Constraint, Hole, replace_hole, find_holes, SymbolicList, FilterStrategy, fill_hole, Expression, FloatConstant, RelationPropertyConstant, SemDist
 from utils.visualization_script import visualize_program_with_support
 from utils.version_space import VersionSpace
 import json
@@ -777,7 +778,7 @@ def get_args():
     # cache_dir
     parser.add_argument('--cache_dir', type=str, default='funsd_cache', help='cache directory')
     parser.add_argument('--upper_float_thres', type=float, default=0.5, help='upper float thres')
-    parser.add_argument('--rel_type', type=str, choices=['cluster', 'default'], default='default')
+    parser.add_argument('--rel_type', type=str, choices=['cluster', 'default', 'legacy'], default='default')
     # use sem store true
     parser.add_argument('--use_sem', action='store_true', help='use semantic information')
     parser.add_argument('--model', type=str, choices=['layoutlmv3'], default='layoutlmv3')
@@ -791,13 +792,19 @@ def setup_grammar(args):
         GrammarReplacement['FloatValue'].append(SemDist)
     if args.rel_type == 'default':
         relation_set = dummy_calculate_relation_set(None, None, None)
-    else:
+        args.build_nx_g = lambda data_sample: build_nx_g(data_sample, args.relation_set, y_threshold=10)
+        args.relation_set = relation_set
+    elif args.rel_type == 'cluster':
         if os.path.exists(f"{args.cache_dir}/relation_set.pkl"):
             relation_set = pkl.load(open('{args.cache_dir}/relation_set.pkl', 'rb'))
         else:
             relation_set = calculate_relation_set(dataset, 5, 10)
             pkl.dump(relation_set, open(f"{args.cache_dir}/relation_set.pkl", 'wb'))
-    args.relation_set = relation_set
+        args.build_nx_g = lambda data_sample: build_nx_g(data_sample, args.relation_set, y_threshold=10)
+        args.relation_set = relation_set
+    else:
+        args.build_nx_g = lambda data_sample: build_nx_g_legacy(data_sample)
+        # Also, remove all the proj from 
     LiteralReplacement['RelationPropertyConstant'] =  [RelationPropertyConstant('mag'), *[RelationPropertyConstant(f'proj{i}') for i in range(len(args.relation_set))]]
     return args
 
@@ -840,7 +847,7 @@ if __name__ == '__main__':
         bar = tqdm.tqdm(total=len(dataset))
         bar.set_description("Constructing data sample set relation cache")
         for data_sample in dataset:
-            nx_g = build_nx_g(data_sample, args.relation_set, y_threshold=10)
+            nx_g = args.build_nx_g(data_sample)
             data_sample_set_relation_cache.append(nx_g)
             bar.update(1)
         end_time = time.time()
