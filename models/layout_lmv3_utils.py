@@ -43,6 +43,7 @@ def get_word_embedding(data: DataSample):
     init_idx = 0
     for chunk, sep in zip(chunks, seps):
         chunk_boxes = data.boxes[init_idx:sep]
+        init_idx = sep
         assert len(chunk_boxes) == len(chunk), (len(chunk_boxes), len(chunk))
         encoding = processor(image, data.words, boxes=list(normalize_bbox(b, width, height) for b in chunk_boxes), word_labels=[0]*len(chunk_boxes), return_tensors="pt")
         output = model(**encoding, output_hidden_states=True)
