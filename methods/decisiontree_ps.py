@@ -382,11 +382,10 @@ def batch_find_program_executor(nx_g, find_programs: List[FindProgram]) -> List[
             nx_graph_query.add_edge(w1, w2, key=0)
 
 
-        print(nx_g.nodes(), nx_g.edges())
+        # print(nx_g.nodes(), nx_g.edges())
         gm = isomorphism.GraphMatcher(nx_g, nx_graph_query)
-        print(nx_graph_query.nodes(), nx_graph_query.edges(), gm.subgraph_is_isomorphic(), gm.subgraph_is_monomorphic())
-        input()
-        for subgraph in gm.subgraph_isomorphisms_iter():
+        # print(nx_graph_query.nodes(), nx_graph_query.edges(), gm.subgraph_is_isomorphic(), gm.subgraph_is_monomorphic())
+        for subgraph in gm.subgraph_monomorphisms_iter():
             subgraph = {v: k for k, v in subgraph.items()}
             # get the corresponding binding for word_variables and relation_variables
             word_binding = {w: subgraph[w] for w in word_vars}
