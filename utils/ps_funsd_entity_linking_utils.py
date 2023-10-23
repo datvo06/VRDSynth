@@ -21,10 +21,10 @@ import os
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--cache_dir_entity_group_merging', type=str, default='funsd_cache_entity_merging', help='cache directory')
+    parser.add_argument('--cache_dir_entity_group_merging', type=str, default='assets/legacy_entity_grouping', help='cache directory')
     parser.add_argument('--cache_dir_entity_linking',
                         type=str,
-                        default='funsd_cache_entity_linking',
+                        default='assets/legacy_entity_linking',
                         help='cache directory')
     args = parser.parse_args()
     os.makedirs(f"{args.cache_dir_entity_linking}/inference/", exist_ok=True)
