@@ -1,4 +1,5 @@
-from utils.funsd_utils import DataSample
+from utils.funsd_utils import DataSample, Bbox
+from utils.algorithms import UnionFind
 from typing import List, Tuple
 from collections import namedtuple, defaultdict
 import itertools
@@ -6,6 +7,8 @@ import networkx as nx
 from networkx import isomorphism
 import copy
 from functools import lru_cache
+import numpy as np
+from scipy.spatial.distance import cosine
 
 
 def construct_entity_merging_specs(dataset: List[DataSample]):
@@ -16,12 +19,51 @@ def construct_entity_merging_specs(dataset: List[DataSample]):
     return specs
 
 
+def construct_entity_level_data(data) -> DataSample:
+    """
+    Construct entity level data from word level data
+    :return:
+    """
+    words = []
+    labels = []
+    entities = []
+    entities_map = data['entities_map']
+    boxes = []
+    for i, entity in enumerate(data.entities):
+        entity_words = []
+        entity_labels = []
+        entity_boxes = []
+        for word_idx in entity:
+            entity_words.append(data.words[word_idx])
+            entity_labels.append(data.labels[word_idx])
+            entity_boxes.append(data.boxes[word_idx])
+        words.append(' '.join(entity_words))
+        labels.append(entity_labels[0])
+        entities.append([i])
+        bbox = Bbox(
+                min([box.x0 for box in entity_boxes]),
+                min([box.y0 for box in entity_boxes]),
+                max([box.x1 for box in entity_boxes]),
+                max([box.y1 for box in entity_boxes])
+        )
+        boxes.append(bbox)
+
+    return DataSample(words, labels, entities, entities_map, boxes, data.img_fp)
+
+
 def construct_entity_linking_specs(dataset: List[DataSample]):
     # Construct the following pairs 
     specs = []
-    for datasample in dataset:
-        specs.append((datasample.to_json(), datasample.entities_map))
-    return specs
+    entity_dataset = []
+    for i, datasample in enumerate(dataset):
+        entity_datasample = construct_entity_level_data(datasample)
+        entity_dataset.append(entity_datasample)
+        parent_entities = defaultdict(set)
+        for e1, e2 in entity_datasample.entities_map:
+            parent_entities[e1].add(e2)
+        specs.append((i, datasample.entities_map, list(parent_entities.values())))
+    return specs, entity_dataset
+
 
 class SpecIterator:
     def __init__(self, specs: List[Tuple[int, List[List[int]]]]):
@@ -292,7 +334,7 @@ class RelationConstraint(Expression):
     def __eq__(self, other):
         return self.w1 == other.w1 and self.w2 == other.w2 and self.r == other.r
 
-    
+
 
 class FindProgram(Program):
     def __init__(self, word_variables, relation_variables, relation_constraints, constraint, return_variables):
@@ -429,6 +471,50 @@ class FloatConstant(FloatValue, Literal):
 
     def __str__(self):
         return str(self.value)
+
+
+class SemDist(FloatValue):
+    def __init__(self, w1, w2):
+        self.w1 = w1
+        self.w2 = w2
+
+
+    @staticmethod
+    def get_arg_type():
+        return [WordVariable, WordVariable]
+
+    @staticmethod
+    def type_name():
+        return 'SemDist'
+
+    def get_args(self):
+        return [self.w1, self.w2]
+
+
+    def __eq__(self, other):
+        return isinstance(other, SemDist) and ((self.w1 == other.w1 and self.w2 == other.w2) or
+                                               (self.w2 == other.w1 and self.w1 == other.w2))
+
+    def __str__(self):
+        return f"SemDist({self.w1}, {self.w2})"
+
+    def __hash__(self):
+        return hash(str(self))
+
+    def evaluate(self, word_binding, relation_binding, nx_g):
+        emb1 = nx_g.nodes[word_binding[self.w1]]['emb']
+        emb2 = nx_g.nodes[word_binding[self.w2]]['emb']
+        # If both emb1 and emb2 is not zero vector
+        if np.linalg.norm(emb1) > 0 and np.linalg.norm(emb2) > 0:
+            return 1 - cosine(emb1, emb2)
+        else:
+            return 1
+
+    def reduce(self):
+        if self.w1 == self.w2:
+            return True, FloatConstant(0)
+        else:
+            return False, self
 
 
 class FalseValue(BoolValue, Literal):
@@ -1235,7 +1321,7 @@ LiteralReplacement = {
         'EmptyProgram': [EmptyProgram()],
         'TrueValue': [TrueValue()],
         'FalseValue': [FalseValue()],
-        'StringConstant': [StringConstant(''), StringConstant('.'), StringConstant('-'), StringConstant('%')],
+        'StringConstant': [StringConstant(''), StringConstant('.'), StringConstant('-'), StringConstant('%'), StringConstant("/"), StringConstant(":")],
         'FloatConstant': [FloatConstant(0.1), FloatConstant(0.2), FloatConstant(0.3), FloatConstant(0.4)], # this should reflect our normalization method.
         'LabelConstant': [LabelConstant('header'), LabelConstant('key'), LabelConstant('value')],
         'BoxConstantValue': [BoxConstantValue('x0'), BoxConstantValue('y0'), BoxConstantValue('x1'), BoxConstantValue('y1')],
@@ -1350,11 +1436,13 @@ def fill_hole(hole, max_depth=3, filter_strategy: FilterStrategy=None) -> list:
             except: # Invalid program
                 pass
     for i in range(len(all_programs)):
-        if all_programs[i].reduce()[0]:
+        if not isinstance(all_programs[i], list) and all_programs[i].reduce()[0]:
             all_programs[i] = all_programs[i].reduce()[1]
-    if filter_strategy is not None:
+    if filter_strategy is not None and all_programs and not isinstance(all_programs[0], list):
         all_programs = [p for p in all_programs if filter_strategy.check_valid(p)]
-    return list(set(all_programs))
+        return list(set(all_programs))
+    else:
+        return all_programs
 
 
 def test_find_hole():

@@ -9,6 +9,15 @@ class UnionFind:
 
         return self.parent[x]
 
+
+    def get_group(self, parent):
+        out = []
+        for i in range(len(self.parent)):
+            if self.parent[i] == parent:
+                out.append(i)
+        return out
+
+
     def union(self, x, y):
         px, py = self.find(x), self.find(y)
 
@@ -28,5 +37,3 @@ class UnionFind:
         for i in range(len(self.parent)):
             ans[self.find(i)].append(i)
         return list(filter(lambda x: len(x) > 0, ans))
-
-

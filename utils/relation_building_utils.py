@@ -1,11 +1,12 @@
 import numpy as np
 from sklearn.metrics import pairwise_distances_argmin
 from collections import namedtuple
-from typing import List, Tuple
+from typing import List, Tuple, Union, Any
 from datasets import Dataset
 from sklearn.neighbors import NearestNeighbors
 from utils.algorithms import UnionFind
 import numpy as np
+import tqdm
 
 BoxRel = namedtuple('BoxRel', ['i', 'j', 'mag', 'projs'])
 
@@ -65,7 +66,7 @@ class AngleKMeans:
         return pairwise_distances_argmin(X, self.centers_, metric=angle_dist)
 
 
-def calculate_relation_set(dataset: Dataset, k: int, clusters: int) -> List[Tuple[float, float]]:
+def calculate_relation_set(dataset: Union[Dataset, List[Any]], k: int, clusters: int) -> List[Tuple[float, float]]:
     """ Calculate the relation set using all samples in the dataset """
     # First, use knn to find the k nearest neighbors
     knn_rels = []
@@ -144,7 +145,7 @@ def filter_relation_med_dist(data_relation: List[BoxRel], coeff=1.3):
 
 
 
-def calculate_relation(dataset: Dataset, relation_set: List[Tuple[float, float]], y_threshold: float = None) -> List[List[BoxRel]]:
+def calculate_relation(dataset: Dataset, relation_set: List[Tuple[float, float]], y_threshold: float = None, filter_rel: bool = True) -> List[List[BoxRel]]:
     """ Calculate the relation between samples in the dataset """
     all_relation = []
 
@@ -177,9 +178,9 @@ def calculate_relation(dataset: Dataset, relation_set: List[Tuple[float, float]]
                     continue
                 if j != k:
                     data_relations.append(BoxRel(j, k, magnitudes[j, k], relation_projections[j, k]))
-        
         filtered_data_relation = data_relations
-        filtered_data_relation = filter_relation(data_relations, relation_set)
+        if filter_rel:
+            filtered_data_relation = filter_relation(data_relations, relation_set)
         all_relation.append(filtered_data_relation)
 
     return all_relation
