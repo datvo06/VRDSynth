@@ -1,14 +1,18 @@
+from random import choices
 import networkx as nx
-from typing import List, Tuple, Dict, Set, Optional
-from utils.funsd_utils import DataSample, load_dataset, build_nx_g, RELATION_SET
+from typing import List, Tuple, Dict, Set, Optional, Any
+
+from transformers.models import layoutlmv3
+from utils.funsd_utils import DataSample, load_dataset, build_nx_g
 from utils.relation_building_utils import calculate_relation_set, dummy_calculate_relation_set, calculate_relation
+from utils.legacy_graph_utils import build_nx_g_legacy
 import argparse
 import numpy as np
 import itertools
 import functools
 from collections import defaultdict, namedtuple
 from networkx.algorithms import constraint, isomorphism
-from utils.ps_utils import FalseValue, LiteralReplacement, Program, EmptyProgram, GrammarReplacement, FindProgram, RelationLabelConstant, RelationLabelProperty, TrueValue, WordLabelProperty, WordVariable, RelationVariable, RelationConstraint, LabelEqualConstraint, RelationLabelEqualConstraint, construct_entity_merging_specs, SpecIterator, LabelConstant, AndConstraint, LiteralSet, Constraint, GrammarReplacement, Hole, replace_hole, find_holes, SymbolicList, FilterStrategy, fill_hole, Expression
+from utils.ps_utils import FalseValue, LiteralReplacement, Program, EmptyProgram, GrammarReplacement, FindProgram, RelationLabelConstant, RelationLabelProperty, TrueValue, WordLabelProperty, WordVariable, RelationVariable, RelationConstraint, LabelEqualConstraint, RelationLabelEqualConstraint, construct_entity_merging_specs, SpecIterator, LabelConstant, AndConstraint, LiteralSet, Constraint, Hole, replace_hole, find_holes, SymbolicList, FilterStrategy, fill_hole, Expression, FloatConstant, RelationPropertyConstant, SemDist
 from utils.visualization_script import visualize_program_with_support
 from utils.version_space import VersionSpace
 import json
@@ -19,8 +23,25 @@ import copy
 import multiprocessing
 from multiprocessing import Pool
 from functools import lru_cache, partial
+import time
 
 
+class Logger(object):
+    def __init__(self):
+        self.dict_data = {}
+
+    def log(self, key: str, value: Any):
+        self.dict_data[key] = value
+        self.write()
+
+    def set_fp(self, fp):
+        self.fp = fp
+
+    def write(self):
+        with open(self.fp, 'w') as f:
+            json.dump(self.dict_data, f)
+
+logger = Logger()
 
 def get_all_path(nx_g, w1, w2, hops=2):
     path_set_counter = defaultdict(int)
@@ -89,13 +110,16 @@ def get_path_specs(dataset, specs: List[Tuple[int, List[List[int]]]], relation_s
     else:
         pos_relations = list(get_all_positive_relation_paths(dataset, specs, relation_set, hops=hops, data_sample_set_relation_cache=data_sample_set_relation))
         pkl.dump(pos_relations, open(f"{args.cache_dir}/all_positive_paths.pkl", 'wb'))
+    '''
     print("Start mining negative relations")
     if os.path.exists(f"{args.cache_dir}/all_negative_paths.pkl"):
         neg_relations = pkl.load(open(f"{args.cache_dir}/all_negative_paths.pkl", 'rb'))
     else:
         neg_relations = list(get_all_negative_relation(dataset, specs, relation_set, hops=hops, sampling_rate=sampling_rate, data_sample_set_relation_cache=data_sample_set_relation))
         pkl.dump(neg_relations, open(f"{args.cache_dir}/all_negative_paths.pkl", 'wb'))
-    return pos_relations, neg_relations
+    '''
+    return pos_relations
+    # return pos_relations, neg_relations
 
 
 def get_parser():
@@ -355,15 +379,23 @@ def batch_find_program_executor(nx_g, find_programs: List[FindProgram]) -> List[
         for w in word_vars:
             nx_graph_query.add_node(w)
         for w1, w2, r in path:
-            nx_graph_query.add_edge(w1, w2)
+            nx_graph_query.add_edge(w1, w2, key=0)
+
+
+        # print(nx_g.nodes(), nx_g.edges())
         gm = isomorphism.MultiDiGraphMatcher(nx_g, nx_graph_query)
-        for subgraph in gm.subgraph_isomorphisms_iter():
+        # print(nx_graph_query.nodes(), nx_graph_query.edges(), gm.subgraph_is_isomorphic(), gm.subgraph_is_monomorphic())
+        for subgraph in gm.subgraph_monomorphisms_iter():
             subgraph = {v: k for k, v in subgraph.items()}
             # get the corresponding binding for word_variables and relation_variables
             word_binding = {w: subgraph[w] for w in word_vars}
             relation_binding = {r: (subgraph[w1], subgraph[w2], 0) for w1, w2, r in path}
+            word_val = {w: nx_g.nodes[word_binding[w]] for i, w in enumerate(word_vars)}
+            relation_val = {r: (nx_g.nodes[word_binding[w1]], nx_g.nodes[word_binding[w2]], 0) for w1, w2, r in path}
+
             for i, f in path_to_programs[path]:
-                if f.evaluate_binding(word_binding, relation_binding, nx_g):
+                val = f.evaluate_binding(word_binding, relation_binding, nx_g)
+                if val:
                     out_words[i].append((word_binding, relation_binding))
     return out_words
 
@@ -442,7 +474,7 @@ def collect_program_execution(programs, dataset, data_sample_set_relation_cache,
             for w in w2otherwords:
                 e = w2entities[w]
                 for w2 in w2otherwords[w]:
-                    assert (i, w, w2) in all_word_pairs[p]
+                    assert (i, (w, w2)) in all_word_pairs[p]
                     if w2 in e:
                         tt[p].add((i, w, w2))
                     else:
@@ -528,17 +560,23 @@ def report_metrics_program(p_io_tt: Dict[Expression, set], p_io_tf: Dict[Express
         out_dict[p] = (prec, rec, f1)
     return out_dict
 
-def three_stages_bottom_up_version_space_based(all_positive_paths, dataset, specs, data_sample_set_relation_cache, cache_dir=None):
-    # STAGE 1: Build base relation spaces
-    if cache_dir is not None and os.path.exists(os.path.join(cache_dir, 'stage1.pkl')):
-        with open(os.path.join(cache_dir, "stage1.pkl"), "rb") as f:
+
+def construct_or_get_initial_programs(pos_paths, cache_fp, logger=logger):
+    if os.path.exists(cache_fp):
+        with open(cache_fp, "rb") as f:
             programs = pkl.load(f)
     else:
-        programs = construct_initial_program_set(all_positive_paths)
-        if cache_dir is not None:
-            with open(os.path.join(cache_dir, "stage1.pkl"), "wb") as f:
-                pkl.dump(programs, f)
+        start_time = time.time()
+        programs = construct_initial_program_set(pos_paths)
+        logger.log("Construct initial program set", float(time.time() - start_time))
+        with open(cache_fp, "wb") as f:
+            pkl.dump(programs, f)
+    return programs
 
+
+def three_stages_bottom_up_version_space_based(all_positive_paths, dataset, specs, data_sample_set_relation_cache, cache_dir=None):
+    # STAGE 1: Build base relation spaces
+    programs = construct_or_get_initial_programs(all_positive_paths, f"{cache_dir}/stage1.pkl")
     print("Number of programs in stage 1: ", len(programs))
     # STAGE 2: Build version space
     # Start by getting the output of each program
@@ -548,11 +586,15 @@ def three_stages_bottom_up_version_space_based(all_positive_paths, dataset, spec
             tt, tf, ft, io_to_program, all_out_mappings = pkl.load(f)
             print(len(tt), len(tf), len(ft))
     else:
+        start_time = time.time()
         bar = tqdm.tqdm(specs)
         bar.set_description("Stage 2 - Getting Program Output")
         tt, tf, ft, all_out_mappings = collect_program_execution(
                 programs, dataset,
                 data_sample_set_relation_cache)
+        end_time = time.time()
+        print("Time to collect program execution: ", end_time - start_time)
+        logger.log("Collect program execution", float(end_time - start_time))
         print(len(programs), len(tt))
         io_to_program = defaultdict(list)
         report_metrics(programs, tt, tf, ft, io_to_program)
@@ -560,6 +602,7 @@ def three_stages_bottom_up_version_space_based(all_positive_paths, dataset, spec
             with open(os.path.join(cache_dir, "stage2.pkl"), "wb") as f:
                 pkl.dump([tt, tf, ft, io_to_program, all_out_mappings], f)
 
+    ## This is simply sanity checking
     w2e = [defaultdict(set) for _ in range(len(dataset))]
     for i, data in enumerate(dataset):
         for e in data.entities:
@@ -601,13 +644,19 @@ def three_stages_bottom_up_version_space_based(all_positive_paths, dataset, spec
     print("Number of version spaces: ", len(vss))
     max_its = 10
     perfect_ps = []
+    start_time = time.time()
+    covered_tt = set()
+    covered_tt_perfect = set()
     for it in range(max_its):
         if cache_dir and os.path.exists(os.path.join(cache_dir, f"stage3_{it}.pkl")):
             vss, c2vs = pkl.load(open(os.path.join(cache_dir, f"stage3_{it}.pkl"), "rb"))
         else:
             c2vs = defaultdict(set)
             for i, vs in enumerate(vss):
-                old_p, old_r, old_f1 = get_p_r_f1(vs.tt, vs.tf, vs.ft)
+                try:
+                    old_p, old_r, old_f1 = get_p_r_f1(vs.tt, vs.tf, vs.ft)
+                except:
+                    continue
                 for p in vs.programs:
                     cs = get_valid_cand_find_program(vs, p)
                     for c in cs:
@@ -630,8 +679,7 @@ def three_stages_bottom_up_version_space_based(all_positive_paths, dataset, spec
             has_child = [False] * len(vss)
             big_bar = tqdm.tqdm(c2vs.items())
             big_bar.set_description("Stage 3 - Creating New Version Spaces")
-            covered_tt = set()
-            covered_tt_perfect = set()
+            
             for c, vs_idxs in big_bar:
                 # Cache to save computation cycles
                 cache, cnt, acc = {}, 0, 0 
@@ -680,12 +728,13 @@ def three_stages_bottom_up_version_space_based(all_positive_paths, dataset, spec
                         if io_key in new_io_to_vs:
                             continue
                         new_program = add_constraint_to_find_program(vss[vs_idx].programs[0], c)
-                        if new_p == 1.0 and (new_tt - covered_tt_perfect):
+                        if new_p >= 1.0 and (new_tt - covered_tt_perfect):
                             if io_key not in perfect_ps_io_value:
                                 perfect_ps.append(new_program)
                                 perfect_ps_io_value.add(io_key)
                                 with open(os.path.join(cache_dir, f"stage3_{it}_perfect_ps.pkl"), "wb") as f:
                                     pkl.dump(perfect_ps, f)
+                            logger.log(str(len(covered_tt_perfect)), (float(time.time()) - start_time, len(perfect_ps)))
                             covered_tt_perfect.update(new_tt)
                             continue
                         if new_p > old_p: 
@@ -725,21 +774,50 @@ def three_stages_bottom_up_version_space_based(all_positive_paths, dataset, spec
 
     return programs
 
-
-if __name__ == '__main__': 
-    relation_set = RELATION_SET
+def get_args():
     parser = get_parser()
     # training_dir
     parser.add_argument('--training_dir', type=str, default='funsd_dataset/training_data', help='training directory')
     # cache_dir
     parser.add_argument('--cache_dir', type=str, default='funsd_cache', help='cache directory')
-    # output_dir
-    parser.add_argument('--output_dir', type=str, default='funsd_output', help='output directory')
-    args = parser.parse_args()
+    parser.add_argument('--upper_float_thres', type=float, default=0.5, help='upper float thres')
+    parser.add_argument('--rel_type', type=str, choices=['cluster', 'default', 'legacy'], default='default')
+    # use sem store true
+    parser.add_argument('--use_sem', action='store_true', help='use semantic information')
+    parser.add_argument('--model', type=str, choices=['layoutlmv3'], default='layoutlmv3')
+    args = parser.parse_known_args()[0]
+    return args
 
+
+def setup_grammar(args):
+    LiteralReplacement['FloatConstant'] = list([FloatConstant(x) for x in np.arange(0.0, args.upper_float_thres + 0.1, 0.1)])
+    if args.use_sem:
+        GrammarReplacement['FloatValue'].append(SemDist)
+    if args.rel_type == 'default':
+        relation_set = dummy_calculate_relation_set(None, None, None)
+        args.build_nx_g = lambda data_sample: build_nx_g(data_sample, args.relation_set, y_threshold=10)
+        args.relation_set = relation_set
+    elif args.rel_type == 'cluster':
+        if os.path.exists(f"{args.cache_dir}/relation_set.pkl"):
+            relation_set = pkl.load(open('{args.cache_dir}/relation_set.pkl', 'rb'))
+        else:
+            relation_set = calculate_relation_set(dataset, 5, 10)
+            pkl.dump(relation_set, open(f"{args.cache_dir}/relation_set.pkl", 'wb'))
+        args.build_nx_g = lambda data_sample: build_nx_g(data_sample, args.relation_set, y_threshold=10)
+        args.relation_set = relation_set
+    else:
+        args.build_nx_g = lambda data_sample: build_nx_g_legacy(data_sample)
+        # Also, remove all the proj from 
+        LiteralReplacement['RelationPropertyConstant'] =  [RelationPropertyConstant('mag')]
+    return args
+
+
+if __name__ == '__main__': 
+    args = get_args()
+    
     os.makedirs(args.cache_dir, exist_ok=True)
-    os.makedirs(args.output_dir, exist_ok=True)
-
+    logger.set_fp(f"{args.cache_dir}/log.json")
+    start_time = time.time()
     if os.path.exists(f"{args.cache_dir}/dataset.pkl"):
         with open(f"{args.cache_dir}/dataset.pkl", 'rb') as f:
             dataset = pkl.load(f)
@@ -747,6 +825,9 @@ if __name__ == '__main__':
         dataset = load_dataset(f"{args.training_dir}/annotations/", f"{args.training_dir}/images/")
         with open(f"{args.cache_dir}/dataset.pkl", 'wb') as f:
             pkl.dump(dataset, f)
+
+    args = setup_grammar(args)
+
     if os.path.exists(f"{args.cache_dir}/specs.pkl"):
         with open(f"{args.cache_dir}/specs.pkl", 'rb') as f:
             specs = pkl.load(f)
@@ -754,6 +835,12 @@ if __name__ == '__main__':
         specs = construct_entity_merging_specs(dataset)
         with open(f"{args.cache_dir}/specs.pkl", 'wb') as f:
             pkl.dump(specs, f)
+    end_time = time.time()
+    print(f"Time taken to load dataset and construct specs: {end_time - start_time}")
+    logger.log("construct spec time: ", float(end_time - start_time))
+
+
+    start_time = time.time()
         
     if os.path.exists(f"{args.cache_dir}/data_sample_set_relation_cache.pkl"):
         with open(f"{args.cache_dir}/data_sample_set_relation_cache.pkl", 'rb') as f:
@@ -763,24 +850,48 @@ if __name__ == '__main__':
         bar = tqdm.tqdm(total=len(dataset))
         bar.set_description("Constructing data sample set relation cache")
         for data_sample in dataset:
-            nx_g = build_nx_g(data_sample, relation_set)
+            nx_g = args.build_nx_g(data_sample)
             data_sample_set_relation_cache.append(nx_g)
             bar.update(1)
+        end_time = time.time()
+        print(f"Time taken to construct data sample set relation cache: {end_time - start_time}")
+        logger.log("construct data sample set relation cache time: ", float(end_time - start_time))
+
         with open(f"{args.cache_dir}/data_sample_set_relation_cache.pkl", 'wb') as f:
             pkl.dump(data_sample_set_relation_cache, f)
+
+    if args.use_sem:
+        assert args.model in ['layoutlmv3']
+        if args.model == 'layoutlmv3':
+            if os.path.exists(f"{args.cache_dir}/embs_layoutlmv3.pkl"):
+                with open(f"{args.cache_dir}/embs_layoutlmv3.pkl", 'rb') as f:
+                    all_embs = pkl.load(f)
+            else:
+                from models.layout_lmv3_utils import get_word_embedding
+                start_time = time.time()
+                all_embs = []
+                for data in dataset:
+                    all_embs.append(get_word_embedding(data))
+                end_time = time.time()
+                print(f"Time taken to get word embedding: {end_time - start_time}")
+                logger.log("get word embedding time: ", float(end_time - start_time))
+            for i, nx_g in enumerate(data_sample_set_relation_cache):
+                for w in sorted(nx_g.nodes()):
+                    nx_g.nodes[w]['emb'] = all_embs[i][w]
+
     # Now we have the data sample set relation cache
     print("Stage 1 - Constructing Program Space")
-    if os.path.exists(f"{args.cache_dir}/all_positive_paths.pkl") and os.path.exists(f"{args.cache_dir}/all_negative_paths.pkl"):
+    start_time = time.time()
+    if os.path.exists(f"{args.cache_dir}/all_positive_paths.pkl"):
         with open(f"{args.cache_dir}/all_positive_paths.pkl", 'rb') as f:
-            all_positive_paths = pkl.load(f)
-        with open(f"{args.cache_dir}/all_negative_paths.pkl", 'rb') as f:
-            all_negative_paths = pkl.load(f)
+            pos_paths = pkl.load(f)
     else:
-        pos_paths, neg_paths = get_path_specs(dataset, specs, relation_set=relation_set, data_sample_set_relation_cache=data_sample_set_relation_cache)
-        all_positive_paths = pos_paths
+        pos_paths = get_path_specs(dataset, specs, relation_set=args.relation_set, data_sample_set_relation_cache=data_sample_set_relation_cache)
+        end_time = time.time()
+        print(f"Time taken to construct positive paths: {end_time - start_time}")
+        logger.log("construct positive paths time: ", float(end_time - start_time))
         with open(f"{args.cache_dir}/all_positive_paths.pkl", 'wb') as f:
-            pkl.dump(all_positive_paths, f)
-        with open(f"{args.cache_dir}/all_negative_paths.pkl", 'wb') as f:
-            pkl.dump(neg_paths, f)
+             pkl.dump(pos_paths, f)
 
-    programs = three_stages_bottom_up_version_space_based(all_positive_paths, dataset, specs, data_sample_set_relation_cache, args.cache_dir)
+
+    programs = three_stages_bottom_up_version_space_based(pos_paths, dataset, specs, data_sample_set_relation_cache, args.cache_dir)
