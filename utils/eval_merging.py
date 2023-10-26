@@ -16,6 +16,9 @@ def get_args():
     parser.add_argument('--testing_dir', type=str, default='funsd_dataset/testing_data', help='training directory')
     parser.add_argument('--rel_type', type=str, choices=['cluster', 'default', 'legacy'], default='legacy')
     parser.add_argument('--cache_dir', type=str, default='funsd_cache', help='cache directory')
+    parser.add_argument('--upper_float_thres', type=float, default=0.5, help='upper float thres')
+    parser.add_argument('--use_sem', action='store_true', help='use semantic information')
+    parser.add_argument('--model', type=str, choices=['layoutlmv3'], default='layoutlmv3')
     args = parser.parse_args()
     return args
 
