@@ -41,6 +41,7 @@ def compare_specs(uf, word_sets):
                 if w1 != w2:
                     spec_links.append((w1, w2))
     uf_links = set(uf_links)
+    print(spec_links)
     spec_links = set(spec_links)
 
     # 3. Compare
