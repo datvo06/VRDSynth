@@ -35,8 +35,9 @@ def compare_specs(uf, word_sets):
     # 2. Convert from specs to link between entities
     spec_links = []
     for word_set in word_sets:
-        word_set = sorted(list(word_sets))
+        word_set = sorted(list(word_set))
         for w1 in word_set:
+            print(w1)
             for w2 in word_set:
                 if w1 != w2:
                     spec_links.append((w1, w2))
