@@ -1,4 +1,4 @@
-from utils.ps_run_utils import batch_find_program_executor, link_entity
+from utils.ps_run_utils import link_entity
 from utils.ps_utils import construct_entity_linking_specs, construct_entity_merging_specs
 from utils.funsd_utils import load_dataset
 from methods.decisiontree_ps import setup_grammar
