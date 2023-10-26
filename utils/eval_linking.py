@@ -92,6 +92,21 @@ if __name__ == '__main__':
             cv2.imwrite(f"{args.cache_dir_entity_linking}/viz_entity_mapping_test/{i}.png", img_ent_map)
         with open(f"{args.cache_dir_entity_linking}/data_sample_set_relation_cache_test.pkl", 'wb') as f:
             pkl.dump(data_sample_set_relation_cache, f)
+
+    if args.use_sem:
+        assert args.model in ['layoutlmv3']
+        if args.model == 'layoutlmv3':
+            if os.path.exists(f"{args.cache_dir}/embs_layoutlmv3_test.pkl"):
+                with open(f"{args.cache_dir}/embs_layoutlmv3_test.pkl", 'rb') as f:
+                    all_embs = pkl.load(f)
+            else:
+                from models.layout_lmv3_utils import get_word_embedding
+                all_embs = []
+                for data in dataset:
+                    all_embs.append(get_word_embedding(data))
+            for i, nx_g in enumerate(data_sample_set_relation_cache):
+                for w in sorted(nx_g.nodes()):
+                    nx_g.nodes[w]['emb'] = all_embs[i][w]
     ps_merging = list(itertools.chain.from_iterable(pkl.load(open(ps_fp, 'rb')) for ps_fp in glob.glob(f"{args.cache_dir_entity_group_merging}/stage3_*_perfect_ps_same_parent.pkl")))
     ps_linking = list(itertools.chain.from_iterable(pkl.load(open(ps_fp, 'rb')) for ps_fp in glob.glob(f"{args.cache_dir_entity_linking}/stage3_*_perfect_ps_linking.pkl")))
     # Also build the spec for testset 
