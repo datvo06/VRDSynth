@@ -96,8 +96,8 @@ if __name__ == '__main__':
     if args.use_sem:
         assert args.model in ['layoutlmv3']
         if args.model == 'layoutlmv3':
-            if os.path.exists(f"{args.cache_dir}/embs_layoutlmv3_test.pkl"):
-                with open(f"{args.cache_dir}/embs_layoutlmv3_test.pkl", 'rb') as f:
+            if os.path.exists(f"{args.cache_dir_entity_linking}/embs_layoutlmv3_test.pkl"):
+                with open(f"{args.cache_dir_entity_linking}/embs_layoutlmv3_test.pkl", 'rb') as f:
                     all_embs = pkl.load(f)
             else:
                 from models.layout_lmv3_utils import get_word_embedding
