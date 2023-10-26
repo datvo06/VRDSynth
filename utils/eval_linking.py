@@ -87,9 +87,9 @@ if __name__ == '__main__':
             img = viz_data(entity_data, nx_g)
             img_no_rel = viz_data_no_rel(entity_data)
             img_ent_map = viz_data_entity_mapping(entity_data)
-            cv2.imwrite(f"{args.cache_dir}/viz_test/{i}.png", img)
-            cv2.imwrite(f"{args.cache_dir}/viz_no_rel_test/{i}.png", img_no_rel)
-            cv2.imwrite(f"{args.cache_dir}/viz_entity_mapping_test/{i}.png", img_ent_map)
+            cv2.imwrite(f"{args.cache_dir_entity_linking}/viz_test/{i}.png", img)
+            cv2.imwrite(f"{args.cache_dir_entity_linking}/viz_no_rel_test/{i}.png", img_no_rel)
+            cv2.imwrite(f"{args.cache_dir_entity_linking}/viz_entity_mapping_test/{i}.png", img_ent_map)
         with open(f"{args.cache_dir_entity_linking}/data_sample_set_relation_cache_test.pkl", 'wb') as f:
             pkl.dump(data_sample_set_relation_cache, f)
     ps_merging = list(itertools.chain.from_iterable(pkl.load(open(ps_fp, 'rb')) for ps_fp in glob.glob(f"{args.cache_dir_entity_group_merging}/stage3_*_perfect_ps.pkl")))
