@@ -26,7 +26,7 @@ def get_args():
 def compare_specs(uf, word_sets):
     # 1. Convert from uf to link between entities
     uf_links = []
-    for group in uf.groups:
+    for group in uf.groups():
         group = sorted(group)
         for w1 in group:
             for w2 in group:
