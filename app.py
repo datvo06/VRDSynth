@@ -1,4 +1,7 @@
 import os
+import glob
+import itertools
+import pickle as pkl
 from fastapi import FastAPI, Header, Request, UploadFile, Form
 from file_reader.file_reader import FileReader
 from layout_extraction.layout_extraction import LayoutExtraction
@@ -8,7 +11,10 @@ from post_process.post_process import PostProcess
 app = FastAPI()
 layout_extraction = LayoutExtraction(model_path="models/finetuned")
 section_grouping = SectionGrouping()
-post_process = PostProcess()
+
+rule_kv_files = glob.glob(f"assets/legacy_entity_linking/stage3_*_perfect_ps_linking.pkl")
+ps_linking = list(itertools.chain.from_iterable(pkl.load(open(ps_fp, 'rb')) for ps_fp in rule_kv_files))
+post_process = PostProcess(ps_linking)
 
 upload_path = "upload"
 os.makedirs(upload_path, exist_ok=True)

@@ -37,7 +37,7 @@ class LayoutExtraction:
         else:
             self.rule_synthesis: RuleSynthesis = None
 
-    def extract_entity(self, pages: List[Page]) -> List[Dict]:
+    def extract_entity(self, pages: List[Page]) -> List[List[Dict]]:
         """
         Extract section titles using LayoutLM and group textboxes to paragraphs.
         :param pages:
