@@ -12,7 +12,7 @@ import itertools
 import functools
 from collections import defaultdict, namedtuple
 from networkx.algorithms import constraint, isomorphism
-from utils.ps_utils import FalseValue, LiteralReplacement, Program, EmptyProgram, GrammarReplacement, FindProgram, RelationLabelConstant, RelationLabelProperty, TrueValue, WordLabelProperty, WordVariable, RelationVariable, RelationConstraint, LabelEqualConstraint, RelationLabelEqualConstraint, construct_entity_merging_specs, SpecIterator, LabelConstant, AndConstraint, LiteralSet, Constraint, Hole, replace_hole, find_holes, SymbolicList, FilterStrategy, fill_hole, Expression, FloatConstant, RelationPropertyConstant, SemDist
+from utils.ps_utils import FalseValue, LiteralReplacement, Program, EmptyProgram, GrammarReplacement, FindProgram, RelationLabelConstant, RelationLabelProperty, TrueValue, WordLabelProperty, WordVariable, RelationVariable, RelationConstraint, LabelEqualConstraint, RelationLabelEqualConstraint, construct_entity_merging_specs, SpecIterator, LabelConstant, AndConstraint, LiteralSet, Constraint, Hole, replace_hole, find_holes, SymbolicList, FilterStrategy, fill_hole, Expression, FloatConstant, RelationPropertyConstant, SemDist, batch_find_program_executor, merge_words
 from utils.visualization_script import visualize_program_with_support
 from utils.version_space import VersionSpace
 import json
@@ -360,44 +360,6 @@ def construct_initial_program_set(all_positive_paths):
         programs.append(FindProgram(word_vars, rel_vars, relation_constraints, AndConstraint(label_constraint, relation_label_constraint), return_vars))
     return programs
 
-
-def batch_find_program_executor(nx_g, find_programs: List[FindProgram]) -> List[List[Tuple[Dict[WordVariable, str], Dict[RelationVariable, Tuple[WordVariable, WordVariable, int]]]]]:
-    # strategy to speed up program executor:
-    # find all program that have same set of path (excluding label)
-    # iterate through all binding
-    # and then test. In this way, we do not have to perform isomorphism multiple times
-    assert all(isinstance(f, FindProgram) for f in find_programs), "All programs must be FindProgram"
-    # First, group programs by their path
-    path_to_programs = defaultdict(list)
-    for i, f in enumerate(find_programs):
-        path_to_programs[tuple(f.relation_constraint)].append((i, f))
-
-    out_words = [[] for _ in range(len(find_programs))]
-    for path in path_to_programs:
-        nx_graph_query = nx.MultiDiGraph()
-        word_vars = path_to_programs[path][0][1].word_variables
-        for w in word_vars:
-            nx_graph_query.add_node(w)
-        for w1, w2, r in path:
-            nx_graph_query.add_edge(w1, w2, key=0)
-
-
-        # print(nx_g.nodes(), nx_g.edges())
-        gm = isomorphism.MultiDiGraphMatcher(nx_g, nx_graph_query)
-        # print(nx_graph_query.nodes(), nx_graph_query.edges(), gm.subgraph_is_isomorphic(), gm.subgraph_is_monomorphic())
-        for subgraph in gm.subgraph_monomorphisms_iter():
-            subgraph = {v: k for k, v in subgraph.items()}
-            # get the corresponding binding for word_variables and relation_variables
-            word_binding = {w: subgraph[w] for w in word_vars}
-            relation_binding = {r: (subgraph[w1], subgraph[w2], 0) for w1, w2, r in path}
-            word_val = {w: nx_g.nodes[word_binding[w]] for i, w in enumerate(word_vars)}
-            relation_val = {r: (nx_g.nodes[word_binding[w1]], nx_g.nodes[word_binding[w2]], 0) for w1, w2, r in path}
-
-            for i, f in path_to_programs[path]:
-                val = f.evaluate_binding(word_binding, relation_binding, nx_g)
-                if val:
-                    out_words[i].append((word_binding, relation_binding))
-    return out_words
 
 
 def construct_dataset_idx_2_list_prog(vss, p2vidxs):

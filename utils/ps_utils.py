@@ -1,6 +1,6 @@
 from utils.funsd_utils import DataSample, Bbox
 from utils.algorithms import UnionFind
-from typing import List, Tuple
+from typing import List, Tuple, Dict
 from collections import namedtuple, defaultdict
 import itertools
 import networkx as nx

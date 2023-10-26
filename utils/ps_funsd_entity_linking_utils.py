@@ -12,14 +12,13 @@ import glob
 import itertools
 from collections import defaultdict
 import os
+from ps_run_utils import link_entity
 
 
 # Implementing inference and measurement
 # Path: utils/ps_funsd_utils.py
 
-
-
-if __name__ == '__main__':
+def get_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('--cache_dir_entity_group_merging', type=str, default='funsd_cache_entity_merging', help='cache directory')
     parser.add_argument('--cache_dir_entity_linking',
@@ -28,7 +27,11 @@ if __name__ == '__main__':
                         help='cache directory')
     args = parser.parse_args()
     os.makedirs(f"{args.cache_dir_entity_linking}/inference/", exist_ok=True)
+    return args
 
+
+if __name__ == '__main__':
+    args = get_args()
     with open(f"{args.cache_dir_entity_group_merging}/specs_linking.pkl", 'rb') as f:
         specs, entity_dataset = pkl.load(f)
 
@@ -44,35 +47,7 @@ if __name__ == '__main__':
     print(f"len(ps_merging) = {len(ps_merging)}")
 
     for i, (data, nx_g_merging, nx_g_linking) in tqdm.tqdm(enumerate(zip(entity_dataset, ds_cache_grouping, ds_cache_linking_kv))):
-        uf = UnionFind(len(data['boxes']))
-        out_bindings_merging = batch_find_program_executor(nx_g_merging, ps_merging)
-        out_bindings_linking = batch_find_program_executor(nx_g_linking, ps_linking)
-        ucount = 0
-        w0 = WordVariable('w0')
-        for j, p_bindings in enumerate(out_bindings_merging):
-            return_var = ps_merging[j].return_variables[0]
-            for w_binding, r_binding in p_bindings:
-                wlast = w_binding[return_var]
-                uf.union(w_binding[w0], wlast)
-                ucount += 1
-        print(f"Union count: {ucount}")
-        w2c = defaultdict(list)
-        for j, p_bindings in enumerate(out_bindings_linking):
-            return_var = ps_linking[j].return_variables[0]
-            for w_binding, r_binding in p_bindings:
-                wlast = w_binding[return_var]
-                for w in uf.get_group(uf.find(wlast)):
-                    w2c[w_binding[w0]].append(w)
-
-        ent_map = list(itertools.chain.from_iterable([[(w, c) for c in w2c[w]] for w in w2c]))
-
-        new_data = DataSample(
-            data['words'],
-            data['labels'],
-            data['entities'],
-            ent_map,
-            data['boxes'],
-            data['img_fp'])
+        new_data, ent_map = link_entity(data, nx_g_merging, ps_merging, ps_linking)
         img_output = viz_data_entity_mapping(new_data)
         # Also, draw additional entity group boxes for those that does not have parent
         c2w = defaultdict(list)
