@@ -38,8 +38,8 @@ def batch_find_program_executor(nx_g, find_programs: List[FindProgram]) -> List[
             # get the corresponding binding for word_variables and relation_variables
             word_binding = {w: subgraph[w] for w in word_vars}
             relation_binding = {r: (subgraph[w1], subgraph[w2], 0) for w1, w2, r in path}
-            word_val = {w: nx_g.nodes[word_binding[w]] for i, w in enumerate(word_vars)}
-            relation_val = {r: (nx_g.nodes[word_binding[w1]], nx_g.nodes[word_binding[w2]], 0) for w1, w2, r in path}
+            # word_val = {w: nx_g.nodes[word_binding[w]] for i, w in enumerate(word_vars)}
+            # relation_val = {r: (nx_g.nodes[word_binding[w1]], nx_g.nodes[word_binding[w2]], 0) for w1, w2, r in path}
 
             for i, f in path_to_programs[path]:
                 val = f.evaluate_binding(word_binding, relation_binding, nx_g)
@@ -83,6 +83,8 @@ def link_entity(data, nx_g, ps_merging, ps_linking):
     uf = UnionFind(len(data['boxes']))
     out_bindings_merging = batch_find_program_executor(nx_g, ps_merging)
     out_bindings_linking = batch_find_program_executor(nx_g, ps_linking)
+    print(len(out_bindings_merging), len(out_bindings_linking))
+    input()
     ucount = 0
     w0 = WordVariable('w0')
     for j, p_bindings in enumerate(out_bindings_merging):

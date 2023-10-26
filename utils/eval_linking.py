@@ -103,18 +103,7 @@ if __name__ == '__main__':
         tf += new_tf
         ft += new_ft
         ff += new_ff
-        img = cv2.imread(data['img_fp'].replace(".jpg", ".png"))
-        # Compare uf to specs
-        # Draw all of these boxes on data
-        for box, label in zip(data['boxes'], data['labels']):
-            color = (0, 0, 255)
-            if label == 'header':   # yellow
-                color = (0, 255, 255)
-            elif label == 'question': # purple
-                color = (255, 0, 255)
-            elif label == 'answer': # red
-                color = (0, 0, 255)
-            cv2.rectangle(img, (box[0], box[1]), (box[2], box[3]), color)
+        img = viz_data_entity_mapping(new_data)
         cv2.imwrite(f"{args.cache_dir_entity_linking}/inference_test/inference_{i}.png", img)
     # Write the result to log
     with open(f"{args.cache_dir_entity_linking}/inference_test/result.txt", 'w') as f:

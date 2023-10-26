@@ -1,6 +1,6 @@
 from utils.ps_run_utils import batch_find_program_executor, merge_words
 from utils.ps_utils import construct_entity_merging_specs
-from utils.funsd_utils import load_dataset
+from utils.funsd_utils import load_dataset, viz_data_entity_mapping
 from methods.decisiontree_ps import setup_grammar
 from utils.ps_utils import FindProgram, WordVariable
 import argparse
