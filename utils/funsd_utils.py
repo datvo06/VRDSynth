@@ -9,6 +9,7 @@ import cv2
 
 
 Bbox = namedtuple('Bbox', ['x0', 'y0', 'x1', 'y1'])
+RELATION_SET = dummy_calculate_relation_set(None, None, None)
 
 class DataSample:
 
