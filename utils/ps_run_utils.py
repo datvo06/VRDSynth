@@ -83,8 +83,6 @@ def link_entity(data, nx_g, ps_merging, ps_linking):
     uf = UnionFind(len(data['boxes']))
     out_bindings_merging = batch_find_program_executor(nx_g, ps_merging)
     out_bindings_linking = batch_find_program_executor(nx_g, ps_linking)
-    print(len(ps_merging), len(ps_linking), len(out_bindings_merging), len(out_bindings_linking))
-    input()
     ucount = 0
     w0 = WordVariable('w0')
     for j, p_bindings in enumerate(out_bindings_merging):
