@@ -94,7 +94,7 @@ if __name__ == '__main__':
     tt, tf, ft, ff = 0, 0, 0, 0
     for (i, word_sets), data in tqdm.tqdm(zip(specs, dataset)):
         nx_g = data_sample_set_relation_cache[i]
-        data_sample, uf = merge_words(data, nx_g, ps)
+        uf, data_sample = merge_words(data, nx_g, ps)
         new_tt, new_tf, new_ft, new_ff = compare_specs(uf, word_sets)
         tt += new_tt
         tf += new_tf
