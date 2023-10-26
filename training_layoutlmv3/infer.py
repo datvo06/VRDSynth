@@ -5,7 +5,7 @@ from post_process.post_process import PostProcess
 from file_reader.file_reader import FileReader
 import sys
 
-layout_extraction = LayoutExtraction(model_path="models/finetuned")
+layout_extraction = LayoutExtraction(model_path="saved_models/fold_0")
 section_grouping = SectionGrouping()
 post_process = PostProcess()
 
