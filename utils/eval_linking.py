@@ -1,6 +1,7 @@
 from utils.ps_run_utils import link_entity
+from utils.funsd_utils import viz_data, viz_data_no_rel, viz_data_entity_mapping
 from utils.ps_utils import construct_entity_linking_specs, construct_entity_merging_specs
-from utils.funsd_utils import load_dataset
+from utils.funsd_utils import load_dataset, viz_data_entity_mapping
 from methods.decisiontree_ps import setup_grammar
 from utils.ps_utils import FindProgram, WordVariable
 import argparse
@@ -51,8 +52,11 @@ def compare_specs(pred_mapping, gt_linking):
 
 if __name__ == '__main__':
     args = get_args()
-    setup_grammar(args)
     os.makedirs(f"{args.cache_dir_entity_linking}/inference_test/", exist_ok=True)
+    os.makedirs(f"{args.cache_dir_entity_linking}/viz_test", exist_ok=True)
+    os.makedirs(f"{args.cache_dir_entity_linking}/viz_no_rel_test", exist_ok=True)
+    os.makedirs(f"{args.cache_dir_entity_linking}/viz_entity_mapping_test", exist_ok=True)
+    setup_grammar(args)
 
     if os.path.exists(f"{args.cache_dir_entity_linking}/testing_dataset.pkl"):
         with open(f"{args.cache_dir_entity_linking}/testing_dataset.pkl", 'rb') as f:
@@ -77,8 +81,15 @@ if __name__ == '__main__':
             data_sample_set_relation_cache = pkl.load(f)
     else:
         data_sample_set_relation_cache = []
-        for entity_data in entity_dataset:
-            data_sample_set_relation_cache.append(args.build_nx_g(entity_data))
+        for i, entity_data in enumerate(entity_dataset):
+            nx_g = args.build_nx_g(entity_data)
+            data_sample_set_relation_cache.append(nx_g)
+            img = viz_data(entity_data, nx_g)
+            img_no_rel = viz_data_no_rel(entity_data)
+            img_ent_map = viz_data_entity_mapping(entity_data)
+            cv2.imwrite(f"{args.cache_dir}/viz_test/{i}.png", img)
+            cv2.imwrite(f"{args.cache_dir}/viz_no_rel_test/{i}.png", img_no_rel)
+            cv2.imwrite(f"{args.cache_dir}/viz_entity_mapping_test/{i}.png", img_ent_map)
         with open(f"{args.cache_dir_entity_linking}/data_sample_set_relation_cache_test.pkl", 'wb') as f:
             pkl.dump(data_sample_set_relation_cache, f)
     ps_merging = list(itertools.chain.from_iterable(pkl.load(open(ps_fp, 'rb')) for ps_fp in glob.glob(f"{args.cache_dir_entity_group_merging}/stage3_*_perfect_ps.pkl")))
