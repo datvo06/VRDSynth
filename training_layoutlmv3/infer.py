@@ -31,3 +31,5 @@ if __name__ == '__main__':
     fp = sys.argv[1]
     fp_out = sys.argv[2]
     result = infer(fp)
+    with open(fp_out, "w") as f:
+        f.write(str(result))
