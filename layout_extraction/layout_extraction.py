@@ -10,6 +10,7 @@ from layout_extraction.layoutlm_utils import FeatureExtraction
 from layout_extraction.ps_utils import RuleSynthesis
 from file_reader import prj_path
 from utils.ps_utils import FindProgram
+from PIL import Image
 
 
 class LayoutExtraction:
@@ -38,6 +39,75 @@ class LayoutExtraction:
             self.rule_synthesis: RuleSynthesis = None
 
     def extract_entity(self, pages: List[Page]) -> List[Dict]:
+        """
+        Extract section titles using LayoutLM and group textboxes to paragraphs.
+        :param pages:
+        :return:
+        """
+        result = []
+        for page in tqdm(pages, desc="Extract entity from page:"):
+            batchs, imgs = self.feature_extraction.get_feature(page, expand_before=0, expand_after=0)
+            if len(imgs) == 0:
+                continue
+            words = [[t["text"] for t in words] for words in batchs]
+            boxes = [[[t["x0"], t["y0"], t["x1"], t["y1"]] for t in words] for words in batchs]
+            encoding = self.processor(imgs, words, boxes=boxes, truncation=True, return_tensors="pt",
+                                      return_offsets_mapping=True, padding=True)
+            offset_mappings = encoding.pop("offset_mapping").squeeze().tolist()
+            outputs = self.model(**encoding)
+            logits = outputs.logits
+            predictions_list = logits.argmax(-1).squeeze().tolist()
+            id2label = self.config.id2label
+            # entities = {label: [] for _, label in id2label.items()}
+            entities = defaultdict(list)
+            word_with_labels = []
+            if len(imgs) == 1:
+                offset_mappings = [offset_mappings]
+                predictions_list = [predictions_list]
+            for offset_mapping, predictions, enc, batch in zip(offset_mappings, predictions_list, encoding.encodings,
+                                                               batchs):
+                is_subword = np.array(offset_mapping)[:, 0] != 0
+                word_ids = enc.word_ids
+
+                true_predictions = [id2label.get(pred, 'O') for idx, pred in enumerate(predictions) if
+                                    not is_subword[idx]]
+                # true_boxes = [box for idx, box in enumerate(token_boxes) if not is_subword[idx]]
+                true_ids = [word_ids[idx] for idx in range(len(predictions)) if not is_subword[idx]]
+                for label in id2label.values():
+                    entities[label.split("-", 1)[-1]].extend(
+                        [batch[idx]["origin_data"] for idx, pred in zip(true_ids, true_predictions) if
+                         pred == label and idx is not None])
+                for idx, pred in zip(true_ids, true_predictions):
+                    if idx is not None:
+                        word_with_label = batch[idx]["origin_data"].copy()
+                        word_with_label["label"] = pred.split("-", 1)[-1]
+                        word_with_labels.append(word_with_label)
+
+            # Group words to entities
+            if self.rule_synthesis:
+                # Use Synthesis rules
+                for word in word_with_labels:
+                    word["label"] = word["label"].lower()
+                output = self.rule_synthesis.inference(word_with_labels, y_threshold=10)
+                for entity in output:
+                    entity["label"] = entity["label"].upper()
+                    if entity["label"] == "HEADER":
+                        # Consider titles in the middle of the line as headers
+                        if 2 * page.width / 5 < (entity["x0"] + entity["x1"]) / 2 < 3 * page.width / 5:
+                            entity["is_header"] = True
+                        else:
+                            entity["is_header"] = False
+                    else:
+                        entity["is_header"] = False
+            else:
+                output = self.post_process(word_with_labels, page)
+            # page.paragraphs = paragraphs
+            result.append(output)
+        return result
+
+
+
+    def extract_entity_and_images(self, pages: List[Page]) -> List[Tuple[Image, Dict]]:
         """
         Extract section titles using LayoutLM and group textboxes to paragraphs.
         :param pages:
