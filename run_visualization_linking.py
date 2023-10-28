@@ -10,9 +10,9 @@ from post_process.ps_utils_kv import RuleSynthesisLinking
 from utils.funsd_utils import viz_data_entity_mapping
 
 
-def process_and_viz(file: FileReader, rule_linking, layout_extraction, section_grouping, post_process, num_pages=None):
+def process_and_viz(file: FileReader, rule_linking, layout_extraction, section_grouping, from_page: int=1, to_page: int=5):
     # Get page
-    pages = file.pages[:num_pages] if num_pages else file.pages
+    pages = file.pages[max(0, from_page - 1): to_page]
     result = layout_extraction.extract_entity(pages)
     for page, entities in zip(pages, result):
         img = page.image
@@ -44,7 +44,6 @@ if __name__ == '__main__':
     rule_linking = RuleSynthesisLinking(ps_linking)
     layout_extraction = LayoutExtraction(model_path=pretrained)
     section_grouping = SectionGrouping()
-    post_process = PostProcess()
 
-    for i, img in enumerate(process_and_viz(file, rule_linking, layout_extraction, section_grouping, post_process, num_pages=2)):
+    for i, img in enumerate(process_and_viz(file, rule_linking, layout_extraction, section_grouping, 1, 2)):
         cv2.imwrite(f"viz_{i}.png", img)

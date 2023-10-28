@@ -53,31 +53,26 @@ async def inference(file: UploadFile, from_page: int = Form(1), to_page: int = F
 
 
 @app.post("/visualize_pdf/")
-async def visualize_pdf(file: UploadFile = File(...)):
+async def visualize_pdf(file: UploadFile = File(...), from_page: int = Form(1), to_page: int = Form(5)):
     temp_dir = tempfile.mkdtemp()
     try:
         for i, img in enumerate(process_and_viz(FileReader(
             path=None, stream=file.file.read()), rule_linking, layout_extraction,
-            section_grouping, post_process)):
+            section_grouping, from_page, to_page)):
             cv2.imwrite(os.path.join(temp_dir, f"viz_{len(os.listdir(temp_dir))}.png"), img)
             img_fp = os.path.join(temp_dir, f'image_{i}.png')
             cv2.imwrite(img_fp, img)
 
-        # Create a ZIP file
         memory_file = io.BytesIO()
         with zipfile.ZipFile(memory_file, 'w') as zf:
             for image_filename in os.listdir(temp_dir):
                 zf.write(os.path.join(temp_dir, image_filename), arcname=image_filename)
 
-        # Reset buffer's position to the beginning
         memory_file.seek(0)
-
-        # Clean-up the temporary directory
         shutil.rmtree(temp_dir)
 
         return StreamingResponse(memory_file, media_type="application/x-zip-compressed")
     except Exception as e:
-        # Clean-up and send an error response or log the error as needed
         shutil.rmtree(temp_dir)
         raise e
 

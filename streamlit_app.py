@@ -14,12 +14,13 @@ st.write('Upload a PDF for processing.')
 API_ENDPOINT = 'http://localhost:8000/visualize_pdf/'
 
 uploaded_file = st.file_uploader("Choose a file")
-
+from_page = st.number_input('From page', min_value=1)
+to_page = st.number_input('To page', min_value=1)
 
 if uploaded_file is not None:
     files = {'file': uploaded_file.getvalue()}
+    data = {'from_page': from_page, 'to_page': to_page}
     
-    # Make a POST request to your FastAPI server with the uploaded file
     response = requests.post(API_ENDPOINT, files=files)
     
     if response.status_code == 200:
@@ -27,7 +28,6 @@ if uploaded_file is not None:
 
         with tempfile.TemporaryDirectory() as temp_dir:
             zip_file.extractall(temp_dir)
-            # loop through image_* files in the ZIP file in order and display them
             nfiles = len([name for name in os.listdir(temp_dir) if os.path.isfile(os.path.join(temp_dir, name))])
             for i in range(nfiles):
                 image = Image.open(os.path.join(temp_dir, f'image_{i}.png'))
