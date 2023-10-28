@@ -34,7 +34,7 @@ class LayoutExtraction:
                 self.use_layoutlm = False
         except Exception:
             self.use_layoutlm = False
-        self.rule_synthesis: RuleSynthesis = RuleSynthesis(find_programs) if find_programs else None
+        self.rule_synthesis: Optional[RuleSynthesis] = RuleSynthesis(find_programs) if find_programs else None
 
     def extract_entity(self, pages: List[Page]) -> List[List[Dict]]:
         """
