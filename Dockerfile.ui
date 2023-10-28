@@ -2,7 +2,7 @@ FROM python:3.9-slim-buster
 
 WORKDIR /opt/app
 
-COPY requirements.txt .
+COPY requirements_ui.txt .
 RUN pip install -r requirements_ui.txt
 COPY streamlit_app.py ./
 
