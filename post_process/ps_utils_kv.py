@@ -1,6 +1,6 @@
 from typing import *
-from methods.decisiontree_ps import batch_find_program_executor
 from utils.ps_utils import FindProgram, WordVariable
+from utils.ps_run_utils import batch_find_program_executor
 from utils.funsd_utils import DataSample
 from utils.legacy_graph_utils import build_nx_g_legacy
 from utils.algorithms import UnionFind
