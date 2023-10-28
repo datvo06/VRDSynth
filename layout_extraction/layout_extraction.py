@@ -11,10 +11,11 @@ from layout_extraction.ps_utils import RuleSynthesis
 from file_reader import prj_path
 from utils.ps_utils import FindProgram
 from PIL import Image
+from pathlib import Path
 
 
 class LayoutExtraction:
-    def __init__(self, model_path=prj_path / "models" / "layoutlmv3", find_programs: List[FindProgram] = None,
+    def __init__(self, model_path: Union[Optional[str], Path]=prj_path / "models" / "layoutlmv3", find_programs: Optional[List[FindProgram]] = None,
                  **kwargs):
         """
         Init LayoutLM model if exists.

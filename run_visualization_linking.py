@@ -46,5 +46,5 @@ if __name__ == '__main__':
     section_grouping = SectionGrouping()
     post_process = PostProcess()
 
-    for i, img in enumerate(viz(file, rule_linking, layout_extraction, section_grouping, post_process, num_pages=2)):
+    for i, img in enumerate(process_and_viz(file, rule_linking, layout_extraction, section_grouping, post_process, num_pages=2)):
         cv2.imwrite(f"viz_{i}.png", img)
