@@ -8,6 +8,8 @@ import itertools
 import glob
 from post_process.ps_utils_kv import RuleSynthesisLinking
 from utils.funsd_utils import viz_data_entity_mapping
+import sys
+import os
 
 
 def process_and_viz(file: FileReader, rule_linking, layout_extraction, section_grouping, from_page: int=1, to_page: int=5):
@@ -33,17 +35,17 @@ def process_and_viz(file: FileReader, rule_linking, layout_extraction, section_g
 
 if __name__ == '__main__':
     # Model
-    pretrained = "../models/finetuned"
+    pretrained = "models/finetuned"
     # Rule linking
     ps_linking = list(itertools.chain.from_iterable(pkl.load(open(ps_fp, 'rb')) for ps_fp in glob.glob(
-        f"../assets/legacy_entity_linking/stage3_*_perfect_ps_linking.pkl")))
+        f"assets/legacy_entity_linking/stage3_*_perfect_ps_linking.pkl")))
     # File
-    file = FileReader("data/test/Gonzalez, G - Kaiser Santa Rosa MR (Updated).pdf",
-                      is_scan=False)
+    file = FileReader(sys.argv[1], is_scan=False)
 
     rule_linking = RuleSynthesisLinking(ps_linking)
     layout_extraction = LayoutExtraction(model_path=pretrained)
     section_grouping = SectionGrouping()
+    os.makedirs(sys.argv[1], exist_ok=True)
 
     for i, img in enumerate(process_and_viz(file, rule_linking, layout_extraction, section_grouping, 1, 2)):
-        cv2.imwrite(f"viz_{i}.png", img)
+        cv2.imwrite(f"{sys.argv[2]}/viz_{i}.png", img)

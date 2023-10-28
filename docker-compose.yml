@@ -13,3 +13,14 @@ services:
     volumes:
       - ./models:/opt/app/models
       - ./upload:/opt/app/upload
+
+
+  doc-equity-viz:
+    image: doc-equity-ui:1.0
+    container_name: doc_equity_ui
+    build:
+      context: .
+      dockerfile: Dockerfile.ui
+    ports:
+      - "8000:8000"
+    command: ['streamlit', 'run', 'streamlit_app.py', '--server.port', '8000', '--server.address', '0.0.0.0']

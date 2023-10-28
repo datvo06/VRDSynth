@@ -11,7 +11,7 @@ st.title('PDF Processor')
 st.write('Upload a PDF for processing.')
 
 # Endpoint URL of your FastAPI application
-API_ENDPOINT = 'http://localhost:8000/visualize_pdf/'
+API_ENDPOINT = 'http://localhost:9000/visualize_pdf/'
 
 uploaded_file = st.file_uploader("Choose a file")
 from_page = st.number_input('From page', min_value=1)
