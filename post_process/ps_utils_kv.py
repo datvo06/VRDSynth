@@ -23,25 +23,28 @@ class RuleSynthesisLinking:
         labels = [word["label"] for word in entities]
         boxes = [[word["x0"], word["y0"], word["x1"], word["y1"]] for word in entities]
         data_sample = DataSample(texts, labels, [], [], boxes, )
-        nx_g = build_nx_g_legacy(data_sample)
-        out_bindings_linking = batch_find_program_executor(nx_g, self.ps)
+        if texts:
+            nx_g = build_nx_g_legacy(data_sample)
+            out_bindings_linking = batch_find_program_executor(nx_g, self.ps)
 
-        uf = UnionFind(len(data_sample['boxes']))
-        w0 = WordVariable('w0')
-        w2c = defaultdict(list)
-        for j, p_bindings in enumerate(out_bindings_linking):
-            return_var = self.ps[j].return_variables[0]
-            for w_binding, r_binding in p_bindings:
-                wlast = w_binding[return_var]
-                for w in uf.get_group(uf.find(wlast)):
-                    w2c[w_binding[w0]].append(w)
+            uf = UnionFind(len(data_sample['boxes']))
+            w0 = WordVariable('w0')
+            w2c = defaultdict(list)
+            for j, p_bindings in enumerate(out_bindings_linking):
+                return_var = self.ps[j].return_variables[0]
+                for w_binding, r_binding in p_bindings:
+                    wlast = w_binding[return_var]
+                    for w in uf.get_group(uf.find(wlast)):
+                        w2c[w_binding[w0]].append(w)
 
-        ent_map = list(itertools.chain.from_iterable([[(w, c) for c in w2c[w]] for w in w2c]))
-        new_data = DataSample(
-            texts,
-            labels,
-            [],
-            ent_map,
-            boxes,
-        )
+            ent_map = list(itertools.chain.from_iterable([[(w, c) for c in w2c[w]] for w in w2c]))
+            new_data = DataSample(
+                texts,
+                labels,
+                [],
+                ent_map,
+                boxes,
+            )
+        else:
+            new_data = data_sample
         return new_data
