@@ -33,10 +33,7 @@ class LayoutExtraction:
                 self.use_layoutlm = False
         except Exception:
             self.use_layoutlm = False
-        if find_programs:
-            self.rule_synthesis: RuleSynthesis = RuleSynthesis(find_programs)
-        else:
-            self.rule_synthesis: RuleSynthesis = None
+        self.rule_synthesis: RuleSynthesis = RuleSynthesis(find_programs) if find_programs else None
 
     def extract_entity(self, pages: List[Page]) -> List[List[Dict]]:
         """
@@ -59,8 +56,7 @@ class LayoutExtraction:
             predictions_list = logits.argmax(-1).squeeze().tolist()
             id2label = self.config.id2label
             # entities = {label: [] for _, label in id2label.items()}
-            entities = defaultdict(list)
-            word_with_labels = []
+            entities, word_with_labels = defaultdict(list), []
             if len(imgs) == 1:
                 offset_mappings = [offset_mappings]
                 predictions_list = [predictions_list]
@@ -78,10 +74,11 @@ class LayoutExtraction:
                         [batch[idx]["origin_data"] for idx, pred in zip(true_ids, true_predictions) if
                          pred == label and idx is not None])
                 for idx, pred in zip(true_ids, true_predictions):
-                    if idx is not None:
-                        word_with_label = batch[idx]["origin_data"].copy()
-                        word_with_label["label"] = pred.split("-", 1)[-1]
-                        word_with_labels.append(word_with_label)
+                    if idx is None:
+                        continue
+                    word_with_label = batch[idx]["origin_data"].copy()
+                    word_with_label["label"] = pred.split("-", 1)[-1]
+                    word_with_labels.append(word_with_label)
 
             # Group words to entities
             if self.rule_synthesis:
@@ -91,14 +88,8 @@ class LayoutExtraction:
                 output = self.rule_synthesis.inference(word_with_labels, y_threshold=10)
                 for entity in output:
                     entity["label"] = entity["label"].upper()
-                    if entity["label"] == "HEADER":
-                        # Consider titles in the middle of the line as headers
-                        if 2 * page.width / 5 < (entity["x0"] + entity["x1"]) / 2 < 3 * page.width / 5:
-                            entity["is_header"] = True
-                        else:
-                            entity["is_header"] = False
-                    else:
-                        entity["is_header"] = False
+                    # Consider titles in the middle of the line as headers
+                    entity["is_header"] = ((entity["label"] == "HEADER") and 0.4 * page.width < 0.5 * (entity["x0"] + entity["x1"]) < 0.6 * page.width)
             else:
                 output = self.post_process(word_with_labels, page)
             # page.paragraphs = paragraphs
@@ -131,8 +122,7 @@ class LayoutExtraction:
             entities = defaultdict(list)
             word_with_labels = []
             if len(imgs) == 1:
-                offset_mappings = [offset_mappings]
-                predictions_list = [predictions_list]
+                offset_mappings, predictions_list = [offset_mappings], [predictions_list]
             for offset_mapping, predictions, enc, batch in zip(offset_mappings, predictions_list, encoding.encodings,
                                                                batchs):
                 is_subword = np.array(offset_mapping)[:, 0] != 0
@@ -158,16 +148,10 @@ class LayoutExtraction:
                 for word in word_with_labels:
                     word["label"] = word["label"].lower()
                 output = self.rule_synthesis.inference(word_with_labels, y_threshold=10)
-                for entity in output:
-                    entity["label"] = entity["label"].upper()
-                    if entity["label"] == "HEADER":
-                        # Consider titles in the middle of the line as headers
-                        if 2 * page.width / 5 < (entity["x0"] + entity["x1"]) / 2 < 3 * page.width / 5:
-                            entity["is_header"] = True
-                        else:
-                            entity["is_header"] = False
-                    else:
-                        entity["is_header"] = False
+                for ent in output:
+                    ent["label"] = ent["label"].upper()
+                    # Consider titles in the middle of the line as headers
+                    ent["is_header"] = ent["label"] == "HEADER" and (0.4 * page.width  < 0.5 * (ent["x0"] + ent["x1"]) < 0.6 * page.width)
             else:
                 output = self.post_process(word_with_labels, page)
             # page.paragraphs = paragraphs
@@ -182,16 +166,13 @@ class LayoutExtraction:
         for word in words:
             entities[word["label"]].append(word)
 
-        output = []
-        paragraphs = []
+        output, paragraphs = [], []
         for entity_type, boxes in entities.items():
-            if len(boxes) == 0:
-                continue
+            if not boxes: continue
             textlines = []
             for t in boxes:
                 spans: List[Span] = []
-                if len(t["text"]) == 0:
-                    continue
+                if not t["text"]: continue
                 w = (t["x1"] - t["x0"]) / len(t["text"])
                 for i, c in enumerate(t["text"]):
                     spans.append(Span(t["x0"] + i * w, t["y0"], t["x0"] + i * w + w, t["y1"], c))
@@ -201,7 +182,7 @@ class LayoutExtraction:
                 rows = group_by_row(textlines)
                 answers = [Paragraph(row) for row in rows]
                 for answer in answers:
-                    if 2 * page.width / 5 < answer.x_cen < 3 * page.width / 5:
+                    if 0.4 * page.width  < answer.x_cen < 0.6 * page.width:
                         answer.is_header = True
                     else:
                         answer._is_title = True
