@@ -12,7 +12,7 @@ import shutil
 import tempfile
 import cv2
 from post_process.ps_utils_kv import RuleSynthesisLinking
-from run_visualization_linking import process_and_viz
+from utils.run_visualization_linking import process_and_viz
 import io
 import zipfile
 
