@@ -1,8 +1,9 @@
 from typing import *
 import numpy as np
-from methods.decisiontree_ps import batch_find_program_executor
 from utils.ps_utils import FindProgram, WordVariable
+from utils.ps_run_utils import batch_find_program_executor
 from utils.funsd_utils import DataSample, RELATION_SET, build_nx_g
+from utils.legacy_graph_utils import build_nx_g_legacy
 from utils.algorithms import UnionFind
 
 
@@ -21,7 +22,7 @@ class RuleSynthesis:
         labels = [word["label"] for word in words]
         boxes = [[word["x0"], word["y0"], word["x1"], word["y1"]] for word in words]
         data_sample = DataSample(texts, labels, [], [], boxes, )
-        nx_g = build_nx_g(data_sample, RELATION_SET, y_threshold)
+        nx_g = build_nx_g_legacy(data_sample)
         out_bindings = batch_find_program_executor(nx_g, self.ps)
 
         uf = UnionFind(len(data_sample['boxes']))
