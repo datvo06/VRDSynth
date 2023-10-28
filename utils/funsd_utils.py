@@ -34,7 +34,6 @@ class DataSample:
             'img_fp': img_fp
         }
 
-
     @property
     def words(self) -> List[str]:
         return self._words
@@ -96,7 +95,7 @@ def load_data(json_fp, img_fp):
     labels = []
     entities = []
     entities_mapping = set()
-    with open(json_fp, 'r') as f:
+    with open(json_fp, 'r', encoding="utf-8") as f:
         json_dict = json.load(f)
         entities = [[] for _ in range(len(json_dict['form']))]
         for block in json_dict['form']:
@@ -119,7 +118,6 @@ def load_dataset(annotation_dir, img_dir):
         img_fp = img_dir + '/' + json_fp.split('/')[-1].split('.')[0] + '.jpg'
         dataset.append(load_data(json_fp, img_fp))
     return dataset
-
 
 
 def build_nx_g(datasample: DataSample, relation_set: Set[Tuple[str, str, str]],
@@ -283,7 +281,10 @@ def viz_data_no_rel(data):
 
 
 def viz_data_entity_mapping(data):
-    img = cv2.imread(data.img_fp.replace('.jpg', '.png'))
+    if isinstance(data.img_fp, str):
+        img = cv2.imread(data.img_fp.replace('.jpg', '.png'))
+    else:
+        img = data.img_fp
     for i in range(len(data['boxes'])):
         # 1. Crop the box
         box = data['boxes'][i]
