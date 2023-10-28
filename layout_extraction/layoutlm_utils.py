@@ -32,8 +32,7 @@ class FeatureExtraction:
                     if w_lbls:
                         w_lbl = w_lbls[0]
                         if w_lbl:
-                            if str(w_lbl) == "None":
-                                print("aaa")
+                            print("aaa") if str(w_lbl) == "None" else None
                             w_lbl = f"B-{w_lbl}" if w_lbl != prev_lbl else f"I-{w_lbl}"
                         prev_lbl = w_lbl
                     else:
@@ -72,10 +71,9 @@ class FeatureExtraction:
             for w in s_ws:
                 origin_data = w.to_dict()
                 w.shift(dy=start_y - s[0])
-                batch.append({
-                    **w.to_dict(),
-                    "label": w.label,
-                    "origin_data": origin_data})
+                batch.append({**w.to_dict(),
+                              "label": w.label,
+                              "origin_data": origin_data})
             start_y = end_y
             if (len(batch) > 0.95 * word_in_batch and len(data) < count_batch - 1) or end_y > self.max_height:
                 data.append(batch)
