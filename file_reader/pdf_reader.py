@@ -242,7 +242,7 @@ def merge_textlines_with_annotation(annotations: List[Paragraph], textlines: Lis
 
 
 class PdfReader:
-    def __init__(self, path: Union[str, Path] = None, stream=None, extract_image=True, is_scan=False, **kwargs):
+    def __init__(self, path: Union[Optional[str], Path] = None, stream=None, extract_image=True, is_scan=False, **kwargs):
         self.path = path
         self.times = []
         if path is not None:

@@ -2,11 +2,19 @@ import os
 import glob
 import itertools
 import pickle as pkl
-from fastapi import FastAPI, Header, Request, UploadFile, Form
+from fastapi import FastAPI, Header, Request, UploadFile, Form, File
+from fastapi.responses import StreamingResponse
 from file_reader.file_reader import FileReader
 from layout_extraction.layout_extraction import LayoutExtraction
 from post_process.section_grouping import SectionGrouping
 from post_process.post_process import PostProcess
+import shutil
+import tempfile
+import cv2
+from post_process.ps_utils_kv import RuleSynthesisLinking
+from run_visualization_linking import process_and_viz
+import io
+import zipfile
 
 app = FastAPI()
 layout_extraction = LayoutExtraction(model_path="models/finetuned")
@@ -15,6 +23,7 @@ section_grouping = SectionGrouping()
 rule_kv_files = glob.glob(f"assets/legacy_entity_linking/stage3_*_perfect_ps_linking.pkl")
 ps_linking = list(itertools.chain.from_iterable(pkl.load(open(ps_fp, 'rb')) for ps_fp in rule_kv_files))
 post_process = PostProcess(ps_linking)
+rule_linking = RuleSynthesisLinking(ps_linking)
 
 upload_path = "upload"
 os.makedirs(upload_path, exist_ok=True)
@@ -41,6 +50,38 @@ async def inference(file: UploadFile, from_page: int = Form(1), to_page: int = F
     return {
         "result": result
     }
+
+
+@app.post("/visualize_pdf/")
+async def visualize_pdf(file: UploadFile = File(...)):
+    temp_dir = tempfile.mkdtemp()
+    try:
+        for i, img in enumerate(process_and_viz(FileReader(
+            path=None, stream=file.file.read()), rule_linking, layout_extraction,
+            section_grouping, post_process)):
+            cv2.imwrite(os.path.join(temp_dir, f"viz_{len(os.listdir(temp_dir))}.png"), img)
+            img_fp = os.path.join(temp_dir, f'image_{i}.png')
+            cv2.imwrite(img_fp, img)
+
+        # Create a ZIP file
+        memory_file = io.BytesIO()
+        with zipfile.ZipFile(memory_file, 'w') as zf:
+            for image_filename in os.listdir(temp_dir):
+                zf.write(os.path.join(temp_dir, image_filename), arcname=image_filename)
+
+        # Reset buffer's position to the beginning
+        memory_file.seek(0)
+
+        # Clean-up the temporary directory
+        shutil.rmtree(temp_dir)
+
+        return StreamingResponse(memory_file, media_type="application/x-zip-compressed")
+    except Exception as e:
+        # Clean-up and send an error response or log the error as needed
+        shutil.rmtree(temp_dir)
+        raise e
+
+
 
 
 if __name__ == '__main__':
