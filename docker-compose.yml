@@ -11,7 +11,7 @@ services:
       - "9000:9000"
     command: [ "uvicorn", "app:app", "--host", "0.0.0.0", "--port", "9000" ]
     volumes:
-      - ./models:/opt/app/models
+      - ./models/finetuned/:/opt/app/models/finetuned
       - ./upload:/opt/app/upload
 
 
