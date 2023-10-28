@@ -13,4 +13,6 @@ COPY post_process post_process
 COPY utils utils 
 COPY app.py ./
 
+EXPOSE 9000
+
 CMD ['python', 'app.py']
