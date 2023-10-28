@@ -1,4 +1,5 @@
 from typing import *
+from .ps_utils_kv import RuleSynthesisLinking
 
 
 def _x0(entity):
@@ -48,6 +49,11 @@ def is_same_col(entity1, entity2) -> bool:
 
 
 class PostProcess:
+    def __init__(self, ps_linking: List = None):
+        if ps_linking:
+            self.rule = RuleSynthesisLinking(ps_linking)
+        else:
+            self.rule: RuleSynthesisLinking = None
 
     def merge_text(self, entities: List[Dict]) -> str:
         entities = sorted(entities, key=lambda entity: (int(entity["y0"] / 2), int(entity["x0"])))
@@ -111,7 +117,45 @@ class PostProcess:
 
     def process_section(self, section: Dict) -> Dict:
         title = self.merge_text(section["title"])
-
+        if self.rule:
+            entities = []
+            for ent in section["content"]:
+                ent = ent.copy()
+                ent["label"] = ent["label"].lower()
+                entities.append(ent)
+            if len(entities) == 0:
+                return {
+                    "title": title,
+                    "content": {
+                        "key-value": [],
+                        "description": ""
+                    }
+                }
+            out = self.rule.inference(entities)
+            linked = set()
+            pairs = []
+            for key, value in set(out.entities_map):
+                pairs.append({
+                    "key": entities[key]["text"],
+                    "value": entities[value]["text"]
+                })
+                linked.add(key)
+                linked.add(value)
+            others = []
+            for i, entity in enumerate(entities):
+                if i not in linked:
+                    if entity["label"] == "question":
+                        pairs.append({"key": entity["text"], "value": ""})
+                    else:
+                        others.append(entity)
+            content = {
+                "key-value": pairs,
+                "description": self.merge_text(others)
+            }
+            return {
+                "title": title,
+                "content": content
+            }
         return {
             "title": title,
             "content": self.process_key_value(section["content"])
