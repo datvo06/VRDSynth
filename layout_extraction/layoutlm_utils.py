@@ -25,12 +25,11 @@ class FeatureExtraction:
                 ws, prev_lbl = t.split(r"\s+", min_distance=0.1), None
                 for ibox, w in enumerate(ws):
                     w_lbls = [s.label for s in w.spans if s.label]      # get all span labels if exist
+                    print("aaa") if (w_lbls and w_lbls[0] and str(w_lbls[0]) == "None") else None
                     if w_lbls:
-                        w_lbl = w_lbls[0]
-                        print("aaa") if (w_lbl and str(w_lbl) == "None") else None
-                        if w_lbl:
-                            w.lbl = f"B-{w_lbl}" if w_lbl != prev_lbl else f"I-{w_lbl}"
-                        prev_lbl = w_lbl
+                        if w_lbls[0]:
+                            w.lbl = f"B-{w_lbls[0]}" if w_lbls[0] != prev_lbl else f"I-{w_lbls}"
+                        prev_lbl = w_lbls[0]
                     else:
                         prev_lbl = None
                 all_ws.extend(ws)

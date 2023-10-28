@@ -11,7 +11,7 @@ from utils.funsd_utils import viz_data_entity_mapping
 
 if __name__ == '__main__':
     # Model
-    pretrained = "../models/doc-equity-2010"
+    pretrained = "../models/finetuned"
     # Rule linking
     ps_linking = list(itertools.chain.from_iterable(pkl.load(open(ps_fp, 'rb')) for ps_fp in glob.glob(
         f"../assets/legacy_entity_linking/stage3_*_perfect_ps_linking.pkl")))
@@ -35,6 +35,8 @@ if __name__ == '__main__':
             for section in group["content"]:
                 for ent in section["content"]:
                     ent["label"] = ent["label"].lower()
+                    if 'header' in ent['label'] or 'title' in ent['label']:
+                        ent['label'] = 'header'
                 # Run rules for each section
                 new_data = rule_linking.inference(section["content"])
                 new_data.img_fp = img
