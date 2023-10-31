@@ -6,6 +6,37 @@ from file_reader.file_reader import FileReader
 from layout_extraction.layoutlm_utils import FeatureExtraction
 from tqdm import tqdm
 import difflib
+map_label = {
+    "b-title": "B-HEADER",
+    "b-title.": "B-HEADER",
+    "b-titled": "B-HEADER",
+    "b-titlle": "B-HEADER",
+    "b- title": "B-HEADER",
+    "b-titletitle": "B-HEADER",
+    "i-title": "I-HEADER",
+    "i-titlle": "I-HEADER",
+    "i- title": "I-HEADER",
+    "i-title.": "I-HEADER",
+    "i-titletitle": "I-HEADER",
+    "b-key": "B-QUESTION",
+    "b-keyd": "B-QUESTION",
+    "b-mkey": "B-QUESTION",
+    "i-key": "I-QUESTION",
+    "i-keyd": "I-QUESTION",
+    "i-mkey": "I-QUESTION",
+    "b-value": "B-ANSWER",
+    "b-mvalue": "B-ANSWER",
+    "b-bvalue": "B-ANSWER",
+    "i-value": "I-ANSWER",
+    "i-bvalue": "I-ANSWER",
+    "i-mvalue": "I-ANSWER",
+    "b- value": "B-ANSWER",
+    "b- \rvalue": "B-ANSWER",
+    "b-package": "B-HEADER",
+    "b-package:": "B-HEADER",
+    "b-": "O",
+    "i-": "O"
+}
 
 if __name__ == '__main__':
     import argparse
@@ -23,37 +54,6 @@ if __name__ == '__main__':
     result_path = Path(args.output)
     result_path.mkdir(parents=True, exist_ok=True)
     start = time.time()
-    map_label = {
-        "b-title": "B-HEADER",
-        "b-title.": "B-HEADER",
-        "b-titled": "B-HEADER",
-        "b-titlle": "B-HEADER",
-        "b- title": "B-HEADER",
-        "b-titletitle": "B-HEADER",
-        "i-title": "I-HEADER",
-        "i-titlle": "I-HEADER",
-        "i- title": "I-HEADER",
-        "i-title.": "I-HEADER",
-        "i-titletitle": "I-HEADER",
-        "b-key": "B-QUESTION",
-        "b-keyd": "B-QUESTION",
-        "b-mkey": "B-QUESTION",
-        "i-key": "I-QUESTION",
-        "i-keyd": "I-QUESTION",
-        "i-mkey": "I-QUESTION",
-        "b-value": "B-ANSWER",
-        "b-mvalue": "B-ANSWER",
-        "b-bvalue": "B-ANSWER",
-        "i-value": "I-ANSWER",
-        "i-bvalue": "I-ANSWER",
-        "i-mvalue": "I-ANSWER",
-        "b- value": "B-ANSWER",
-        "b- \rvalue": "B-ANSWER",
-        "b-package": "B-HEADER",
-        "b-package:": "B-HEADER",
-        "b-": "O",
-        "i-": "O"
-    }
     for file in tqdm(pdf_path.glob("*.pdf")):
         name = file.name[:-4]
         print(name)
