@@ -111,14 +111,6 @@ def get_path_specs(dataset, specs: List[Tuple[int, List[List[int]]]], relation_s
     else:
         pos_relations = list(get_all_positive_relation_paths(dataset, specs, relation_set, hops=hops, data_sample_set_relation_cache=data_sample_set_relation))
         pkl.dump(pos_relations, open(f"{args.cache_dir}/all_positive_paths.pkl", 'wb'))
-    '''
-    print("Start mining negative relations")
-    if os.path.exists(f"{args.cache_dir}/all_negative_paths.pkl"):
-        neg_relations = pkl.load(open(f"{args.cache_dir}/all_negative_paths.pkl", 'rb'))
-    else:
-        neg_relations = list(get_all_negative_relation(dataset, specs, relation_set, hops=hops, sampling_rate=sampling_rate, data_sample_set_relation_cache=data_sample_set_relation))
-        pkl.dump(neg_relations, open(f"{args.cache_dir}/all_negative_paths.pkl", 'wb'))
-    '''
     return pos_relations
     # return pos_relations, neg_relations
 
@@ -745,6 +737,8 @@ def get_args():
     parser.add_argument('--cache_dir', type=str, default='funsd_cache', help='cache directory')
     parser.add_argument('--upper_float_thres', type=float, default=0.5, help='upper float thres')
     parser.add_argument('--rel_type', type=str, choices=['cluster', 'default', 'legacy'], default='default')
+    parser.add_argument('--hops', type=int, default=2)
+    parser.add_argument('--strategy', type=str, choices=['precision', 'decisiontree', 'precision_counter'], default='precision')
     # use sem store true
     parser.add_argument('--use_sem', action='store_true', help='use semantic information')
     parser.add_argument('--model', type=str, choices=['layoutlmv3'], default='layoutlmv3')
@@ -849,7 +843,7 @@ if __name__ == '__main__':
         with open(f"{args.cache_dir}/all_positive_paths.pkl", 'rb') as f:
             pos_paths = pkl.load(f)
     else:
-        pos_paths = get_path_specs(dataset, specs, relation_set=args.relation_set, data_sample_set_relation_cache=data_sample_set_relation_cache)
+        pos_paths = get_path_specs(dataset, specs, relation_set=args.relation_set, data_sample_set_relation_cache=data_sample_set_relation_cache, hops=args.hops)
         end_time = time.time()
         print(f"Time taken to construct positive paths: {end_time - start_time}")
         logger.log("construct positive paths time: ", float(end_time - start_time))

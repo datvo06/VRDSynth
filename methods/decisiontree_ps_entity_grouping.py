@@ -1,6 +1,6 @@
 import networkx as nx
 from typing import List, Tuple, Dict, Set, Optional
-from utils.funsd_utils import DataSample, load_dataset, build_nx_g, viz_data, viz_data_no_rel, viz_data_entity_mapping
+from utils.funsd_utils import DataSample, load_dataset, viz_data
 from utils.relation_building_utils import calculate_relation_set, dummy_calculate_relation_set, calculate_relation
 import argparse
 import numpy as np
@@ -8,7 +8,7 @@ import itertools
 import functools
 from collections import defaultdict, namedtuple
 from networkx.algorithms import constraint, isomorphism
-from utils.ps_utils import FalseValue, LiteralReplacement, Program, GrammarReplacement, FindProgram, RelationLabelConstant, RelationLabelProperty, TrueValue, WordLabelProperty, WordVariable, RelationVariable, RelationConstraint, LabelEqualConstraint, RelationLabelEqualConstraint, construct_entity_linking_specs, LabelConstant, AndConstraint, LiteralSet, Constraint, Hole, replace_hole, find_holes, SymbolicList, FilterStrategy, fill_hole, Expression, FloatConstant
+from utils.ps_utils import FalseValue, Program, EmptyProgram, FindProgram, RelationLabelConstant, RelationLabelProperty, TrueValue, WordLabelProperty, WordVariable, RelationVariable, RelationConstraint, LabelEqualConstraint, RelationLabelEqualConstraint, construct_entity_linking_specs, LabelConstant, AndConstraint, LiteralSet, Constraint, Hole, replace_hole, find_holes, SymbolicList, FilterStrategy, fill_hole, Expression, FloatConstant
 from utils.visualization_script import visualize_program_with_support
 from utils.version_space import VersionSpace
 import json
@@ -18,29 +18,32 @@ import tqdm
 import copy
 import multiprocessing
 from multiprocessing import Pool
+import cv2
 from functools import lru_cache, partial
 from methods.decisiontree_ps import get_all_path, get_parser, construct_or_get_initial_programs, batch_find_program_executor, mapping2tuple, tuple2mapping, report_metrics, get_p_r_f1, get_valid_cand_find_program, add_constraint_to_find_program, get_args, logger, setup_grammar
-from methods.decisiontree_ps_entity_linking import SpecType
-import cv2
 import time
 
+SpecType = List[Tuple[int, List[Tuple[int, int]], List[Set[int]]]]
 
 
-def get_all_positive_relation_paths_linking(specs: SpecType, relation_set, hops=2, data_sample_set_relation_cache=None):
+def get_all_positive_relation_paths_same_parent(specs: SpecType, relation_set, hops=2, data_sample_set_relation_cache=None):
     data_sample_set_relation = [] if data_sample_set_relation_cache is None else data_sample_set_relation_cache
     path_set_counter = defaultdict(int)
     bar = tqdm.tqdm(specs, total=len(specs))
     bar.set_description("Mining positive relations")
-    for i, entity_map,_ in bar:
+    for i, _, word_sets in bar:
         nx_g = data_sample_set_relation[i]
-        for w1, w2 in entity_map:
-            for path, count in get_all_path(nx_g, w1, w2, hops=hops):
-                path_set_counter[path] += count
+        for word_set in word_sets:
+            for w1, w2 in itertools.combinations(word_set, 2):
+                if w1 == w2: continue
+                for path, count in get_all_path(nx_g, w1, w2, hops=hops):
+                    path_set_counter[path] += count
     for path_type, count in path_set_counter.items():
         yield path_type, count
 
 
-def get_path_specs_linking(dataset, specs: SpecType, relation_set, hops=2, sampling_rate=0.2, data_sample_set_relation_cache=None, cache_dir=None):
+
+def get_path_specs_same_parent(dataset, specs: SpecType, relation_set, hops=2, sampling_rate=0.2, data_sample_set_relation_cache=None, cache_dir=None):
     data_sample_set_relation = {} if data_sample_set_relation_cache is None else data_sample_set_relation_cache
     assert data_sample_set_relation_cache is not None
     pos_relations = []
@@ -49,12 +52,14 @@ def get_path_specs_linking(dataset, specs: SpecType, relation_set, hops=2, sampl
     if os.path.exists(f"{cache_dir}/all_positive_paths.pkl"):
         pos_relations = pkl.load(open(f"{cache_dir}/all_positive_paths.pkl", 'rb'))
     else:
-        pos_relations = list(get_all_positive_relation_paths_linking(specs, relation_set, hops=hops, data_sample_set_relation_cache=data_sample_set_relation))
+        pos_relations = list(get_all_positive_relation_paths_same_parent(specs, relation_set, hops=hops, data_sample_set_relation_cache=data_sample_set_relation))
         pkl.dump(pos_relations, open(f"{cache_dir}/all_positive_paths.pkl", 'wb'))
     return pos_relations
 
 
-def collect_program_execution_linking(programs, specs: SpecType, data_sample_set_relation_cache):
+
+
+def collect_program_execution_same_parent(programs, specs: SpecType, data_sample_set_relation_cache):
     tt, ft, tf = defaultdict(set), defaultdict(set), defaultdict(set)
     # TT:  True x True
     # FT: Predicted False, but was supposed to be True
@@ -63,12 +68,12 @@ def collect_program_execution_linking(programs, specs: SpecType, data_sample_set
     bar.set_description("Getting Program Output")
     all_out_mappings = defaultdict(set)
     all_word_pairs = defaultdict(set)
-    for i, entity_map, _ in bar:
-        bar.set_description(f"Getting Program Output {i}")
+    for i, _, entities in bar:
         nx_g = data_sample_set_relation_cache[i]
-        w2e = defaultdict(set)
-        for w1, w2 in entity_map:
-            w2e[w1].add(w2)
+        w2entities = {}
+        for e in entities:
+            for w in e:
+                w2entities[w] = set(e)
         programs = programs
         out_mappingss = batch_find_program_executor(nx_g, programs)
         word_mappingss = list([list([om[0] for om in oms]) for oms in out_mappingss])
@@ -88,33 +93,33 @@ def collect_program_execution_linking(programs, specs: SpecType, data_sample_set
                 w2otherwords[w_bind[w0]].add(w_bind[ret_var])
                 assert (i, w_bind[w0], w_bind[ret_var]) in all_word_pairs[p]
             for w in w2otherwords:
-                if w not in w2e: 
+                if w not in w2entities: 
                     ft[p].update([(i, w, w2) for w2 in w2otherwords[w]])
                 else:
-                    tt[p].update([(i, w, w2) for w2 in w2otherwords[w] if w2 in w2e[w]])
-                    tf[p].update([(i, w, w2) for w2 in w2otherwords[w] if w2 not in w2e[w]])
-                    ft[p].update(w2e[w] - w2otherwords[w] - {w})
-    print("Total tt: ", sum([len(tt[p]) for p in tt]))
+                    e = w2entities[w]
+                    tt[p].update([(i, w, w2) for w2 in w2otherwords[w] if w2 in e])
+                    tf[p].update([(i, w, w2) for w2 in w2otherwords[w] if w2 not in e])
+                    ft[p].update(e - w2otherwords[w] - {w})
     return tt, ft, tf, all_out_mappings
 
 
 
-def three_stages_bottom_up_version_space_based_entity_linking(pos_paths, dataset, specs, data_sample_set_relation_cache, cache_dir=None):
+def three_stages_bottom_up_version_space_based_same_parent(pos_paths, dataset, specs, data_sample_set_relation_cache, cache_dir=None):
     # STAGE 1: Build base relation spaces
-    programs = construct_or_get_initial_programs(pos_paths, f"{cache_dir}/stage1_linking.pkl", logger)
+    programs = construct_or_get_initial_programs(pos_paths, f"{cache_dir}/stage1_same_parent.pkl", logger=logger)
     print("Number of programs in stage 1: ", len(programs))
     # STAGE 2: Build version space
     # Start by getting the output of each program
     # Load the following: vs_io, vs_io_neg, p_io, p_io_neg, io_to_program
-    if cache_dir is not None and os.path.exists('{cache_dir}/stage2_linking.pkl'):
-        with open(f"{cache_dir}/stage2_linking.pkl", "rb") as f:
+    if cache_dir is not None and os.path.exists('{cache_dir}/stage2_same_parent.pkl'):
+        with open(f"{cache_dir}/stage2_same_parent.pkl", "rb") as f:
             tt, tf, ft, io_to_program, all_out_mappings = pkl.load(f)
             print(len(tt), len(tf), len(ft))
     else:
-        bar = tqdm.tqdm(specs)
         start_time = time.time()
+        bar = tqdm.tqdm(specs)
         bar.set_description("Stage 2 - Getting Program Output")
-        tt, tf, ft, all_out_mappings = collect_program_execution_linking(
+        tt, tf, ft, all_out_mappings = collect_program_execution_same_parent(
                 programs, specs, 
                 data_sample_set_relation_cache)
         end_time = time.time()
@@ -124,13 +129,14 @@ def three_stages_bottom_up_version_space_based_entity_linking(pos_paths, dataset
         io_to_program = defaultdict(list)
         report_metrics(programs, tt, tf, ft, io_to_program)
         if cache_dir is not None:
-            with open(f"{cache_dir}/stage2_linking.pkl", "wb") as f:
+            with open(f"{cache_dir}/stage2_same_parent.pkl", "wb") as f:
                 pkl.dump([tt, tf, ft, io_to_program, all_out_mappings], f)
 
     w2e = [defaultdict(set) for _ in range(len(dataset))]
-    for i, elink, _ in specs:
-        for e1, e2 in elink:
-            w2e[i][e1].add(e2)
+    for i, _, entities in specs:
+        for e in entities:
+            for w in e:
+                w2e[i][w] = set(e)
     io_to_program = defaultdict(list)
 
     tt, tf, ft = [defaultdict(set) for _ in range(3)]
@@ -172,8 +178,8 @@ def three_stages_bottom_up_version_space_based_entity_linking(pos_paths, dataset
     covered_tt_perfect = set()
     start_time = time.time()
     for it in range(max_its):
-        if cache_dir and os.path.exists(f"{cache_dir}/stage3_{it}_linking.pkl"):
-            vss, c2vs = pkl.load(open(f"{cache_dir}/stage3_{it}_linking.pkl", "rb"))
+        if cache_dir and os.path.exists(f"{cache_dir}/stage3_{it}_same_parent.pkl"):
+            vss, c2vs = pkl.load(open(f"{cache_dir}/stage3_{it}_same_parent.pkl", "rb"))
         else:
             c2vs = defaultdict(set)
             for i, vs in enumerate(vss):
@@ -187,13 +193,13 @@ def three_stages_bottom_up_version_space_based_entity_linking(pos_paths, dataset
                         c2vs[c].add(i)
             # Save this for this iter
             if cache_dir:
-                with open(f"{cache_dir}/stage3_{it}_linking.pkl", "wb") as f:
+                with open(f"{cache_dir}/stage3_{it}_same_parent.pkl", "wb") as f:
                     pkl.dump([vss, c2vs], f)
         # Now we have extended_cands
         # Let's create the set of valid input for each cands
         # for each constraint, check against each of the original programs
-        if cache_dir and os.path.exists(f"{cache_dir}/stage3_{it}_new_vs_linking.pkl"):
-            with open(f"{cache_dir}/stage3_{it}_new_vs_linking.pkl", "rb") as f:
+        if cache_dir and os.path.exists(f"{cache_dir}/stage3_{it}_new_vs_same_parent.pkl"):
+            with open(f"{cache_dir}/stage3_{it}_new_vs_same_parent.pkl", "rb") as f:
                 new_vss = pkl.load(f)
         else:
             new_vss, new_io_to_vs = [], {}
@@ -256,7 +262,7 @@ def three_stages_bottom_up_version_space_based_entity_linking(pos_paths, dataset
                             if io_key not in perfect_ps_io_value:
                                 perfect_ps.append(new_program)
                                 perfect_ps_io_value.add(io_key)
-                                with open(f"{cache_dir}/stage3_{it}_perfect_ps_linking.pkl", "wb") as f:
+                                with open(f"{cache_dir}/stage3_{it}_perfect_ps_same_parent.pkl", "wb") as f:
                                     pkl.dump(perfect_ps, f)
 
                             logger.log(str(len(covered_tt_perfect)), (float(time.time()) - start_time, len(perfect_ps)))
@@ -286,13 +292,13 @@ def three_stages_bottom_up_version_space_based_entity_linking(pos_paths, dataset
                     print("Rejecting: ", c)
 
 
-            if cache_dir and os.path.exists(os.path.join(cache_dir, f"stage3_{it}_new_vs_linking.pkl")):
-                with open(os.path.join(cache_dir, f"stage3_{it}_new_vs_linking.pkl"), "wb") as f:
+            if cache_dir and os.path.exists(os.path.join(cache_dir, f"stage3_{it}_new_vs_same_parent.pkl")):
+                with open(os.path.join(cache_dir, f"stage3_{it}_new_vs_same_parent.pkl"), "wb") as f:
                     pkl.dump(new_vss, f)
             # perfect_ps = perfect_ps + list(itertools.chain.from_iterable(vs.programs for vs, hc in zip(vss, has_child) if not hc))
             print("Number of perfect programs:", len(perfect_ps))
             if cache_dir:
-                with open(os.path.join(cache_dir, f"stage3_{it}_perfect_ps_linking.pkl"), "wb") as f:
+                with open(os.path.join(cache_dir, f"stage3_{it}_perfect_ps_same_parent.pkl"), "wb") as f:
                     pkl.dump(perfect_ps, f)
 
         vss = new_vss
@@ -301,16 +307,15 @@ def three_stages_bottom_up_version_space_based_entity_linking(pos_paths, dataset
 
 
 if __name__ == '__main__': 
-    relation_set = dummy_calculate_relation_set(None, None, None)
     args = get_args()
-    logger.set_fp(f"{args.cache_dir}/log.json")
     os.makedirs(args.cache_dir, exist_ok=True)
     os.makedirs(f"{args.cache_dir}/viz", exist_ok=True)
-    os.makedirs(f"{args.cache_dir}/viz_no_rel", exist_ok=True)
-    os.makedirs(f"{args.cache_dir}/viz_entity_mapping", exist_ok=True)
+    logger.set_fp(f"{args.cache_dir}/log.json")
+
     args = setup_grammar(args)
 
     start_time = time.time()
+
     if os.path.exists(f"{args.cache_dir}/dataset.pkl"):
         with open(f"{args.cache_dir}/dataset.pkl", 'rb') as f:
             dataset = pkl.load(f)
@@ -331,8 +336,8 @@ if __name__ == '__main__':
             pkl.dump((specs, entity_dataset), f)
         
     start_time = time.time()
-    if os.path.exists(f"{args.cache_dir}/ds_cache_linking_kv.pkl"):
-        with open(f"{args.cache_dir}/ds_cache_linking_kv.pkl", 'rb') as f:
+    if os.path.exists(f"{args.cache_dir}/ds_cache_linking.pkl"):
+        with open(f"{args.cache_dir}/ds_cache_linking.pkl", 'rb') as f:
             data_sample_set_relation_cache = pkl.load(f)
     else:
         data_sample_set_relation_cache = []
@@ -342,18 +347,14 @@ if __name__ == '__main__':
             nx_g = args.build_nx_g(data)
             data_sample_set_relation_cache.append(nx_g)
             img = viz_data(data, nx_g)
-            img_no_rel = viz_data_no_rel(data)
-            img_ent_map = viz_data_entity_mapping(data)
             cv2.imwrite(f"{args.cache_dir}/viz/{i}.png", img)
-            cv2.imwrite(f"{args.cache_dir}/viz_no_rel/{i}.png", img_no_rel)
-            cv2.imwrite(f"{args.cache_dir}/viz_entity_mapping/{i}.png", img_ent_map)
             bar.update(1)
+        with open(f"{args.cache_dir}/ds_cache_linking.pkl", 'wb') as f:
+            pkl.dump(data_sample_set_relation_cache, f)
 
         end_time = time.time()
         print(f"Time taken to construct data sample set relation cache: {end_time - start_time}")
         logger.log("construct data sample set relation cache time: ", float(end_time - start_time))
-        with open(f"{args.cache_dir}/ds_cache_linking_kv.pkl", 'wb') as f:
-            pkl.dump(data_sample_set_relation_cache, f)
 
     if args.use_sem:
         assert args.model in ['layoutlmv3']
@@ -373,18 +374,19 @@ if __name__ == '__main__':
             for i, nx_g in enumerate(data_sample_set_relation_cache):
                 for w in sorted(nx_g.nodes()):
                     nx_g.nodes[w]['emb'] = all_embs[i][w]
+
     # Now we have the data sample set relation cache
     print("Stage 1 - Constructing Program Space")
-    if os.path.exists(f"{args.cache_dir}/pos_paths_linking_kv.pkl"):
-        with open(f"{args.cache_dir}/pos_paths_linking_kv.pkl", 'rb') as f:
+    if os.path.exists(f"{args.cache_dir}/pos_paths_linking.pkl"):
+        with open(f"{args.cache_dir}/pos_paths_linking.pkl", 'rb') as f:
             pos_paths = pkl.load(f)
     else:
         start_time = time.time()
-        pos_paths = get_path_specs_linking(entity_dataset, specs, relation_set=args.relation_set, data_sample_set_relation_cache=data_sample_set_relation_cache, cache_dir=args.cache_dir)
+        pos_paths = get_path_specs_same_parent(entity_dataset, specs, relation_set=args.relation_set, data_sample_set_relation_cache=data_sample_set_relation_cache, cache_dir=args.cache_dir, hops=args.hops)
         end_time = time.time()
         print(f"Time taken to construct positive paths: {end_time - start_time}")
         logger.log("construct positive paths time: ", float(end_time - start_time))
-        with open(f"{args.cache_dir}/pos_paths_linking_kv.pkl", 'wb') as f:
+        with open(f"{args.cache_dir}/pos_paths_linking.pkl", 'wb') as f:
             pkl.dump(pos_paths, f)
 
-    programs = three_stages_bottom_up_version_space_based_entity_linking(pos_paths, entity_dataset, specs, data_sample_set_relation_cache, args.cache_dir)
+    programs = three_stages_bottom_up_version_space_based_same_parent(pos_paths, entity_dataset, specs, data_sample_set_relation_cache, args.cache_dir)
