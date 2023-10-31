@@ -380,7 +380,7 @@ if __name__ == '__main__':
             pos_paths = pkl.load(f)
     else:
         start_time = time.time()
-        pos_paths = get_path_specs_linking(entity_dataset, specs, relation_set=args.relation_set, data_sample_set_relation_cache=data_sample_set_relation_cache, cache_dir=args.cache_dir)
+        pos_paths = get_path_specs_linking(entity_dataset, specs, relation_set=args.relation_set, data_sample_set_relation_cache=data_sample_set_relation_cache, cache_dir=args.cache_dir, hops=args.hops)
         end_time = time.time()
         print(f"Time taken to construct positive paths: {end_time - start_time}")
         logger.log("construct positive paths time: ", float(end_time - start_time))

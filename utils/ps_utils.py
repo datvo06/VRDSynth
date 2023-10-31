@@ -678,7 +678,10 @@ class WordBoxProperty(FloatValue):
 
     def evaluate(self, word_binding, relation_binding, nx_g_data):
         prop = self.prop.evaluate()
-        return nx_g_data.nodes[word_binding[self.word_var]][prop]
+        if prop == 'w':
+            return nx_g_data.nodes[word_binding[self.word_var]]['x1'] - nx_g_data.nodes[word_binding[self.word_var]]['x0']
+        if prop == 'h':
+            return nx_g_data.nodes[word_binding[self.word_var]]['y1'] - nx_g_data.nodes[word_binding[self.word_var]]['y0']
 
     def __str__(self):
         return f'{self.word_var}.{self.prop}'
@@ -1327,6 +1330,12 @@ LiteralReplacement = {
         'BoxConstantValue': [BoxConstantValue('x0'), BoxConstantValue('y0'), BoxConstantValue('x1'), BoxConstantValue('y1')],
         'RelationPropertyConstant': [RelationPropertyConstant('mag'), *[RelationPropertyConstant(f'proj{i}') for i in range(4)]],
         'RelationLabelConstant': [RelationLabelConstant(i) for i in range(4)]
+}
+
+
+ExtendedLiteralReplacement = {
+        **LiteralReplacement,
+        'BoxConstantValue': [BoxConstantValue('x0'), BoxConstantValue('y0'), BoxConstantValue('x1'), BoxConstantValue('y1'), BoxConstantValue('w'), BoxConstantValue('h')],
 }
 
 
