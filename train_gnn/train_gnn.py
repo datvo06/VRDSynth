@@ -95,7 +95,7 @@ def main(args):
         all_preds = []
         for data in test_subset:
             data = data.to(device)
-            out = model(data)
+            out = model(data.x, data.edge_index)
             all_preds.append(out[0].argmax(dim=1).cpu().numpy())
         all_preds = np.concatenate(all_preds)
         all_labels = np.concatenate([data.y.cpu().numpy() for data in test_subset])
