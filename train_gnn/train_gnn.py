@@ -98,7 +98,7 @@ def main(args):
                 out = model(data.x, data.edge_index)
                 all_preds.append(out[0].argmax(dim=1).cpu().numpy())
             all_preds = np.concatenate(all_preds)
-            all_labels = np.concatenate([data.y.cpu().numpy() for data in test_subset])
+            all_labels = np.concatenate([data.y.cpu().numpy() for data, _ in test_subset])
             f1 = f1_score(all_labels, all_preds, average="macro")
             if f1 > best_f1:
                 best_f1 = f1
