@@ -479,7 +479,7 @@ def from_funsd_datasample(data):
     return [(e1.index, e2.index, lbl) for (e1, e2, lbl) in g.es]
 
 
-def build_nx_g_legacy(data):
+def build_nx_g_legacy(data, normalize=True):
     edges = from_funsd_datasample(data)
     # build a networkx graph
     nx_g = nx.MultiDiGraph()
@@ -496,6 +496,8 @@ def build_nx_g_legacy(data):
         if i not in nx_g.nodes():
             nx_g.add_node(i)
         nx_g.nodes[i].update({'x0': box[0], 'y0': box[1], 'x1': box[2], 'y1': box[3], 'label': label, 'word': word})
+    if not normalize:
+        return nx_g
     # Normalize the mag according to the smallest and largest mag
     mags = [e[2]['mag'] for e in nx_g.edges(data=True)]
     if len(mags) > 1:

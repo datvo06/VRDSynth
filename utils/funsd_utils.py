@@ -1,12 +1,12 @@
 import json
 from collections import namedtuple
-from typing import List, Tuple, Set
+from typing import List, Tuple, Set, Union
 import glob
 from utils.relation_building_utils import calculate_relation_set, dummy_calculate_relation_set, calculate_relation
 import networkx as nx
 import numpy as np
 import cv2
-
+from PIL import Image
 
 Bbox = namedtuple('Bbox', ['x0', 'y0', 'x1', 'y1'])
 RELATION_SET = dummy_calculate_relation_set(None, None, None)
@@ -18,7 +18,7 @@ class DataSample:
                  labels: List[int], entities: List[List[int]],
                  entities_map: List[Tuple[int, int]],
                  boxes: List[Bbox],
-                 img_fp: str=""):
+                 img_fp: Union[str, Image.Image]=""):
         self._words = words
         self._labels = labels
         self._entities = entities

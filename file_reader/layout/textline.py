@@ -119,13 +119,12 @@ class TextLine(Box):
         d = Box.to_dict(self)
         self.answers = []
         self.text = ''
-        prev = None
-        start = 0
+        prev, start = None, 0
         for span in self.spans:
             if span.label != prev:
-                if prev != None:
+                if prev is not None:
                     self.answers.append({'start_pos': start, 'text': self.text[start:], 'label': prev})
-                if span.label != None:
+                if span.label is not None:
                     start = len(self.text)
             self.text += span.text
             prev = span.label
