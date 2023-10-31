@@ -39,7 +39,7 @@ def train(model, dataset, criterion, optimizer, device):
     for i, (data, _) in bar:
         data = data.to(device)
         optimizer.zero_grad()
-        out = model(data)
+        out = model(data.x, data.edge_index)
         loss = criterion(out[0], data.y)
         acc = (out[0].argmax(dim=1) == data.y).sum().item() / data.y.shape[0]
         loss.backward()
@@ -60,7 +60,7 @@ def test(model, dataset, criterion, device):
     avg_acc = 0
     for i, (data, _) in bar:
         data = data.to(device)
-        out = model(data)
+        out = model(data.x, data.edge_index)
         loss = criterion(out[0], data.y)
         acc = (out[0].argmax(dim=1) == data.y).sum().item() / data.y.shape[0]
         total_loss += loss.item()
