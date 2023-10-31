@@ -20,7 +20,7 @@ import multiprocessing
 from multiprocessing import Pool
 from functools import lru_cache, partial
 from methods.decisiontree_ps import get_all_path, get_parser, construct_or_get_initial_programs, batch_find_program_executor, mapping2tuple, tuple2mapping, report_metrics, get_p_r_f1, get_valid_cand_find_program, add_constraint_to_find_program, get_args, logger, setup_grammar
-from methods.decisiontree_ps_entity_linking import SpecType
+from methods.decisiontree_ps_entity_grouping import SpecType
 import cv2
 import time
 
