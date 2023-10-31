@@ -124,11 +124,11 @@ def encode(box, text, w2i, pos_encoding="one_hot", fidelity=0.1):
 
 def calc_feature_size(pos_encoding="one_hot", fidelity=0.1, w2i=None):
     if pos_encoding == "one_hot":
-        return len(w2i) + 1 + int(1.0/fidelity) * 4
+        return len(w2i) + int(1.0/fidelity) * 4
     elif pos_encoding == "sin_cos":
-        return len(w2i) + 1 + 4
+        return len(w2i) + 4
     else:
-        return len(w2i) + 1 + 4
+        return len(w2i) + 4
 
 
 
