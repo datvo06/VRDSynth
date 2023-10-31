@@ -75,7 +75,7 @@ class GNNFeatureExtraction:
         boxes = list([Bbox(w.x0, w.y0, w.x1, w.y1) for w in valid_words])
 
         texts = list([w.text for w in valid_words])
-        labels = list([w.lbl for w in valid_words])
+        labels = list([w.label for w in valid_words])
         return DataSampleWithDim(texts, labels, [], [], boxes, image, width=page.width, height=page.height)
 
 
