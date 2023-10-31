@@ -8,6 +8,8 @@ from train_gnn.models import MPNNModel
 from layout_extraction.gnn_utils import calc_feature_size
 from sklearn.model_selection import KFold
 from sklearn.metrics import f1_score
+from sklearn.metrics import classification_report
+import numpy as np
 
 def k_fold_split(dataset, k):
     """
@@ -53,13 +55,18 @@ def train(model, dataset, criterion, optimizer, device):
 def test(model, dataset, criterion, device):
     model.eval()
     total_loss = 0
-    bar = tqdm(dataset)
-    for data in bar:
+    bar = tqdm(enumerate(dataset))
+    avg_loss = 0
+    avg_acc = 0
+    for i, data in bar:
         data = data.to(device)
         out = model(data)
-        loss = criterion(out, data.y)
+        loss = criterion(out[0], data.y)
+        acc = (out[0].argmax(dim=1) == data.y).sum().item() / data.y.shape[0]
         total_loss += loss.item()
-        bar.set_description(f"Loss: {loss.item():.4f}")
+        avg_loss = (avg_loss * i + loss.item()) / (i + 1)
+        avg_acc += (avg_acc * i + acc) / (i + 1)
+        bar.set_description(f"Loss: {avg_loss:.4f}, Acc: {avg_acc:.4f}")
     return total_loss / len(dataset)
 
 def main(args):
@@ -85,11 +92,19 @@ def main(args):
             print(f"Train loss: {train_loss:.4f}")
             test_loss = test(model, test_subset, criterion, device)
             print(f"Test loss: {test_loss:.4f}")
-        f1 = f1_score(model(torch.stack([data.x for data in test_subset]).to(device)).argmax(dim=1).cpu(), torch.stack([data.y for data in test_subset]).argmax(dim=1).cpu(), average="macro")
-        print(f"F1 score: {f1:.4f}")
+        all_preds = []
+        for data in test_subset:
+            data = data.to(device)
+            out = model(data)
+            all_preds.append(out[0].argmax(dim=1).cpu().numpy())
+        all_preds = np.concatenate(all_preds)
+        all_labels = np.concatenate([data.y.cpu().numpy() for data in test_subset])
+        f1 = f1_score(all_labels, all_preds, average="macro")
         if f1 > best_f1:
             best_f1 = f1
             torch.save(model.state_dict(), args.model_path)
+            # Full classification report
+            print(classification_report(all_labels, all_preds))
             print("Saved model")
 
 if __name__ == '__main__':
