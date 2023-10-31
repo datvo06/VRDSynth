@@ -737,7 +737,6 @@ def get_args():
     parser.add_argument('--cache_dir', type=str, default='funsd_cache', help='cache directory')
     parser.add_argument('--upper_float_thres', type=float, default=0.5, help='upper float thres')
     parser.add_argument('--rel_type', type=str, choices=['cluster', 'default', 'legacy'], default='default')
-    parser.add_argument('--hops', type=int, default=2)
     parser.add_argument('--strategy', type=str, choices=['precision', 'decisiontree', 'precision_counter'], default='precision')
     # use sem store true
     parser.add_argument('--use_sem', action='store_true', help='use semantic information')
