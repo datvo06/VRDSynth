@@ -46,7 +46,7 @@ def train(model, dataset, criterion, optimizer, device):
         optimizer.step()
         total_loss += loss.item()
         avg_loss = (avg_loss * i + loss.item()) / (i + 1)
-        avg_acc += (avg_acc * i + acc) / (i + 1)
+        avg_acc = (avg_acc * i + acc) / (i + 1) + acc
         bar.set_description(f"Loss: {avg_loss:.4f}, Acc: {avg_acc:.4f}")
         bar.set_description(f"Loss: {loss.item():.4f}, Acc: {acc:.4f}")
     return total_loss / len(dataset)
@@ -65,7 +65,7 @@ def test(model, dataset, criterion, device):
         acc = (out[0].argmax(dim=1) == data.y).sum().item() / data.y.shape[0]
         total_loss += loss.item()
         avg_loss = (avg_loss * i + loss.item()) / (i + 1)
-        avg_acc += (avg_acc * i + acc) / (i + 1)
+        avg_acc = (avg_acc * i + acc) / (i + 1) + acc
         bar.set_description(f"Loss: {avg_loss:.4f}, Acc: {avg_acc:.4f}")
     return total_loss / len(dataset)
 
