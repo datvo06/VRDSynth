@@ -37,6 +37,7 @@ def train(model, dataset, criterion, optimizer, device):
     avg_loss = 0
     avg_acc = 0
     for i, data in bar:
+        print(data)
         data = data.to(device)
         optimizer.zero_grad()
         out = model(data)
