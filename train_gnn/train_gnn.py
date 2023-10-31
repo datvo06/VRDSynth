@@ -36,8 +36,7 @@ def train(model, dataset, criterion, optimizer, device):
     bar = tqdm(enumerate(dataset))
     avg_loss = 0
     avg_acc = 0
-    for i, data in bar:
-        print(data)
+    for i, (data, _) in bar:
         data = data.to(device)
         optimizer.zero_grad()
         out = model(data)
@@ -59,7 +58,7 @@ def test(model, dataset, criterion, device):
     bar = tqdm(enumerate(dataset))
     avg_loss = 0
     avg_acc = 0
-    for i, data in bar:
+    for i, (data, _) in bar:
         data = data.to(device)
         out = model(data)
         loss = criterion(out[0], data.y)
