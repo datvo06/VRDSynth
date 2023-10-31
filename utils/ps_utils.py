@@ -680,8 +680,10 @@ class WordBoxProperty(FloatValue):
         prop = self.prop.evaluate()
         if prop == 'w':
             return nx_g_data.nodes[word_binding[self.word_var]]['x1'] - nx_g_data.nodes[word_binding[self.word_var]]['x0']
-        if prop == 'h':
+        elif prop == 'h':
             return nx_g_data.nodes[word_binding[self.word_var]]['y1'] - nx_g_data.nodes[word_binding[self.word_var]]['y0']
+        else:
+            nx_g_data.nodes[word_binding[self.word_var]][prop]
 
     def __str__(self):
         return f'{self.word_var}.{self.prop}'
