@@ -148,9 +148,9 @@ def convert_to_pyg(data: DataSampleWithDim, w2i):
     bot_edges = torch.tensor([(u, v) for u, v, d in nx_g.edges(data=True) if d['lbl'] == 2], dtype=torch.long)
     left_edges = torch.tensor([(u, v) for u, v, d in nx_g.edges(data=True) if d['lbl'] == 1], dtype=torch.long)
     right_edges = torch.tensor([(u, v) for u, v, d in nx_g.edges(data=True) if d['lbl'] == 0], dtype=torch.long)
-    es = [top_edges, bot_edges, left_edges, right_edges]
+    es = [top_edges.transpose(), bot_edges.transpose(), left_edges.transpose(), right_edges.transpose()]
     # also, add self loop to all nodes
-    es = [add_self_loops(e, num_nodes=nx_g.number_of_nodes())[0] for e in es]
+    es = [add_self_loops(e, num_nodes=nx_g.number_of_nodes())[0] if e else e for e in es]
     node_feat = torch.tensor([encode(b, t, w2i, pos_encoding="one_hot", fidelity=0.1)] for b, t in zip(data.boxes, data.words))
     labels = torch.tensor([l2i[d['label']] for n, d in nx_g.nodes(data=True) if 'label' in d])
     # Convert to pyg

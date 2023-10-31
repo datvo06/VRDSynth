@@ -9,6 +9,7 @@ import difflib
 import pickle as pkl
 import itertools
 import argparse
+import os
 
 from process_data_layoutlm import map_label
 
@@ -27,34 +28,38 @@ if __name__ == '__main__':
     result_path.mkdir(parents=True, exist_ok=True)
     start = time.time()
     all_data = []
-    for file in tqdm(pdf_path.glob("*.pdf")):
-        name = file.name[:-4]
-        print(name)
-        file_reader = FileReader(path=file)
-        pages = file_reader.pages
+    if not os.path.exists(result_path / "data.pkl"):
+        for file in tqdm(pdf_path.glob("*.pdf")):
+            name = file.name[:-4]
+            print(name)
+            file_reader = FileReader(path=file)
+            pages = file_reader.pages
 
-        for i, page in enumerate(file_reader.pages):
-            data = feature_extraction.get_feature(page, expand_after=0, expand_before=0)
-            img = data.img_fp
-            labels = set()
-            if len(data.words) == 0:
-                continue
-            new_l = []
-            try:
-                for w, l in zip(data.words, data.labels):
-                    if l is not None:
-                        l = difflib.get_close_matches(l, map_label.keys(), n=1)[0].lower()
-                        new_l.append(map_label[l])
-                    else:
-                        new_l.append("O")
-            except:
-                print(f"Ignore page {i}: wrong labels {labels}")
-                continue
-            data.labels = new_l
-            all_data.append(data)
-            cv2.imwrite(str(result_path / f"{name}_{i}.png"), img)
-    with open(result_path / "data.pkl", "wb") as f:
-        pkl.dump(all_data, f)
+            for i, page in enumerate(file_reader.pages):
+                data = feature_extraction.get_feature(page, expand_after=0, expand_before=0)
+                img = data.img_fp
+                labels = set()
+                if len(data.words) == 0:
+                    continue
+                new_l = []
+                try:
+                    for w, l in zip(data.words, data.labels):
+                        if l is not None:
+                            l = difflib.get_close_matches(l, map_label.keys(), n=1)[0].lower()
+                            new_l.append(map_label[l])
+                        else:
+                            new_l.append("O")
+                except:
+                    print(f"Ignore page {i}: wrong labels {labels}")
+                    continue
+                data.labels = new_l
+                all_data.append(data)
+                cv2.imwrite(str(result_path / f"{name}_{i}.png"), img)
+        with open(result_path / "data.pkl", "wb") as f:
+            pkl.dump(all_data, f)
+    else:
+        with open(result_path / "data.pkl", "rb") as f:
+            all_data = pkl.load(f)
     all_words = itertools.chain.from_iterable([d.words for d in all_data])
     word_dict = WordDict(all_words, cutoff=300)
     with open(result_path / "word_dict.pkl", "wb") as f:
