@@ -46,7 +46,7 @@ def train(model, dataset, criterion, optimizer, device):
         optimizer.step()
         total_loss += loss.item()
         avg_loss = (avg_loss * i + loss.item()) / (i + 1)
-        avg_acc = (avg_acc * i + acc) / (i + 1) + acc
+        avg_acc = (avg_acc * i + acc) / (i + 1)
         bar.set_description(f"Loss: {avg_loss:.4f}, Acc: {avg_acc:.4f}")
         bar.set_description(f"Loss: {loss.item():.4f}, Acc: {acc:.4f}")
     return total_loss / len(dataset)
@@ -65,7 +65,7 @@ def test(model, dataset, criterion, device):
         acc = (out[0].argmax(dim=1) == data.y).sum().item() / data.y.shape[0]
         total_loss += loss.item()
         avg_loss = (avg_loss * i + loss.item()) / (i + 1)
-        avg_acc = (avg_acc * i + acc) / (i + 1) + acc
+        avg_acc = (avg_acc * i + acc) / (i + 1)
         bar.set_description(f"Loss: {avg_loss:.4f}, Acc: {avg_acc:.4f}")
     return total_loss / len(dataset)
 
@@ -92,20 +92,20 @@ def main(args):
             print(f"Train loss: {train_loss:.4f}")
             test_loss = test(model, test_subset, criterion, device)
             print(f"Test loss: {test_loss:.4f}")
-        all_preds = []
-        for data in test_subset:
-            data = data.to(device)
-            out = model(data.x, data.edge_index)
-            all_preds.append(out[0].argmax(dim=1).cpu().numpy())
-        all_preds = np.concatenate(all_preds)
-        all_labels = np.concatenate([data.y.cpu().numpy() for data in test_subset])
-        f1 = f1_score(all_labels, all_preds, average="macro")
-        if f1 > best_f1:
-            best_f1 = f1
-            torch.save(model.state_dict(), args.model_path)
-            # Full classification report
-            print(classification_report(all_labels, all_preds))
-            print("Saved model")
+            all_preds = []
+            for data in test_subset:
+                data = data.to(device)
+                out = model(data.x, data.edge_index)
+                all_preds.append(out[0].argmax(dim=1).cpu().numpy())
+            all_preds = np.concatenate(all_preds)
+            all_labels = np.concatenate([data.y.cpu().numpy() for data in test_subset])
+            f1 = f1_score(all_labels, all_preds, average="macro")
+            if f1 > best_f1:
+                best_f1 = f1
+                torch.save(model.state_dict(), args.model_path)
+                # Full classification report
+                print(classification_report(all_labels, all_preds))
+                print("Saved model")
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Training script.")
