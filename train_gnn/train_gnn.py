@@ -122,7 +122,7 @@ if __name__ == '__main__':
                         help='save model every save_interval epochs')
     parser.add_argument('--save_dir', type=str, default='./saved_models_gnn',
                         help='directory to save trained models')
-    parser.add_argument('--k', type=int, default=5,
+    parser.add_argument('--k', type=int, default=5)
     
     args = parser.parse_args()
     main(args)

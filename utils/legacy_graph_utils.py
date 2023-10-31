@@ -265,7 +265,6 @@ class Graph():
         self.es = []
         self.build_edges()
         self._get_adj_matrix()
-        print(len(self.es))
 
     def build_edges(self):
         cell_list_top_down = sorted(self.nodes, key=lambda cell: cell.y)
