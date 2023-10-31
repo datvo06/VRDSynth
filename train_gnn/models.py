@@ -30,8 +30,9 @@ class MPNNModel(nn.Module):
     def __init__(self, dim_h, netypes, 
                  dim_in, n_layers=5, n_classes=7, device=device):
         super().__init__()
-        self.enc = nn.Embedding(dim_in, dim_h)
+        self.enc = nn.Linear(dim_in, dim_h)
         nn.init.xavier_normal_(self.enc.weight)
+        nn.init.normal_(self.enc.bias)
 
         self.netypes = netypes
         self.n_layers = n_layers
