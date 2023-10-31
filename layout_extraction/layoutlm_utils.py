@@ -28,7 +28,7 @@ class FeatureExtraction:
                     print("aaa") if (w_lbls and w_lbls[0] and str(w_lbls[0]) == "None") else None
                     if w_lbls:
                         if w_lbls[0]:
-                            w.lbl = f"B-{w_lbls[0]}" if w_lbls[0] != prev_lbl else f"I-{w_lbls}"
+                            w.label = f"B-{w_lbls[0]}" if w_lbls[0] != prev_lbl else f"I-{w_lbls[0]}"
                         prev_lbl = w_lbls[0]
                     else:
                         prev_lbl = None
