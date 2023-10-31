@@ -103,10 +103,10 @@ def main(args):
             f1 = f1_score(all_labels, all_preds, average="macro")
             if f1 > best_f1:
                 best_f1 = f1
-                torch.save(model.state_dict(), f"{args.save_dir}/model.pt")
                 # Full classification report
                 print(classification_report(all_labels, all_preds))
                 print("Saved model")
+                torch.save(model.state_dict(), f"{args.save_dir}/model.pt")
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Training script.")
