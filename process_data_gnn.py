@@ -8,6 +8,7 @@ from tqdm import tqdm
 import difflib
 import pickle as pkl
 import itertools
+import argparse
 
 from process_data_layoutlm import map_label
 
