@@ -10,6 +10,7 @@ from sklearn.model_selection import KFold
 from sklearn.metrics import f1_score
 from sklearn.metrics import classification_report
 import numpy as np
+import os
 
 def k_fold_split(dataset, k):
     """
@@ -87,7 +88,7 @@ def main(args):
         for epoch in range(args.epochs):
             print(f"Epoch {epoch+1}")
             criterion = nn.CrossEntropyLoss()
-            optimizer = optim.Adam(model.parameters(), lr=0.001)
+            optimizer = optim.Adam(model.parameters(), lr=0.0001)
             train_loss = train(model, train_subset, criterion, optimizer, device)
             print(f"Train loss: {train_loss:.4f}")
             test_loss = test(model, test_subset, criterion, device)
@@ -102,7 +103,7 @@ def main(args):
             f1 = f1_score(all_labels, all_preds, average="macro")
             if f1 > best_f1:
                 best_f1 = f1
-                torch.save(model.state_dict(), args.model_path)
+                torch.save(model.state_dict(), f"{args.save_dir}/model.pt")
                 # Full classification report
                 print(classification_report(all_labels, all_preds))
                 print("Saved model")
@@ -125,4 +126,5 @@ if __name__ == '__main__':
     parser.add_argument('--k', type=int, default=5)
     
     args = parser.parse_args()
+    os.makedirs(args.save_dir, exist_ok=True)
     main(args)
