@@ -34,7 +34,8 @@ if __name__ == '__main__':
         pages = file_reader.pages
 
         for i, page in enumerate(file_reader.pages):
-            data, img = feature_extraction.get_feature(page, expand_after=0, expand_before=0)
+            data = feature_extraction.get_feature(page, expand_after=0, expand_before=0)
+            img = data.img_fp
             labels = set()
             if len(data.words) == 0:
                 continue
