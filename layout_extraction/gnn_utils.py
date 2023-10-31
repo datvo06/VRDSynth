@@ -11,7 +11,7 @@ from torch_geometric import data as pyg_data
 import torch
 
 l2i = {
-        x: i for i, x in enumerate(['B-HEADER', 'I-HEADER', 'B-QUESTION', 'I-QUESTION', 'B-ANSWER', 'I-ANSWER'])
+        x: i for i, x in enumerate(['B-HEADER', 'I-HEADER', 'B-QUESTION', 'I-QUESTION', 'B-ANSWER', 'I-ANSWER', 'O'])
 }
 
 

@@ -28,7 +28,7 @@ class MPNN(MessagePassing):
 
 class MPNNModel(nn.Module):
     def __init__(self, dim_h, netypes, 
-                 dim_in, n_layers=5, n_classes=6, device=device):
+                 dim_in, n_layers=5, n_classes=7, device=device):
         super().__init__()
         self.enc = nn.Embedding(dim_in, dim_h)
         nn.init.xavier_normal_(self.enc.weight)
