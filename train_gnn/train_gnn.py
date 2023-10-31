@@ -93,7 +93,7 @@ def main(args):
             test_loss = test(model, test_subset, criterion, device)
             print(f"Test loss: {test_loss:.4f}")
             all_preds = []
-            for data in test_subset:
+            for data, _ in test_subset:
                 data = data.to(device)
                 out = model(data.x, data.edge_index)
                 all_preds.append(out[0].argmax(dim=1).cpu().numpy())
