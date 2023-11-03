@@ -53,6 +53,8 @@ if __name__ == '__main__':
                 except:
                     print(f"Ignore page {i}: wrong labels {labels}")
                     continue
+                if set(new_l) == {"O"}:
+                    continue
                 data.labels = new_l
                 all_data.append(data)
                 cv2.imwrite(str(result_path / f"{name}_{i}.png"), img)
