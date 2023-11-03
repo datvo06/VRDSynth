@@ -289,7 +289,6 @@ def viz_data_no_rel(data):
             color = (255, 255, 255)
             color_edge = (128, 128, 128)
 
-        print(data['labels'][i], color)
         colored_rect = np.zeros(cropped_img.shape, dtype=np.uint8)
         colored_rect[:] = color
         alpha = 0.5
