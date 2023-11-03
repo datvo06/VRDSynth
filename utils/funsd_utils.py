@@ -250,7 +250,10 @@ def viz_data(data, nx_g):
 
 
 def viz_data_no_rel(data):
-    img = cv2.imread(data.img_fp.replace('.jpg', '.png'))
+    if isinstance(data.img_fp, str):
+        img = cv2.imread(data.img_fp.replace('.jpg', '.png'))
+    else:
+        img = data.img_fp
     for i in range(len(data['boxes'])):
         # 1. Crop the box
         box = data['boxes'][i]
