@@ -205,7 +205,14 @@ def viz_data(data, nx_g):
 
 
 def viz_data(data, nx_g):
-    img = cv2.imread(data.img_fp.replace('.jpg', '.png'))
+    if isinstance(data.img_fp, str):
+        img = cv2.imread(data.img_fp.replace('.jpg', '.png'))
+    else:
+        img = data.img_fp
+
+    # if image is grayscale, convert to BGR 
+    if len(img.shape) == 2:
+        img = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
     for i in range(len(data['boxes'])):
         # 1. Crop the box
         box = data['boxes'][i]
@@ -228,7 +235,7 @@ def viz_data(data, nx_g):
         colored_rect = np.zeros(cropped_img.shape, dtype=np.uint8)
         colored_rect[:] = color
         alpha = 0.5
-        res = cv2.addWeighted(cropped_img, alpha, cropped_img, 1 - alpha, 0, colored_rect)
+        res = cv2.addWeighted(cropped_img, alpha, colored_rect, 1 - alpha, 0, cropped_img)
         img[box[1]:box[3], box[0]:box[2]] = res
         # Draw box edge
         cv2.rectangle(img, (box[0], box[1]), (box[2], box[3]), color_edge, 2)
@@ -254,6 +261,8 @@ def viz_data_no_rel(data):
         img = cv2.imread(data.img_fp.replace('.jpg', '.png'))
     else:
         img = data.img_fp
+    if len(img.shape) == 2:
+        img = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
     for i in range(len(data['boxes'])):
         # 1. Crop the box
         box = data['boxes'][i]
@@ -276,7 +285,7 @@ def viz_data_no_rel(data):
         colored_rect = np.zeros(cropped_img.shape, dtype=np.uint8)
         colored_rect[:] = color
         alpha = 0.5
-        res = cv2.addWeighted(cropped_img, alpha, cropped_img, 1 - alpha, 0, colored_rect)
+        res = cv2.addWeighted(cropped_img, alpha, colored_rect, 1 - alpha, 0, cropped_img)
         img[box[1]:box[3], box[0]:box[2]] = res
         # Draw box edge
         cv2.rectangle(img, (box[0], box[1]), (box[2], box[3]), color_edge, 2)
@@ -288,6 +297,8 @@ def viz_data_entity_mapping(data):
         img = cv2.imread(data.img_fp.replace('.jpg', '.png'))
     else:
         img = data.img_fp
+    if len(img.shape) == 2:
+        img = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
     for i in range(len(data['boxes'])):
         # 1. Crop the box
         box = data['boxes'][i]
@@ -310,7 +321,7 @@ def viz_data_entity_mapping(data):
         colored_rect = np.zeros(cropped_img.shape, dtype=np.uint8)
         colored_rect[:] = color
         alpha = 0.5
-        res = cv2.addWeighted(cropped_img, alpha, cropped_img, 1 - alpha, 0, colored_rect)
+        res = cv2.addWeighted(cropped_img, alpha, colored_rect, 1 - alpha, 0, cropped_img)
         img[box[1]:box[3], box[0]:box[2]] = res
         # Draw box edge
         cv2.rectangle(img, (box[0], box[1]), (box[2], box[3]), color_edge, 2)
