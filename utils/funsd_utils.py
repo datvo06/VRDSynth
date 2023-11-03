@@ -235,7 +235,7 @@ def viz_data(data, nx_g):
         colored_rect = np.zeros(cropped_img.shape, dtype=np.uint8)
         colored_rect[:] = color
         alpha = 0.5
-        res = cv2.addWeighted(cropped_img, alpha, colored_rect, 1 - alpha, 0, cropped_img)
+        res = cv2.addWeighted(cropped_img, alpha, colored_rect, 1 - alpha, 0)
         img[box[1]:box[3], box[0]:box[2]] = res
         # Draw box edge
         cv2.rectangle(img, (box[0], box[1]), (box[2], box[3]), color_edge, 2)
@@ -285,7 +285,7 @@ def viz_data_no_rel(data):
         colored_rect = np.zeros(cropped_img.shape, dtype=np.uint8)
         colored_rect[:] = color
         alpha = 0.5
-        res = cv2.addWeighted(cropped_img, alpha, colored_rect, 1 - alpha, 0, cropped_img)
+        res = cv2.addWeighted(cropped_img, alpha, colored_rect, 1 - alpha, 0)
         img[box[1]:box[3], box[0]:box[2]] = res
         # Draw box edge
         cv2.rectangle(img, (box[0], box[1]), (box[2], box[3]), color_edge, 2)
@@ -321,7 +321,7 @@ def viz_data_entity_mapping(data):
         colored_rect = np.zeros(cropped_img.shape, dtype=np.uint8)
         colored_rect[:] = color
         alpha = 0.5
-        res = cv2.addWeighted(cropped_img, alpha, colored_rect, 1 - alpha, 0, cropped_img)
+        res = cv2.addWeighted(cropped_img, alpha, colored_rect, 1 - alpha, 0)
         img[box[1]:box[3], box[0]:box[2]] = res
         # Draw box edge
         cv2.rectangle(img, (box[0], box[1]), (box[2], box[3]), color_edge, 2)
