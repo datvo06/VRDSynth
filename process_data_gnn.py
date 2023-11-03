@@ -63,7 +63,7 @@ if __name__ == '__main__':
             all_data = pkl.load(f)
 
     os.makedirs(result_path / "viz", exist_ok=True)
-    for i, data in all_data:
+    for i, data in enumerate(all_data):
         data.old_labels = data.labels[:]
         data.labels = [l[2:].lower() for l in data.labels]
         img = viz_data_no_rel(data)
