@@ -10,6 +10,7 @@ import pickle as pkl
 import itertools
 import argparse
 import os
+from utils.funsd_utils import viz_data_no_rel
 
 from process_data_layoutlm import map_label
 
@@ -60,6 +61,15 @@ if __name__ == '__main__':
     else:
         with open(result_path / "data.pkl", "rb") as f:
             all_data = pkl.load(f)
+
+    os.makedirs(result_path / "viz", exist_ok=True)
+    for i, data in all_data:
+        data.old_labels = data.labels[:]
+        data.labels = [l[2:].lower() for l in data.labels]
+        img = viz_data_no_rel(data)
+        cv2.imwrite(str(result_path / "viz" / f"{i}.png"), img)
+
+
     all_words = itertools.chain.from_iterable([d.words for d in all_data])
     word_dict = WordDict(all_words, cutoff=300)
     with open(result_path / "word_dict.pkl", "wb") as f:
