@@ -8,8 +8,6 @@ from file_reader.file_reader import FileReader
 from layout_extraction.layout_extraction import LayoutExtraction
 from post_process.section_grouping import SectionGrouping
 from post_process.post_process import PostProcess
-import shutil
-import tempfile
 import cv2
 from post_process.ps_utils_kv import RuleSynthesisLinking
 from utils.run_visualization_linking import process_and_viz
@@ -37,10 +35,11 @@ async def inference(file: UploadFile, from_page: int = Form(1), to_page: int = F
     file_data = file.file.read()
     file_reader = FileReader(path=None, stream=file_data)
     pages = file_reader.pages[max(0, from_page - 1): to_page]
-    page_entities = layout_extraction.extract_entity(pages)
+    page_words = layout_extraction.extract_words(pages)
     result = []
-    for page, entities in zip(pages, page_entities):
-        groups = section_grouping.group_to_tree(entities)
+    for page, words in zip(pages, page_words):
+        entities = layout_extraction.merge_words_to_entities(words)
+        groups = section_grouping.group_to_tree(entities, page.width)
         page_output = post_process.process(groups)
         result.append({
             "page": page.index + 1,
@@ -54,29 +53,19 @@ async def inference(file: UploadFile, from_page: int = Form(1), to_page: int = F
 
 @app.post("/visualize_pdf/")
 async def visualize_pdf(file: UploadFile = File(...), from_page: int = Form(1), to_page: int = Form(5)):
-    temp_dir = tempfile.mkdtemp()
     try:
-        for i, img in enumerate(process_and_viz(FileReader(
-            path=None, stream=file.file.read()), rule_linking, layout_extraction,
-            section_grouping, from_page, to_page)):
-            cv2.imwrite(os.path.join(temp_dir, f"viz_{len(os.listdir(temp_dir))}.png"), img)
-            img_fp = os.path.join(temp_dir, f'image_{i}.png')
-            cv2.imwrite(img_fp, img)
-
+        file_reader = FileReader(path=None, stream=file.file.read())
         memory_file = io.BytesIO()
         with zipfile.ZipFile(memory_file, 'w') as zf:
-            for image_filename in os.listdir(temp_dir):
-                zf.write(os.path.join(temp_dir, image_filename), arcname=image_filename)
-
+            for i, img in enumerate(process_and_viz(file_reader, rule_linking, layout_extraction,
+                                                    section_grouping, from_page, to_page)):
+                is_success, buffer = cv2.imencode(".jpg", img)
+                zf.writestr(f'page_{i + from_page}.png', buffer)
         memory_file.seek(0)
-        shutil.rmtree(temp_dir)
 
         return StreamingResponse(memory_file, media_type="application/x-zip-compressed")
     except Exception as e:
-        shutil.rmtree(temp_dir)
         raise e
-
-
 
 
 if __name__ == '__main__':

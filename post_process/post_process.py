@@ -1,4 +1,5 @@
 from typing import *
+from layout_extraction.funsd_utils import Entity
 from .ps_utils_kv import RuleSynthesisLinking
 
 
@@ -55,7 +56,7 @@ class PostProcess:
         else:
             self.rule: RuleSynthesisLinking = None
 
-    def merge_text(self, entities: List[Dict]) -> str:
+    def merge_text(self, entities: List[Entity]) -> str:
         entities = sorted(entities, key=lambda entity: (int(entity["y0"] / 2), int(entity["x0"])))
         return " ".join([entity["text"] for entity in entities])
 
@@ -115,13 +116,12 @@ class PostProcess:
             "key-value": pairs
         }
 
-    def process_section(self, section: Dict) -> Dict:
+    def process_section(self, section: Dict[str, List[Entity]]) -> Dict:
         title = self.merge_text(section["title"])
         if self.rule:
             entities = []
             for ent in section["content"]:
-                ent = ent.copy()
-                ent["label"] = ent["label"].lower()
+                ent.label = ent["label"].lower()
                 entities.append(ent)
             if len(entities) == 0:
                 return {
