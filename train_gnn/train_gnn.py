@@ -78,7 +78,7 @@ def main(args):
         word_dict = pkl.load(f)
     
     splits = k_fold_split(dataset, args.k)
-    model = MPNNModel(128, 4, calc_feature_size(w2i=word_dict), 5, 7)
+    model = MPNNModel(128, 4, calc_feature_size(w2i=word_dict), 5, 4)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model.to(device)
     best_f1 = 0

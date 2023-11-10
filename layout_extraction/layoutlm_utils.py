@@ -3,6 +3,8 @@ from typing import *
 from file_reader.layout.page import Page
 import itertools
 
+MAX_HEIGHT = 200
+
 
 class FeatureExtraction:
     def __init__(self, max_height=900):
@@ -53,7 +55,7 @@ class FeatureExtraction:
         start_y, data, sub_imgs, batch = 0, [], [], []
         tot_word = len([w for s, w in itertools.product(spans, all_ws)
                         if s[0] <= w.y0 < w.y1 <= s[1]])
-        count_batch = tot_word // 200 + 1
+        count_batch = tot_word // MAX_HEIGHT + 1
         word_in_batch = tot_word / count_batch
         for s in spans:
             end_y = start_y + s[1] - s[0]

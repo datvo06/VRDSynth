@@ -69,7 +69,7 @@ if __name__ == '__main__':
         data.old_labels = data.labels[:]
         data.labels = [l[2:].lower() if len(l) > 2 else l for l in data.labels]
         img = viz_data_no_rel(data)
-        data.labels = data.old_labels[:]
+        data.labels = [l if "-" not in l else l[2:] for l in data.old_labels]
         cv2.imwrite(str(result_path / "viz" / f"{i}.png"), img)
 
 

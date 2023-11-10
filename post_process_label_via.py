@@ -4,6 +4,7 @@ import argparse
 from pathlib import Path
 import cv2
 from utils.funsd_utils import viz_data_no_rel
+from layout_extraction.gnn_utils import convert_to_pyg
 import os
 
 from collections import namedtuple
@@ -68,13 +69,13 @@ def main(args):
         print(i, box, lbl, len(intersect_words))
         # sort by left most and top most
         intersect_words.sort(key=lambda x: (cdata['boxes'][x][1], cdata['boxes'][x][2]))
-        # if the first word is the same as the label, then we can just use it
-        if intersect_words:
-            cdata['labels'][intersect_words[0]] = f"B-{lbl}"
-            cdata.labels[intersect_words[0]] = f"B-{lbl}"
         for i in intersect_words[1:]:
             cdata['labels'][i] = f"I-{lbl}"
             cdata.labels[i] = f"I-{lbl}"
+
+    for data in all_data:
+        data['labels'] = [l if "I-" not in l else l[2:] for l in data['labels']]
+        data.labels = [l if "-" not in l else l[2:] for l in data.labels]
 
     # Save the data
     with open(f"{args.output}/new_data.pkl", "wb") as f:
@@ -86,6 +87,13 @@ def main(args):
         img = viz_data_no_rel(data)
         data.labels = data.old_labels[:]
         cv2.imwrite(str(result_path / "viz_new" / f"{i}.png"), img)
+
+    word_dict = pkl.load(open(f"{args.output}/word_dict.pkl", "rb"))
+
+    # encode
+    all_data_encoded = [convert_to_pyg(d, word_dict) for d in all_data]
+    with open(result_path / "data_encoded.pkl", "wb") as f:
+        pkl.dump(all_data_encoded, f)
 
 
 if __name__ == '__main__':
