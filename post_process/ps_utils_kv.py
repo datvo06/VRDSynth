@@ -5,6 +5,7 @@ from utils.funsd_utils import DataSample
 from utils.legacy_graph_utils import build_nx_g_legacy
 from utils.algorithms import UnionFind
 from collections import defaultdict
+from layout_extraction.funsd_utils import Entity
 import itertools
 
 
@@ -12,15 +13,15 @@ class RuleSynthesisLinking:
     def __init__(self, ps_linking: List[FindProgram]):
         self.ps = ps_linking
 
-    def inference(self, entities: List[Dict], y_threshold: float = None) -> DataSample:
+    def inference(self, entities: List[Entity], y_threshold: float = None) -> DataSample:
         """
         Map each answer to the corresponding question
         :param entities: a list of words as dictionary. {"text", "label", "x0", "y0", "x1", "y1"}
         :param y_threshold:
         :return: a DataSample object
         """
-        texts = [word["text"] for word in entities]
-        labels = [word["label"] for word in entities]
+        texts = [word.text for word in entities]
+        labels = [word.label for word in entities]
         boxes = [[word["x0"], word["y0"], word["x1"], word["y1"]] for word in entities]
         data_sample = DataSample(texts, labels, [], [], boxes, )
         if texts:
