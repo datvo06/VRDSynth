@@ -73,7 +73,7 @@ def test(model, dataset, criterion, device):
 def main(args):
     # Load the dataset
     with open(args.data_path, "rb") as f:
-        dataset = pkl.load(f)
+        dataset = pkl.load(f)[:400]
     with open(args.word_dict_path, "rb") as f:
         word_dict = pkl.load(f)
     
