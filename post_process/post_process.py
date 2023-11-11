@@ -60,7 +60,9 @@ class PostProcess:
         entities = sorted(entities, key=lambda entity: (int(entity["y0"] / 2), int(entity["x0"])))
         return " ".join([entity["text"] for entity in entities])
 
-    def process_key_value(self, entities: List[Dict]) -> Dict:
+    def process_key_value(self, entities: List[Entity]) -> Dict:
+        entities = [{"x0": e.x0, "y0": e.y0, "x1": e.x1, "y1": e.y1, "label": e.label, "text": e.text}
+                    for e in entities]
         others = []
         keys = []
         values = []
