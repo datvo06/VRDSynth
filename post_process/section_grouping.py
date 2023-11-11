@@ -4,6 +4,7 @@ from layout_extraction.layout_extraction import HEADER_LABEL
 
 
 def is_section_header(entity: Entity, width: int) -> bool:
+    # The header on the middle page is the section header
     if (entity["label"] == HEADER_LABEL) and 0.4 * width < 0.5 * (entity["x0"] + entity["x1"]) < 0.6 * width:
         return True
     return False

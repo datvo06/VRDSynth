@@ -12,7 +12,7 @@ from layout_extraction.layoutlm_utils import FeatureExtraction
 from layout_extraction.ps_utils import RuleSynthesis
 from file_reader import prj_path
 from utils.ps_utils import FindProgram
-from layout_extraction.funsd_utils import Word, Bbox, Entity, BoxLabel
+from layout_extraction.funsd_utils import Word, Bbox, Entity, BoxLabel, Direction
 from pathlib import Path
 
 HEADER_LABEL = "HEADER"
@@ -99,7 +99,7 @@ class LayoutExtraction:
             for idx, pred in zip(true_ids, true_predictions):
                 if idx is None:
                     continue
-                if idx >= pad_tokens/2 or batch[idx].label is None:
+                if idx >= pad_tokens / 2 or batch[idx].label is None:
                     batch[idx].label = pred.split("-", 1)[-1]
         return words
 
@@ -111,67 +111,68 @@ class LayoutExtraction:
         """
         result = []
         for page in tqdm(pages, desc="Extract entity from page:"):
-            batchs, imgs = self.feature_extraction.get_feature(page, expand_before=0, expand_after=0)
-            if len(imgs) == 0:
-                continue
-            words = [[t["text"] for t in words] for words in batchs]
-            boxes = [[[t["x0"], t["y0"], t["x1"], t["y1"]] for t in words] for words in batchs]
-            encoding = self.processor(imgs, words, boxes=boxes, truncation=True, return_tensors="pt",
-                                      return_offsets_mapping=True, padding=True)
-            offset_mappings = encoding.pop("offset_mapping").squeeze().tolist()
-            outputs = self.model(**encoding)
-            logits = outputs.logits
-            predictions_list = logits.argmax(-1).squeeze().tolist()
-            id2label = self.config.id2label
-            # entities = {label: [] for _, label in id2label.items()}
-            entities, word_with_labels = defaultdict(list), []
-            if len(imgs) == 1:
-                offset_mappings = [offset_mappings]
-                predictions_list = [predictions_list]
-            for offset_mapping, predictions, enc, batch in zip(offset_mappings, predictions_list, encoding.encodings,
-                                                               batchs):
-                is_subword = np.array(offset_mapping)[:, 0] != 0
-                word_ids = enc.word_ids
+            # batchs, imgs = self.feature_extraction.get_feature(page, expand_before=0, expand_after=0)
+            # if len(imgs) == 0:
+            #     continue
+            # words = [[t["text"] for t in words] for words in batchs]
+            # boxes = [[[t["x0"], t["y0"], t["x1"], t["y1"]] for t in words] for words in batchs]
+            # encoding = self.processor(imgs, words, boxes=boxes, truncation=True, return_tensors="pt",
+            #                           return_offsets_mapping=True, padding=True)
+            # offset_mappings = encoding.pop("offset_mapping").squeeze().tolist()
+            # outputs = self.model(**encoding)
+            # logits = outputs.logits
+            # predictions_list = logits.argmax(-1).squeeze().tolist()
+            # id2label = self.config.id2label
+            # # entities = {label: [] for _, label in id2label.items()}
+            # entities, word_with_labels = defaultdict(list), []
+            # if len(imgs) == 1:
+            #     offset_mappings = [offset_mappings]
+            #     predictions_list = [predictions_list]
+            # for offset_mapping, predictions, enc, batch in zip(offset_mappings, predictions_list, encoding.encodings,
+            #                                                    batchs):
+            #     is_subword = np.array(offset_mapping)[:, 0] != 0
+            #     word_ids = enc.word_ids
+            #
+            #     true_predictions = [id2label.get(pred, 'O') for idx, pred in enumerate(predictions) if
+            #                         not is_subword[idx]]
+            #     # true_boxes = [box for idx, box in enumerate(token_boxes) if not is_subword[idx]]
+            #     true_ids = [word_ids[idx] for idx in range(len(predictions)) if not is_subword[idx]]
+            #     for label in id2label.values():
+            #         entities[label.split("-", 1)[-1]].extend(
+            #             [batch[idx]["origin_data"] for idx, pred in zip(true_ids, true_predictions) if
+            #              pred == label and idx is not None])
+            #     for idx, pred in zip(true_ids, true_predictions):
+            #         if idx is None:
+            #             continue
+            #         word_with_label = batch[idx]["origin_data"].copy()
+            #         word_with_label["label"] = pred.split("-", 1)[-1]
+            #         word_with_labels.append(Word(box=Bbox(word_with_label["x0"], word_with_label["y0"],
+            #                                               word_with_label["x1"], word_with_label["y1"]),
+            #                                      text=word_with_label["text"],
+            #                                      label=word_with_label["label"]))
 
-                true_predictions = [id2label.get(pred, 'O') for idx, pred in enumerate(predictions) if
-                                    not is_subword[idx]]
-                # true_boxes = [box for idx, box in enumerate(token_boxes) if not is_subword[idx]]
-                true_ids = [word_ids[idx] for idx in range(len(predictions)) if not is_subword[idx]]
-                for label in id2label.values():
-                    entities[label.split("-", 1)[-1]].extend(
-                        [batch[idx]["origin_data"] for idx, pred in zip(true_ids, true_predictions) if
-                         pred == label and idx is not None])
-                for idx, pred in zip(true_ids, true_predictions):
-                    if idx is None:
-                        continue
-                    word_with_label = batch[idx]["origin_data"].copy()
-                    word_with_label["label"] = pred.split("-", 1)[-1]
-                    word_with_labels.append(Word(box=Bbox(word_with_label["x0"], word_with_label["y0"],
-                                                          word_with_label["x1"], word_with_label["y1"]),
-                                                 text=word_with_label["text"],
-                                                 label=word_with_label["label"]))
-            result.append(word_with_labels)
+            words = []
+            for paragraph in page.paragraphs:
+                for textline in paragraph.textlines:
+                    for token in textline.split(r"\s+", min_distance=0.1):
+                        words.append(Word(box=Bbox(token.x0, token.y0, token.x1, token.y1),
+                                          text=token.text))
+            result.append(self.predict_tokens(words, page.image))
             continue
-            # Group words to entities
-            # if self.rule_synthesis:
-            #     # Use Synthesis rules
-            #     for word in word_with_labels:
-            #         word["label"] = word["label"].lower()
-            #     output = self.rule_synthesis.inference(word_with_labels, y_threshold=10)
-            #     for entity in output:
-            #         entity["label"] = entity["label"].upper()
-            #         # Consider titles in the middle of the line as headers
-            #         entity["is_header"] = ((entity["label"] == "HEADER") and 0.4 * page.width < 0.5 * (
-            #                     entity["x0"] + entity["x1"]) < 0.6 * page.width)
-            # else:
-            #     output = self.post_process(word_with_labels, page)
-            # page.paragraphs = paragraphs
-            # result.append(output)
         return result
 
-    def merge_words_to_entities(self, words: List[Word], margin: float = 0.35) -> List[Entity]:
+    def merge_words_to_entities(self, words: List[Word], x_margin: float = 0.35, y_margin: float = 0.3) -> List[Entity]:
+        margin_weights = {
+            HEADER_LABEL: 2,
+            QUESTION_LABEL: 1,
+            VALUE_LABEL: 1
+        }
+        # merge words horizontally
         padded_words = [
-            word.add_pad(margin * word.height, - 0.2 * word.height, margin * word.height, -0.2 * word.height)
+            word.add_pad(x_margin * word.height * margin_weights.get(word.label, 1),
+                         - 0.2 * word.height,
+                         x_margin * word.height * margin_weights.get(word.label, 1),
+                         -0.2 * word.height)
             for word in words]
         horizontally_merged = {i: set() for i in range(len(padded_words))}
         for i1, word1 in enumerate(padded_words):
@@ -193,7 +194,7 @@ class LayoutExtraction:
                 if value in horizontally_merged:
                     values.update(horizontally_merged.pop(value))
             groups.append(group)
-        entities: List[Entity] = []
+        line_entities: List[Entity] = []
         for group in groups:
             word_in_group = [words[i] for i in group]
             word_in_group = sorted(word_in_group, key=lambda word: word.x0)
@@ -201,9 +202,9 @@ class LayoutExtraction:
                 [word.label for word in word_in_group if word.label and word.label != OTHER_LABEL], return_counts=True)
             labels = dict(zip(labels, counts))
             if HEADER_LABEL in labels and len(labels) == 1:
-                entities.append(Entity(word_in_group, label=HEADER_LABEL))
+                line_entities.append(Entity(word_in_group, label=HEADER_LABEL))
             elif QUESTION_LABEL in labels and len(labels) == 1:
-                entities.append(Entity(word_in_group, label=QUESTION_LABEL))
+                line_entities.append(Entity(word_in_group, label=QUESTION_LABEL))
             else:
                 prev = None
                 span = []
@@ -212,13 +213,44 @@ class LayoutExtraction:
                         span.append(word)
                     else:
                         if span:
-                            entities.append(Entity(span, label=prev))
+                            line_entities.append(Entity(span, label=prev))
                             span = []
                         span.append(word)
                         prev = word.label
                 if span:
-                    entities.append(Entity(span, label=prev or OTHER_LABEL))
+                    line_entities.append(Entity(span, label=prev or OTHER_LABEL))
+
+        # merge headers vertically
+
+        line_entities = sorted(line_entities, key=lambda entity: (entity.y0, entity.x0))
+        entities: List[Entity] = []
+        for entity in line_entities:
+            if entities:
+                if self.find_header(entities[-1], entity, y_margin=y_margin):
+                    # Check if entities can be merged. Can use the rule synthesis
+                    entities[-1] = Entity(entities[-1].words + entity.words, label=HEADER_LABEL)
+                else:
+                    entities.append(entity)
+            else:
+                entities.append(entity)
+
+        # TODO Merge keys vertically
+
         return entities
+
+    def find_header(self, e1, e2, y_margin: float = 0.3) -> bool:
+        # Check if entities can be merged. Can use the rule synthesis
+        if e1.label != HEADER_LABEL or e2.label != HEADER_LABEL:
+            # Entity is not a header
+            return False
+        if e2.y0 - e1.y1 > y_margin * min(e1.avg_height, e2.avg_height):
+            # The entities are too far away
+            return False
+
+        if e1.x0 > e2.x1 or e2.x0 > e1.x1:
+            return False
+
+        return True
 
     def group_to_entities_rule_synthesis(self, words: List[Dict], page) -> List[Dict]:
         # Use Synthesis rules

@@ -2,6 +2,7 @@ from typing import *
 from collections import namedtuple
 import numpy as np
 import cv2
+from enum import Enum
 
 RED = [0, 0, 255]
 GREEN = [0, 255, 0]
@@ -15,6 +16,14 @@ label_to_color = {"question": BLUE, "key": BLUE, "QUESTION": BLUE,
                   "section": RED}
 
 Bbox = namedtuple('Bbox', ['x0', 'y0', 'x1', 'y1'])
+
+
+class Direction(Enum):
+    RIGHT = "right"
+    LEFT = "left"
+    BOTTOM = "bottom"
+    TOP = "top"
+    NONE = "none"
 
 
 class BoxLabel:
@@ -37,6 +46,14 @@ class BoxLabel:
     @property
     def y1(self):
         return self.box.y1
+
+    @property
+    def x_cen(self):
+        return (self.box.x0 + self.box.x1) / 2
+
+    @property
+    def y_cen(self):
+        return (self.box.y0 + self.box.y1) / 2
 
     @property
     def height(self):
@@ -71,6 +88,19 @@ class BoxLabel:
         return BoxLabel(Bbox(self.box.x0 - left, self.box.y0 - top, self.box.x1 + right, self.box.y1 + bottom),
                         self.label)
 
+    def calculate_direction(self, other: "BoxLabel") -> Direction:
+        if self.x0 < other.x_cen < self.x1:
+            if other.y_cen > self.y_cen:
+                return Direction.BOTTOM
+            else:
+                return Direction.TOP
+        elif self.y0 < other.y_cen < self.y1:
+            if other.x_cen > self.x_cen:
+                return Direction.RIGHT
+            else:
+                return Direction.LEFT
+        return Direction.NONE
+
 
 class Word(BoxLabel):
     def __init__(self, box: Bbox, text: str, label: str = None):
@@ -103,6 +133,13 @@ class Entity(BoxLabel):
             self.text = " ".join(word.text for word in self.words)
         self.label = label
         self.linking = linking
+
+    @property
+    def avg_height(self):
+        """
+        Get average height of words.
+        """
+        return sum(word.height for word in self.words) / len(self.words)
 
     def __getitem__(self, item):
         if not hasattr(self, item):

@@ -1,5 +1,5 @@
 import re
-
+from typing import *
 from file_reader.utils.text_utils import get_bullet, get_level
 
 from .box import Box
@@ -151,7 +151,7 @@ class TextLine(Box):
         })
         return d
 
-    def split(self, sep=None, min_distance=0.5):
+    def split(self, sep=None, min_distance=0.5) -> List["TextLine"]:
         chars = self.spans
         text = ''.join(span.text for span in chars)
         if sep is None:
