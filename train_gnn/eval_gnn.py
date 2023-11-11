@@ -23,6 +23,6 @@ if __name__ == '__main__':
         for i, page in enumerate(file_reader.pages):
             data = feat_extractor.get_feature(page, expand_after=0, expand_before=0)
             graph, lbls = convert_to_pyg(data, word_dict)
-            pred = model(graph.x, graph.edge_index)
-            all_preds.append(out[0].argmax(dim=1).cpu().numpy())
+            out = model(graph.x, graph.edge_index)
+            pred = out[0].argmax(dim=1).cpu().numpy()
             data.labels = [i2l[l2i_trimmed[p]] for p in pred]
