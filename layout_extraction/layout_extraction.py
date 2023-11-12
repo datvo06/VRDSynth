@@ -17,7 +17,7 @@ from pathlib import Path
 
 HEADER_LABEL = "HEADER"
 QUESTION_LABEL = "QUESTION"
-VALUE_LABEL = "ANSWER"
+ANSWER_LABEL = "ANSWER"
 OTHER_LABEL = "O"
 
 
@@ -99,7 +99,7 @@ class LayoutExtraction:
         margin_weights = {
             HEADER_LABEL: 2,
             QUESTION_LABEL: 1,
-            VALUE_LABEL: 1
+            ANSWER_LABEL: 1
         }
         # merge words horizontally
         padded_words = [
@@ -137,12 +137,14 @@ class LayoutExtraction:
             labels = dict(zip(labels, counts))
             if HEADER_LABEL in labels:
                 # All words must be headers or not
-                if labels[HEADER_LABEL] > 0.5 * sum(labels.values()):
+                if labels[HEADER_LABEL] >= 0.5 * sum(labels.values()):
                     line_entities.append(Entity(word_in_group, label=HEADER_LABEL))
                 else:
                     line_entities.append(Entity(word_in_group, label=max(labels, key=labels.__getitem__)))
             elif QUESTION_LABEL in labels and len(labels) == 1:
                 line_entities.append(Entity(word_in_group, label=QUESTION_LABEL))
+            elif ANSWER_LABEL in labels and len(labels) == 1:
+                line_entities.append(Entity(word_in_group, label=ANSWER_LABEL))
             else:
                 prev = None
                 span = []
