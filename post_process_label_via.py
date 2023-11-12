@@ -98,7 +98,7 @@ def main(args):
 
     # encode
     all_data_encoded = [convert_to_pyg(d, word_dict) for d in all_data][:400]
-    all_data_encoded = [d for i, d in all_data_encoded if d is not bad_list]
+    all_data_encoded = [d for i, d in enumerate(all_data_encoded) if i is not bad_list]
     with open(result_path / "data_encoded.pkl", "wb") as f:
         pkl.dump(all_data_encoded, f)
     # shuffle
