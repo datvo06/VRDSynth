@@ -106,12 +106,9 @@ def main(args):
     random.shuffle(all_data_encoded)
     # split
     train_data = all_data_encoded[:int(len(all_data_encoded) * 0.8)]
-    val_data = all_data_encoded[int(len(all_data_encoded) * 0.8):int(len(all_data_encoded) * 0.9)]
-    test_data = all_data_encoded[int(len(all_data_encoded) * 0.9):]
+    test_data = all_data_encoded[int(len(all_data_encoded) * 0.8):]
     with open(result_path / "train_data.pkl", "wb") as f:
         pkl.dump(train_data, f)
-    with open(result_path / "val_data.pkl", "wb") as f:
-        pkl.dump(val_data, f)
     with open(result_path / "test_data.pkl", "wb") as f:
         pkl.dump(test_data, f)
 
