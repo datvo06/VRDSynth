@@ -33,7 +33,7 @@ class LayoutExtraction:
         """
         try:
             if model_path:
-                self.feature_extraction = FeatureExtraction(max_height=700)
+                self.feature_extraction = FeatureExtraction(max_height=900)
                 self.model = LayoutLMv3ForTokenClassification.from_pretrained(model_path)
                 self.processor = LayoutLMv3Processor.from_pretrained(model_path, apply_ocr=False)
                 self.config = LayoutLMv3Config.from_pretrained(model_path)
@@ -44,50 +44,24 @@ class LayoutExtraction:
             self.use_layoutlm = False
         self.rule_synthesis: Optional[RuleSynthesis] = RuleSynthesis(find_programs) if find_programs else None
 
-    def predict_tokens(self, words: List[Word], image: np.ndarray = None, max_tokens: int = 200,
-                       pad_tokens: int = 10, max_width: int = 900) -> List[Word]:
-        words = sorted(words, key=lambda word: word.y0)
-        if max(image.shape) >= max_width:
-            rate = max_width / max(image.shape)
-            height = int(image.shape[0] * rate)
-            width = int(image.shape[1] * rate)
-            image = cv2.resize(image, (width, height))
-            word_boxes = [BoxLabel(Bbox(*[int(d * rate) for d in word.box])) for word in words]
-        else:
-            word_boxes = [BoxLabel(word.box) for word in words]
+    def predict_tokens(self, words: List[Word], image: np.ndarray = None, overlap_tokens: int = 10) -> List[Word]:
+        batches, feat_imgs, feat_boxes = self.feature_extraction.segment_page(words, image, overlap_tokens)
+        texts = [[word.text for word in batch] for batch in batches]
+        # Sets label to None
         for word in words:
             word.label = None
-        tot_word = len(words)
-        count_batch = tot_word // max_tokens + 1
-        count_word_in_batch = tot_word // count_batch + 1
-
-        batchs = []
-        texts, imgs, boxes = [], [], []
-        for i in range(count_batch):
-            start = max(0, i * count_word_in_batch - pad_tokens)
-            end = min(len(words), (i + 1) * count_word_in_batch + pad_tokens)
-            word_in_batch = words[start: end]
-            y_min = min(word.y0 for word in word_boxes[start: end])
-            y_min = max(0, y_min - 3 * word_boxes[start].height)
-            y_max = max(word.y1 for word in word_boxes[start: end])
-            y_max = min(image.shape[0], y_max + 3 * word_boxes[start].height, y_min + max_width)
-            batchs.append(word_in_batch)
-            texts.append([word.text for word in word_in_batch])
-            imgs.append(np.copy(image[y_min: y_max]))
-            boxes.append([word.add_pad(0, y_min, 0, - y_min).box for word in word_boxes[start: end]])
-
-        encoding = self.processor(imgs, texts, boxes=boxes, truncation=True, return_tensors="pt",
+        encoding = self.processor(feat_imgs, texts, boxes=feat_boxes, truncation=True, return_tensors="pt",
                                   return_offsets_mapping=True, padding=True)
         offset_mappings = encoding.pop("offset_mapping").squeeze().tolist()
         outputs = self.model(**encoding)
         logits = outputs.logits
         predictions_list = logits.argmax(-1).squeeze().tolist()
         id2label = self.config.id2label
-        if len(imgs) == 1:
+        if len(feat_imgs) == 1:
             offset_mappings = [offset_mappings]
             predictions_list = [predictions_list]
         for offset_mapping, predictions, enc, batch in zip(offset_mappings, predictions_list, encoding.encodings,
-                                                           batchs):
+                                                           batches):
             is_subword = np.array(offset_mapping)[:, 0] != 0
             word_ids = enc.word_ids
 
@@ -99,7 +73,7 @@ class LayoutExtraction:
             for idx, pred in zip(true_ids, true_predictions):
                 if idx is None:
                     continue
-                if idx >= pad_tokens / 2 or batch[idx].label is None:
+                if idx >= overlap_tokens or batch[idx].label is None:
                     batch[idx].label = pred.split("-", 1)[-1]
         return words
 
@@ -111,46 +85,6 @@ class LayoutExtraction:
         """
         result = []
         for page in tqdm(pages, desc="Extract entity from page:"):
-            # batchs, imgs = self.feature_extraction.get_feature(page, expand_before=0, expand_after=0)
-            # if len(imgs) == 0:
-            #     continue
-            # words = [[t["text"] for t in words] for words in batchs]
-            # boxes = [[[t["x0"], t["y0"], t["x1"], t["y1"]] for t in words] for words in batchs]
-            # encoding = self.processor(imgs, words, boxes=boxes, truncation=True, return_tensors="pt",
-            #                           return_offsets_mapping=True, padding=True)
-            # offset_mappings = encoding.pop("offset_mapping").squeeze().tolist()
-            # outputs = self.model(**encoding)
-            # logits = outputs.logits
-            # predictions_list = logits.argmax(-1).squeeze().tolist()
-            # id2label = self.config.id2label
-            # # entities = {label: [] for _, label in id2label.items()}
-            # entities, word_with_labels = defaultdict(list), []
-            # if len(imgs) == 1:
-            #     offset_mappings = [offset_mappings]
-            #     predictions_list = [predictions_list]
-            # for offset_mapping, predictions, enc, batch in zip(offset_mappings, predictions_list, encoding.encodings,
-            #                                                    batchs):
-            #     is_subword = np.array(offset_mapping)[:, 0] != 0
-            #     word_ids = enc.word_ids
-            #
-            #     true_predictions = [id2label.get(pred, 'O') for idx, pred in enumerate(predictions) if
-            #                         not is_subword[idx]]
-            #     # true_boxes = [box for idx, box in enumerate(token_boxes) if not is_subword[idx]]
-            #     true_ids = [word_ids[idx] for idx in range(len(predictions)) if not is_subword[idx]]
-            #     for label in id2label.values():
-            #         entities[label.split("-", 1)[-1]].extend(
-            #             [batch[idx]["origin_data"] for idx, pred in zip(true_ids, true_predictions) if
-            #              pred == label and idx is not None])
-            #     for idx, pred in zip(true_ids, true_predictions):
-            #         if idx is None:
-            #             continue
-            #         word_with_label = batch[idx]["origin_data"].copy()
-            #         word_with_label["label"] = pred.split("-", 1)[-1]
-            #         word_with_labels.append(Word(box=Bbox(word_with_label["x0"], word_with_label["y0"],
-            #                                               word_with_label["x1"], word_with_label["y1"]),
-            #                                      text=word_with_label["text"],
-            #                                      label=word_with_label["label"]))
-
             words = []
             for paragraph in page.paragraphs:
                 for textline in paragraph.textlines:
@@ -201,8 +135,12 @@ class LayoutExtraction:
             labels, counts = numpy.unique(
                 [word.label for word in word_in_group if word.label and word.label != OTHER_LABEL], return_counts=True)
             labels = dict(zip(labels, counts))
-            if HEADER_LABEL in labels and len(labels) == 1:
-                line_entities.append(Entity(word_in_group, label=HEADER_LABEL))
+            if HEADER_LABEL in labels:
+                # All words must be headers or not
+                if labels[HEADER_LABEL] > 0.5 * sum(labels.values()):
+                    line_entities.append(Entity(word_in_group, label=HEADER_LABEL))
+                else:
+                    line_entities.append(Entity(word_in_group, label=max(labels, key=labels.__getitem__)))
             elif QUESTION_LABEL in labels and len(labels) == 1:
                 line_entities.append(Entity(word_in_group, label=QUESTION_LABEL))
             else:
@@ -248,6 +186,12 @@ class LayoutExtraction:
             return False
 
         if e1.x0 > e2.x1 or e2.x0 > e1.x1:
+            return False
+
+        if e2.x0 < e1.x0 - e1.avg_height and e2.x1 < e1.x1 - e1.avg_height:
+            return False
+
+        if e2.x0 > e1.x0 + e1.avg_height / 2 and abs(e1.x_cen - e2.x_cen) > e1.avg_height / 2:
             return False
 
         return True

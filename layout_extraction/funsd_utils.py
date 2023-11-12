@@ -169,11 +169,13 @@ def visualize(img, boxes):
         box = entity.box
 
         cropped_img = img[box.y0:box.y1, box.x0:box.x1, :]
+        if min(cropped_img.shape) == 0:
+            print("Error", box)
+            continue
         colored_rect = np.zeros(cropped_img.shape, dtype=np.uint8)
         colored_rect[:] = label_to_color[entity.label]
         alpha = 0.6
         res = cv2.addWeighted(cropped_img, alpha, colored_rect, 1 - alpha, 0)
-
         # image_crop[np.where((image_crop < [168, 168, 168]).all(axis=2))] = label_to_color[entity.label]
         img[box.y0:box.y1, box.x0:box.x1, :] = res
 

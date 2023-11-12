@@ -1,14 +1,15 @@
+import cv2
 import numpy as np
 from typing import *
 from file_reader.layout.page import Page
+from layout_extraction.funsd_utils import Word, Bbox, BoxLabel
 import itertools
-
-MAX_HEIGHT = 200
 
 
 class FeatureExtraction:
-    def __init__(self, max_height=900):
+    def __init__(self, max_height: int = 900, max_tokens: int = 200):
         self.max_height = max_height
+        self.max_tokens = max_tokens
 
     def get_feature(self, page: Page, other_textline=0.0, get_label=False, expand_before=1, expand_after=1):
         """
@@ -21,12 +22,12 @@ class FeatureExtraction:
         :param expand_after:    Expand textlines after proposal title.
         :return: Words and image, that is used for LayoutLM model.
         """
-        all_ws, paragraphs = [], sorted(page.paragraphs, key=lambda x: x.y0)    # sort from top to bottom
+        all_ws, paragraphs = [], sorted(page.paragraphs, key=lambda x: x.y0)  # sort from top to bottom
         for p in paragraphs:
             for t in p.textlines:
                 ws, prev_lbl = t.split(r"\s+", min_distance=0.1), None
                 for ibox, w in enumerate(ws):
-                    w_lbls = [s.label for s in w.spans if s.label]      # get all span labels if exist
+                    w_lbls = [s.label for s in w.spans if s.label]  # get all span labels if exist
                     print("aaa") if (w_lbls and w_lbls[0] and str(w_lbls[0]) == "None") else None
                     if w_lbls:
                         if w_lbls[0]:
@@ -55,7 +56,7 @@ class FeatureExtraction:
         start_y, data, sub_imgs, batch = 0, [], [], []
         tot_word = len([w for s, w in itertools.product(spans, all_ws)
                         if s[0] <= w.y0 < w.y1 <= s[1]])
-        count_batch = tot_word // MAX_HEIGHT + 1
+        count_batch = tot_word // self.max_tokens + 1
         word_in_batch = tot_word / count_batch
         for s in spans:
             end_y = start_y + s[1] - s[0]
@@ -75,3 +76,42 @@ class FeatureExtraction:
                 batch = []
         (data.append(batch), sub_imgs.append(new_image[:start_y])) if batch else None
         return data, sub_imgs
+
+    def segment_page(self, words: List[Word], image: np.ndarray = None, overlap_tokens: int = 10):
+        """
+        Segment page into many pages with overlap words.
+        :param words: a list of words in the page
+        :param image: image of page
+        :param overlap_tokens: count overlap words.
+        :return: batchs, imgs, boxes
+        """
+        words = sorted(words, key=lambda word: word.y0)
+        if max(image.shape) >= self.max_height:
+            rate = self.max_height / max(image.shape)
+            height = int(image.shape[0] * rate)
+            width = int(image.shape[1] * rate)
+            image = cv2.resize(image, (width, height))
+            word_boxes = [BoxLabel(Bbox(*[int(d * rate) for d in word.box])) for word in words]
+        else:
+            word_boxes = [BoxLabel(word.box) for word in words]
+
+        tot_word = len(words)
+        count_batch = tot_word // self.max_tokens + 1
+        count_word_in_batch = tot_word // count_batch + 1
+
+        batchs = []
+        texts, imgs, boxes = [], [], []
+        for i in range(count_batch):
+            start = max(0, i * count_word_in_batch - overlap_tokens)
+            end = min(len(words), (i + 1) * count_word_in_batch + overlap_tokens)
+            word_in_batch = words[start: end]
+            y_min = min(word.y0 for word in word_boxes[start: end])
+            y_min = max(0, y_min - 3 * word_boxes[start].height)
+            y_max = max(word.y1 for word in word_boxes[start: end])
+            y_max = min(image.shape[0], y_max + 3 * word_boxes[start].height, y_min + self.max_height)
+            batchs.append(word_in_batch)
+            texts.append([word.text for word in word_in_batch])
+            imgs.append(np.copy(image[y_min: y_max]))
+            boxes.append([word.add_pad(0, y_min, 0, - y_min).box for word in word_boxes[start: end]])
+
+        return batchs, imgs, boxes
