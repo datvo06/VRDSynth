@@ -11,6 +11,7 @@ from collections import namedtuple
 
 Box = namedtuple("Box", ["x0", "y0", "x1", "y1"])
 
+bad_list = set([20, 30, 54, 55, 65, 104, 157, 170, 234, 239, 240, 293, 303, 320, 332, 340, 351, 365, 366, 395])
 
 def check_intersect_percentage(big_box, small_box):
     # Calculate the area of the small box
@@ -96,9 +97,23 @@ def main(args):
     word_dict = pkl.load(open(f"{args.output}/word_dict.pkl", "rb"))
 
     # encode
-    all_data_encoded = [convert_to_pyg(d, word_dict) for d in all_data]
+    all_data_encoded = [convert_to_pyg(d, word_dict) for d in all_data][:400]
+    all_data_encoded = [d for i, d in all_data_encoded if d is not bad_list]
     with open(result_path / "data_encoded.pkl", "wb") as f:
         pkl.dump(all_data_encoded, f)
+    # shuffle
+    import random
+    random.shuffle(all_data_encoded)
+    # split
+    train_data = all_data_encoded[:int(len(all_data_encoded) * 0.8)]
+    val_data = all_data_encoded[int(len(all_data_encoded) * 0.8):int(len(all_data_encoded) * 0.9)]
+    test_data = all_data_encoded[int(len(all_data_encoded) * 0.9):]
+    with open(result_path / "train_data.pkl", "wb") as f:
+        pkl.dump(train_data, f)
+    with open(result_path / "val_data.pkl", "wb") as f:
+        pkl.dump(val_data, f)
+    with open(result_path / "test_data.pkl", "wb") as f:
+        pkl.dump(test_data, f)
 
 
 if __name__ == '__main__':
