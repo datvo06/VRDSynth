@@ -10,6 +10,9 @@ RUN pip install -r requirements.txt
 COPY file_reader file_reader
 COPY layout_extraction layout_extraction
 COPY post_process post_process
+COPY utils utils 
 COPY app.py ./
+
+EXPOSE 9000
 
 CMD ['python', 'app.py']

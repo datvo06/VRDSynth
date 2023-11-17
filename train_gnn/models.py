@@ -27,19 +27,12 @@ class MPNN(MessagePassing):
 
 
 class MPNNModel(nn.Module):
-    def __init__(self, dim_h, netypes, t_srcs, t_tgts,
-                 n_al, dim_ac, n_layers=5, n_classes=3, device=device):
+    def __init__(self, dim_h, netypes, 
+                 dim_in, n_layers=5, n_classes=7, device=device):
         super().__init__()
-        self.enc_al = nn.Embedding(n_al, dim_h)
-        self.enc_ac = nn.Linear(dim_ac, dim_h)
-
-        nn.init.xavier_normal_(self.enc_al.weight)
-        nn.init.xavier_normal_(self.enc_ac.weight)
-        nn.init.normal_(self.enc_ac.bias)
-
-        self.emb_test = nn.Embedding(1, dim_h)
-        self.t_srcs = t_srcs
-        self.t_tgts = t_tgts
+        self.enc = nn.Linear(dim_in, dim_h)
+        nn.init.xavier_normal_(self.enc.weight)
+        nn.init.normal_(self.enc.bias)
 
         self.netypes = netypes
         self.n_layers = n_layers
@@ -52,16 +45,15 @@ class MPNNModel(nn.Module):
             self.last_act = nn.Softmax(dim=1)
         else:
             self.last_act = nn.Sigmoid()
+        self.h = dim_h
 
-    def forward(self, xs, ess, weights=None):
+    def forward(self, x, es, weights=None):
         '''xs: word embeddings of the nodes'''
+        x = self.enc(x)
         for i in range(self.n_layers):
-            out = [0, 0]
-            for j, (es, t_src, t_tgt) in enumerate(
-                    zip(ess, self.t_srcs, self.t_tgts)):
-                out[t_tgt] += self.mpnns[i][j](xs[t_src], xs[t_tgt], es,
-                                               weights[j] if weights else None)
-            xs = self.relu(out)
-        last = self.decode(xs)
+            out = torch.zeros(x.size(0), self.h).to(device)
+            for j in range(self.netypes):
+                out += self.mpnns[i][j](x, x, es[j], weights)
+            x = self.relu(out)
+        last = self.decode(x)
         return last, self.last_act(last)
-

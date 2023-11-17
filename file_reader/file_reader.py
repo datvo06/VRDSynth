@@ -37,7 +37,7 @@ def get_reader(extensions):
 
 
 class FileReader(object):
-    def __init__(self, path: Union[str, Path] = None, stream=None, is_scan=False):
+    def __init__(self, path: Union[Optional[str], Path] = None, stream=None, is_scan=False):
         self.raw_page = 0
         self.extensions = get_extension(path, stream)
         reader_cls = get_reader(self.extensions)

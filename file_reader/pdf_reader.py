@@ -152,7 +152,11 @@ def get_annot_character(vertices, chars, label=''):
     if vertices is None:
         return []
     while len(vertices) > 0:
-        (x0, y0), (x1, y1), (x2, y2), (x3, y3) = vertices[:4]
+        try:
+            (x0, y0), (x1, y1), (x2, y2), (x3, y3) = vertices[:4]
+        except ValueError:
+            print("Warning: Encountered invalid vertices")
+            continue
         vertices = vertices[4:]
         xvals = [x0, x1, x2, x3]
         yvals = [y0, y1, y2, y3]
@@ -238,7 +242,7 @@ def merge_textlines_with_annotation(annotations: List[Paragraph], textlines: Lis
 
 
 class PdfReader:
-    def __init__(self, path: Union[str, Path] = None, stream=None, extract_image=True, is_scan=False, **kwargs):
+    def __init__(self, path: Union[Optional[str], Path] = None, stream=None, extract_image=True, is_scan=False, **kwargs):
         self.path = path
         self.times = []
         if path is not None:

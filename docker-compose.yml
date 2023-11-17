@@ -11,5 +11,20 @@ services:
       - "9000:9000"
     command: [ "uvicorn", "app:app", "--host", "0.0.0.0", "--port", "9000" ]
     volumes:
-      - ./models:/opt/app/models
+      - ./models/finetuned/:/opt/app/models/finetuned
       - ./upload:/opt/app/upload
+
+
+  doc-equity-viz:
+    image: doc-equity-ui:1.0
+    container_name: doc_equity_ui
+    build:
+      context: .
+      dockerfile: Dockerfile.ui
+    ports:
+      - "8000:8000"
+    depends_on:
+      - doc-equity
+    environment:
+      - API_SERVICE_URL=http://doc-equity:9000
+    command: ['streamlit', 'run', 'streamlit_app.py', '--server.port', '8000', '--server.address', '0.0.0.0']
