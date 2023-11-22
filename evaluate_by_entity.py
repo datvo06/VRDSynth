@@ -9,9 +9,7 @@ from layout_extraction.layout_extraction import LayoutExtraction, HEADER_LABEL, 
     OTHER_LABEL
 from layout_extraction.funsd_utils import visualize, Word, Form
 
-
-form_json = json.load(open("data/kv_training/annotated_4-2.json", encoding="utf-8"))
-page = form_json["form"]
+import os
 
 bad_list = set([20, 30, 54, 55, 65,
                 104, 157, 170, 234, 239,
@@ -33,7 +31,7 @@ def iter_new_data(data_path):
     for i in tqdm(range(start, 400)):
         if i in bad_list:
             continue
-        page = json.load(open(f"{data_path}/{i}.json", encoding="utf-8"))["form"]
+        page = Form(json.load(open(f"{data_path}/{i}.json", encoding="utf-8"))["form"])
         yield i, page
 
 
@@ -48,7 +46,10 @@ def get_truth_entities(page, layout_extraction):
     return layout_extraction.merge_words_to_entities(truth_words)
 
 def get_pred_entities(page, layout_extraction, img):
-    pred_words = [Word(box, text) for box, text in zip(page.boxes, page.words)]
+    if isinstance(page, Form):
+        pred_words = page.words
+    else:
+        pred_words = [Word(box, text) for box, text in zip(page.boxes, page.words)]
     pred_words = layout_extraction.predict_tokens(pred_words, image=img)
     pred_entities = layout_extraction.merge_words_to_entities(pred_words)
     return pred_entities
@@ -78,27 +79,31 @@ def match_entities(ents1, ents2):
 
 if __name__ == '__main__':
     layout_extraction = LayoutExtraction(model_path="models/finetuned_1113")
-    mode = "old"
+    mode = "new"
     if mode == 'old':
         data_path = "data/all_data_gnn/new_data.pkl"
+        iter_func = iter_old_data
+        get_truth_entities_func = get_truth_entities 
+        img_path = None
     else:
         data_path = "processed_label_studio"
         img_path = "old_data/images"
-    output_folder = "inference_via_1113"
+        iter_func = iter_new_data
+        get_truth_entities_func = get_top_header_entities
+    output_folder = f"inference_via_1113_{mode}"
+    os.makedirs(output_folder, exist_ok=True)
     pred_labels, true_labels = [], []
-    iter_func = iter_old_data if mode == "old" else iter_new_data
-    get_truth_entities_func = get_truth_entities if mode == "old" else get_top_header_entities
     for i, page in iter_func(data_path):
         img = page.img_fp if mode == 'old' else cv2.imread(f"{img_path}/{i}.jpg")
         img = cv2.rotate(img, cv2.ROTATE_90_COUNTERCLOCKWISE) if img.shape[1] > img.shape[0] else img
         truth_entities = get_truth_entities_func(page, layout_extraction)
         pred_entities = get_pred_entities(page, layout_extraction, img)
-        match_pairs = match_entities(pred_entities, truth_entities) if mode == 'old' else match_entities(truth_entities, pred_entities)
+        match_pairs = match_entities(pred_entities, truth_entities) if mode == 'new' else match_entities(truth_entities, pred_entities)
 
         # match each pred_entity with truth_entties
         for pred_entity, truth_entity in match_pairs:
             pred_labels.append(pred_entity.label or OTHER_LABEL)
-            true_labels.append(truth_entity.label or OTHER_LABEL)
+            true_labels.append(truth_entity.label.upper() or OTHER_LABEL)
 
         pred_img = np.copy(img)
         pred_img = visualize(pred_img, pred_entities)
