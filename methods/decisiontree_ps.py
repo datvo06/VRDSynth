@@ -774,7 +774,7 @@ def setup_cache_dir(args, task="merge_words"):
 
 
 def setup_dataset(args):
-    dataset_opts = {'dataset': args.dataset, 'lang': args.lang, 'mode': args.mode}
+    dataset_opts = {'lang': args.lang, 'mode': args.mode}
     if os.path.exists(f"{args.cache_dir}/dataset.pkl"):
         with open(f"{args.cache_dir}/dataset.pkl", 'rb') as f:
             dataset = pkl.load(f)
