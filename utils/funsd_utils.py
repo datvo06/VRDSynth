@@ -151,7 +151,7 @@ def load_xfunsd(dataset_dir, mode, lang):
     documents = json.load(open(json_fp, 'r'))['documents']
     dataset = []
     for doc in documents:
-        dataset.append(load_xfunsd_data_sample(doc['document']))
+        dataset.append(load_xfunsd_data_sample(doc))
     return dataset
 
 
