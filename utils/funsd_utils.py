@@ -134,6 +134,7 @@ def load_xfunsd_data_sample(data_dict):
     for block in data_dict['document']:
         block_words_and_bbox = block['words']
         block_labels = [block['label']] * len(block_words_and_bbox)
+        print(block['id'], len(entities))
         entities[block['id']] = list(range(len(words), len(words) + len(block_words_and_bbox)))
         for pair in block['linking']:
             entities_mapping.add(tuple(pair))
