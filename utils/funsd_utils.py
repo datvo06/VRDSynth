@@ -1,6 +1,6 @@
 import json
-from collections import namedtuple
-from typing import List, Tuple, Set
+from collections import namedtuple, defaultdict
+from typing import List, Tuple, Set, Union, Dict
 import glob
 from utils.public_dataset_utils import DATASET_PATH, download_funsd_dataset, download_xfund_dataset
 from utils.relation_building_utils import calculate_relation_set, dummy_calculate_relation_set, calculate_relation
@@ -16,7 +16,9 @@ class DataSample:
 
     def __init__(self,
                  words: List[str],
-                 labels: List[int], entities: List[List[int]],
+                 labels: List[int],
+                 entities: Union[
+                     List[List[int]], Dict[int, List[int]]],
                  entities_map: List[Tuple[int, int]],
                  boxes: List[Bbox],
                  img_fp: str=""):
@@ -53,12 +55,14 @@ class DataSample:
         self._labels = labels
 
     @property
-    def entities(self) -> List[List[int]]:
+    def entities(self) -> Union[
+          List[List[int]], Dict[int, List[int]]]:
         return self._entities
 
     @entities.setter
-    def entities(self, entities: List[List[int]]):
-        self._entities = entities
+    def entities(self, entities: Union[
+              List[List[int]], Dict[int, List[int]]]):
+         self._entities = entities
 
     @property
     def entities_map(self) -> List[Tuple[int, int]]:
@@ -130,11 +134,10 @@ def load_xfunsd_data_sample(data_dict):
     bboxs = []
     labels = []
     entities_mapping = set()
-    entities = [[] for _ in range(len(data_dict['document']))]
+    entities = defaultdict(list)
     for block in data_dict['document']:
         block_words_and_bbox = block['words']
         block_labels = [block['label']] * len(block_words_and_bbox)
-        print(block['id'], len(entities))
         entities[block['id']] = list(range(len(words), len(words) + len(block_words_and_bbox)))
         for pair in block['linking']:
             entities_mapping.add(tuple(pair))

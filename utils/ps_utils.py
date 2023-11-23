@@ -29,7 +29,11 @@ def construct_entity_level_data(data) -> DataSample:
     entities = []
     entities_map = data['entities_map']
     boxes = []
-    for i, entity in enumerate(data.entities):
+    if isinstance(data.entities, list):
+        itor = enumerate(data.entities)
+    else:
+        itor = data.entities.items()
+    for i, entity in itor:
         entity_words = []
         entity_labels = []
         entity_boxes = []
