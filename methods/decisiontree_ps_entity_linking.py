@@ -19,7 +19,7 @@ import copy
 import multiprocessing
 from multiprocessing import Pool
 from functools import lru_cache, partial
-from methods.decisiontree_ps import get_all_path, get_parser, construct_or_get_initial_programs, batch_find_program_executor, mapping2tuple, tuple2mapping, report_metrics, get_p_r_f1, get_valid_cand_find_program, add_constraint_to_find_program, get_args, logger, setup_grammar
+from methods.decisiontree_ps import get_all_path, get_parser, construct_or_get_initial_programs, batch_find_program_executor, mapping2tuple, tuple2mapping, report_metrics, get_p_r_f1, get_valid_cand_find_program, add_constraint_to_find_program, get_args, logger, setup_grammar, setup_cache_dir, setup_dataset
 from methods.decisiontree_ps_entity_grouping import SpecType
 import cv2
 import time
@@ -300,35 +300,33 @@ def three_stages_bottom_up_version_space_based_entity_linking(pos_paths, dataset
     return programs
 
 
+def setup_specs(args, dataset):
+    if os.path.exists(f"{args.cache_dir}/specs_linking.pkl"):
+        with open(f"{args.cache_dir}/specs_linking.pkl", 'rb') as f:
+            specs, entity_dataset = pkl.load(f)
+    else:
+        specs, entity_dataset = construct_entity_linking_specs(dataset)
+        print(f"Time taken to load dataset and construct specs: {end_time - start_time}")
+        logger.log("construct spec time: ", float(end_time - start_time))
+        with open(f"{args.cache_dir}/specs_linking.pkl", 'wb') as f:
+            pkl.dump((specs, entity_dataset), f)
+    return specs, entity_dataset
+
+
 if __name__ == '__main__': 
     relation_set = dummy_calculate_relation_set(None, None, None)
     args = get_args()
+    setup_cache_dir(args, "entity_linking")
     logger.set_fp(f"{args.cache_dir}/log.json")
     os.makedirs(args.cache_dir, exist_ok=True)
     os.makedirs(f"{args.cache_dir}/viz", exist_ok=True)
     os.makedirs(f"{args.cache_dir}/viz_no_rel", exist_ok=True)
     os.makedirs(f"{args.cache_dir}/viz_entity_mapping", exist_ok=True)
     args = setup_grammar(args)
-
     start_time = time.time()
-    if os.path.exists(f"{args.cache_dir}/dataset.pkl"):
-        with open(f"{args.cache_dir}/dataset.pkl", 'rb') as f:
-            dataset = pkl.load(f)
-    else:
-        dataset = load_dataset(f"{args.training_dir}/annotations/", f"{args.training_dir}/images/")
-        with open(f"{args.cache_dir}/dataset.pkl", 'wb') as f:
-            pkl.dump(dataset, f)
-
-    if os.path.exists(f"{args.cache_dir}/specs_linking.pkl"):
-        with open(f"{args.cache_dir}/specs_linking.pkl", 'rb') as f:
-            specs, entity_dataset = pkl.load(f)
-    else:
-        specs, entity_dataset = construct_entity_linking_specs(dataset)
-        end_time = time.time()
-        print(f"Time taken to load dataset and construct specs: {end_time - start_time}")
-        logger.log("construct spec time: ", float(end_time - start_time))
-        with open(f"{args.cache_dir}/specs_linking.pkl", 'wb') as f:
-            pkl.dump((specs, entity_dataset), f)
+    dataset = setup_dataset(args)
+    specs, entity_dataset = setup_specs(args, dataset)
+    end_time = time.time()
         
     start_time = time.time()
     if os.path.exists(f"{args.cache_dir}/ds_cache_linking_kv.pkl"):

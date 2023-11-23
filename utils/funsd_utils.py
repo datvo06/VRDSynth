@@ -2,10 +2,12 @@ import json
 from collections import namedtuple
 from typing import List, Tuple, Set
 import glob
+from utils.public_dataset_utils import DATASET_PATH, download_funsd_dataset, download_xfund_dataset
 from utils.relation_building_utils import calculate_relation_set, dummy_calculate_relation_set, calculate_relation
 import networkx as nx
 import numpy as np
 import cv2
+import os
 
 
 Bbox = namedtuple('Bbox', ['x0', 'y0', 'x1', 'y1'])
@@ -89,35 +91,87 @@ class DataSample:
         return json.dumps(self._dict)
 
 
-def load_data(json_fp, img_fp):
+def load_funsd_data_from_dict(data_dict):
     words = []
     bboxs = []
     labels = []
-    entities = []
     entities_mapping = set()
+    entities = [[] for _ in range(len(data_dict['form']))]
+    for block in data_dict['form']:
+        block_words_and_bbox = block['words']
+        block_labels = [block['label']] * len(block_words_and_bbox)
+        entities[block['id']] = list(range(len(words), len(words) + len(block_words_and_bbox)))
+        for pair in block['linking']:
+            entities_mapping.add(tuple(pair))
+        for w_bbox in block_words_and_bbox:
+            words.append(w_bbox['text'])
+            bboxs.append(Bbox(*w_bbox['box']))
+        labels.extend(block_labels)
+    entities_mapping = list(entities_mapping)
+    return DataSample(words, labels, entities, entities_mapping, bboxs)
+
+
+def load_funsd_data_sample(json_fp):
     with open(json_fp, 'r') as f:
         json_dict = json.load(f)
-        entities = [[] for _ in range(len(json_dict['form']))]
-        for block in json_dict['form']:
-            block_words_and_bbox = block['words']
-            block_labels = [block['label']] * len(block_words_and_bbox)
-            entities[block['id']] = list(range(len(words), len(words) + len(block_words_and_bbox)))
-            for pair in block['linking']:
-                entities_mapping.add(tuple(pair))
-            for w_bbox in block_words_and_bbox:
-                words.append(w_bbox['text'])
-                bboxs.append(Bbox(*w_bbox['box']))
-            labels.extend(block_labels)
-    entities_mapping = list(entities_mapping)
-    return DataSample(words, labels, entities, entities_mapping, bboxs, img_fp)
+        return load_funsd_data_from_dict(json_dict)
 
-
-def load_dataset(annotation_dir, img_dir):
+def load_funsd(annotation_dir, img_dir):
     dataset = []
     for json_fp in glob.glob(annotation_dir + '/*.json'):
         img_fp = img_dir + '/' + json_fp.split('/')[-1].split('.')[0] + '.jpg'
-        dataset.append(load_data(json_fp, img_fp))
+        data_sample = load_funsd_data_sample(json_fp)
+        data_sample.img_fp = img_fp
+        dataset.append(data_sample)
     return dataset
+
+def load_xfunsd_data_sample(data_dict):
+    words = []
+    bboxs = []
+    labels = []
+    entities_mapping = set()
+    entities = [[] for _ in range(len(data_dict['document']))]
+    for block in data_dict['document']:
+        block_words_and_bbox = block['words']
+        block_labels = [block['label']] * len(block_words_and_bbox)
+        entities[block['id']] = list(range(len(words), len(words) + len(block_words_and_bbox)))
+        for pair in block['linking']:
+            entities_mapping.add(tuple(pair))
+        for w_bbox in block_words_and_bbox:
+            words.append(w_bbox['text'])
+            bboxs.append(Bbox(*w_bbox['box']))
+        labels.extend(block_labels)
+    entities_mapping = list(entities_mapping)
+    lang = data_dict['img']['fname'].split('_')[0]
+    data_dir = DATASET_PATH[f'xfund/{lang}']
+    return DataSample(words, labels, entities, entities_mapping, bboxs, f"{data_dir}/{data_dict['img']['fname']}")
+
+def load_xfunsd(dataset_dir, mode, lang):
+    json_fp = f"{dataset_dir}/{lang}.{mode}.json"
+    documents = json.load(open(json_fp, 'r'))['documents']
+    dataset = []
+    for doc in documents:
+        dataset.append(load_xfunsd_data_sample(doc['document']))
+    return dataset
+
+
+def load_dataset(dataset='funsd', **dataset_opt) -> List[DataSample]:
+    if dataset == 'funsd':
+        if not os.path.exists(DATASET_PATH[dataset]):
+            download_funsd_dataset()
+        subdir = "training_data" if dataset_opt['mode'] == 'train' else "testing_data"
+        return load_funsd(
+                f"{DATASET_PATH[dataset]}/{subdir}/annotations",
+                f"{DATASET_PATH[dataset]}/{subdir}/images")
+    elif dataset == 'xfund':
+        dataset_dir = DATASET_PATH[f"{dataset}/{dataset_opt['lang']}"]
+        if not os.path.exists(dataset_dir):
+            download_xfund_dataset(dataset_opt['lang'])
+        mode = dataset_opt['mode']
+        mode = 'val' if mode == 'test' else mode
+        return load_xfunsd(DATASET_PATH[dataset_dir], mode, dataset_opt['lang'])
+    else:
+        raise NotImplementedError(f"Dataset {dataset} not implemented")
 
 
 

@@ -115,16 +115,6 @@ def get_path_specs(dataset, specs: List[Tuple[int, List[List[int]]]], relation_s
     # return pos_relations, neg_relations
 
 
-def get_parser():
-    parser = argparse.ArgumentParser(description='Decision tree-based program synthesis')
-    parser.add_argument('--data_dir', type=str, default='data/funsd', help='directory to the dataset')
-    parser.add_argument('--hops', type=int, default=2, help='number of hops to consider')
-    parser.add_argument('--sampling_rate', type=float, default=0.2, help='sampling rate for negative relations')
-    parser.add_argument('--relation_set', type=str, default='data/funsd/relation_set.json', help='relation set')
-    parser.add_argument('--output', type=str, default='data/funsd/decisiontree_ps', help='output directory')
-    return parser
-
-
 
 
 def dfs_code_based_backtrack(curr_codes):
@@ -730,14 +720,23 @@ def three_stages_bottom_up_version_space_based(all_positive_paths, dataset, spec
     return programs
 
 def get_args():
-    parser = get_parser()
-    # training_dir
-    parser.add_argument('--training_dir', type=str, default='funsd_dataset/training_data', help='training directory')
+    parser = argparse.ArgumentParser(description='Decision tree-based program synthesis')
+    parser.add_argument('--hops', type=int, default=2, help='number of hops to consider')
+    parser.add_argument('--sampling_rate', type=float, default=0.2, help='sampling rate for negative relations')
+
+    # dataset
+    parser.add_argument('--dataset', type=str, default='funsd', help='dataset')
+
+    # mode and lang
+    parser.add_argument('--mode', type=str, default='train', help='train or test')
+    parser.add_argument('--lang', type=str, default='en', help='en or de')
     # cache_dir
-    parser.add_argument('--cache_dir', type=str, default='funsd_cache', help='cache directory')
     parser.add_argument('--upper_float_thres', type=float, default=0.5, help='upper float thres')
+
+    # hyperparam
     parser.add_argument('--rel_type', type=str, choices=['cluster', 'default', 'legacy'], default='default')
     parser.add_argument('--strategy', type=str, choices=['precision', 'decisiontree', 'precision_counter'], default='precision')
+    parser.add_argument('--grammar', type=str, choices=['default', 'extended'])
     # use sem store true
     parser.add_argument('--use_sem', action='store_true', help='use semantic information')
     parser.add_argument('--model', type=str, choices=['layoutlmv3'], default='layoutlmv3')
@@ -768,22 +767,25 @@ def setup_grammar(args):
     return args
 
 
-if __name__ == '__main__': 
-    args = get_args()
-    
+def setup_cache_dir(args, task="merge_words"):
+    cache_dir = f"cache_{task}_{args.dataset}_{args.mode}_{args.lang}_{args.model}_{args.strategy}_{args.rel_type}_{args.grammar}_{args.use_sem}_{args.upper_float_thres}_{args.seed}"
+    args.cache_dir = cache_dir
     os.makedirs(args.cache_dir, exist_ok=True)
-    logger.set_fp(f"{args.cache_dir}/log.json")
-    start_time = time.time()
+
+
+def setup_dataset(args):
+    dataset_opts = {'dataset': args.dataset, 'lang': args.lang, 'mode': args.mode}
     if os.path.exists(f"{args.cache_dir}/dataset.pkl"):
         with open(f"{args.cache_dir}/dataset.pkl", 'rb') as f:
             dataset = pkl.load(f)
     else:
-        dataset = load_dataset(f"{args.training_dir}/annotations/", f"{args.training_dir}/images/")
+        dataset = load_dataset(args.dataset, **dataset_opts)
         with open(f"{args.cache_dir}/dataset.pkl", 'wb') as f:
             pkl.dump(dataset, f)
+    return dataset
 
-    args = setup_grammar(args)
 
+def setup_specs(args, dataset):
     if os.path.exists(f"{args.cache_dir}/specs.pkl"):
         with open(f"{args.cache_dir}/specs.pkl", 'rb') as f:
             specs = pkl.load(f)
@@ -791,13 +793,22 @@ if __name__ == '__main__':
         specs = construct_entity_merging_specs(dataset)
         with open(f"{args.cache_dir}/specs.pkl", 'wb') as f:
             pkl.dump(specs, f)
+    return specs
+
+
+if __name__ == '__main__': 
+    args = get_args()
+    setup_cache_dir(args)
+    logger.set_fp(f"{args.cache_dir}/log.json")
+    start_time = time.time()
+    dataset = setup_dataset(args)
+    specs = setup_specs(args, dataset)
     end_time = time.time()
+    args = setup_grammar(args)
     print(f"Time taken to load dataset and construct specs: {end_time - start_time}")
     logger.log("construct spec time: ", float(end_time - start_time))
 
-
     start_time = time.time()
-        
     if os.path.exists(f"{args.cache_dir}/data_sample_set_relation_cache.pkl"):
         with open(f"{args.cache_dir}/data_sample_set_relation_cache.pkl", 'rb') as f:
             data_sample_set_relation_cache = pkl.load(f)
