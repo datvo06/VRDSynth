@@ -169,7 +169,7 @@ def load_dataset(dataset='funsd', **dataset_opt) -> List[DataSample]:
             download_xfund_dataset(dataset_opt['lang'])
         mode = dataset_opt['mode']
         mode = 'val' if mode == 'test' else mode
-        return load_xfunsd(DATASET_PATH[dataset_dir], mode, dataset_opt['lang'])
+        return load_xfunsd(dataset_dir, mode, dataset_opt['lang'])
     else:
         raise NotImplementedError(f"Dataset {dataset} not implemented")
 
