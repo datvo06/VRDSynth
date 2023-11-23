@@ -768,7 +768,7 @@ def setup_grammar(args):
 
 
 def setup_cache_dir(args, task="merge_words"):
-    cache_dir = f"cache_{task}_{args.dataset}_{args.mode}_{args.lang}_{args.model}_{args.strategy}_{args.rel_type}_{args.grammar}_{args.use_sem}_{args.upper_float_thres}_{args.seed}"
+    cache_dir = f"cache_{task}_{args.dataset}_{args.mode}_{args.lang}_{args.model}_{args.strategy}_{args.rel_type}_{args.grammar}_{args.use_sem}_{args.upper_float_thres}"
     args.cache_dir = cache_dir
     os.makedirs(args.cache_dir, exist_ok=True)
 
