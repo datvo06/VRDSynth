@@ -306,8 +306,7 @@ def setup_specs(args, dataset):
             specs, entity_dataset = pkl.load(f)
     else:
         specs, entity_dataset = construct_entity_linking_specs(dataset)
-        print(f"Time taken to load dataset and construct specs: {end_time - start_time}")
-        logger.log("construct spec time: ", float(end_time - start_time))
+
         with open(f"{args.cache_dir}/specs_linking.pkl", 'wb') as f:
             pkl.dump((specs, entity_dataset), f)
     return specs, entity_dataset
@@ -327,7 +326,8 @@ if __name__ == '__main__':
     dataset = setup_dataset(args)
     specs, entity_dataset = setup_specs(args, dataset)
     end_time = time.time()
-        
+    print(f"Time taken to load dataset and construct specs: {end_time - start_time}")
+    logger.log("construct spec time: ", float(end_time - start_time))       
     start_time = time.time()
     if os.path.exists(f"{args.cache_dir}/ds_cache_linking_kv.pkl"):
         with open(f"{args.cache_dir}/ds_cache_linking_kv.pkl", 'rb') as f:
