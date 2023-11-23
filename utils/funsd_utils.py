@@ -219,7 +219,10 @@ def build_nx_g(datasample: DataSample, relation_set: Set[Tuple[str, str, str]],
 
 
 def viz_data(data, nx_g):
-    img = cv2.imread(data.img_fp.replace('.jpg', '.png'))
+    if isinstance(data, str) and not os.path.exists(data.img_fp):
+        data.img_fp = data.img_fp.replace('.jpg', '.png')
+    img = cv2.imread()
+    assert img is not None, f"Image {data.img_fp} not found"
     for i in range(len(data['boxes'])):
         # 1. Crop the box
         box = data['boxes'][i]
