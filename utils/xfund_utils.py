@@ -1,8 +1,7 @@
 from typing import List, Tuple, Set, Union, Dict
-from collections import namedtuple, defaultdict
-Bbox = namedtuple('Bbox', ['x0', 'y0', 'x1', 'y1'])
+from collections import defaultdict
 import json
-from utils.funsd_utils import DataSample
+from utils.data_sample import Bbox, DataSample
 from utils.public_dataset_utils import DATASET_PATH, download_funsd_dataset, download_xfund_dataset
 import os
 
