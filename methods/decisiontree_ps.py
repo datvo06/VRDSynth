@@ -762,6 +762,8 @@ def setup_grammar(args):
         args.relation_set = relation_set
     else:
         args.build_nx_g = lambda data_sample: build_nx_g_legacy(data_sample)
+        args.relation_set = dummy_calculate_relation_set(None, None, None)
+        args.relation_set = [args.relation_set[2], args.relation_set[3], args.relation_set[0], args.relation_set[1]] 
         # Also, remove all the proj from 
         LiteralReplacement['RelationPropertyConstant'] =  [RelationPropertyConstant('mag')]
     return args
