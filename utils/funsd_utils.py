@@ -95,6 +95,8 @@ class DataSample:
         return json.dumps(self._dict)
 
 
+
+
 def load_funsd_data_from_dict(data_dict):
     words = []
     bboxs = []
@@ -127,35 +129,6 @@ def load_funsd(annotation_dir, img_dir):
         data_sample = load_funsd_data_sample(json_fp)
         data_sample.img_fp = img_fp
         dataset.append(data_sample)
-    return dataset
-
-def load_xfunsd_data_sample(data_dict):
-    words = []
-    bboxs = []
-    labels = []
-    entities_mapping = set()
-    entities = defaultdict(list)
-    for block in data_dict['document']:
-        block_words_and_bbox = block['words']
-        block_labels = [block['label']] * len(block_words_and_bbox)
-        entities[block['id']] = list(range(len(words), len(words) + len(block_words_and_bbox)))
-        for pair in block['linking']:
-            entities_mapping.add(tuple(pair))
-        for w_bbox in block_words_and_bbox:
-            words.append(w_bbox['text'])
-            bboxs.append(Bbox(*w_bbox['box']))
-        labels.extend(block_labels)
-    entities_mapping = list(entities_mapping)
-    lang = data_dict['img']['fname'].split('_')[0]
-    data_dir = DATASET_PATH[f'xfund/{lang}']
-    return DataSample(words, labels, entities, entities_mapping, bboxs, f"{data_dir}/{data_dict['img']['fname']}")
-
-def load_xfunsd(dataset_dir, mode, lang):
-    json_fp = f"{dataset_dir}/{lang}.{mode}.json"
-    documents = json.load(open(json_fp, 'r'))['documents']
-    dataset = []
-    for doc in documents:
-        dataset.append(load_xfunsd_data_sample(doc))
     return dataset
 
 
