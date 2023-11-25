@@ -124,7 +124,7 @@ def load_xfunsd_data_sample(data_dict):
     entities_mapping = list(entities_mapping)
     lang = data_dict['img']['fname'].split('_')[0]
     data_dir = DATASET_PATH[f'xfund/{lang}']
-    return XFUNDDataSampleAdapter(DataSampleXFUND(words, labels, entities, entities_mapping, bboxs, data_dir + data_dict['img']['fname']))
+    return XFUNDDataSampleAdapter(DataSampleXFUND(words, labels, entities, entities_mapping, bboxs, data_dir + '/' + data_dict['img']['fname']))
 
 
 
