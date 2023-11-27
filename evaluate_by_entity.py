@@ -64,8 +64,6 @@ map_label = {
 font = ImageFont.load_default()
 
 
-
-
 def match_entities(ents1, ents2):
     match_pairs = []
     for e1 in ents1:

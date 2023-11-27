@@ -17,6 +17,27 @@ import os
 # Implementing inference and measurement
 # Path: utils/ps_funsd_utils.py
 
+def load_datasample_cache_train(cache_dir_entity_group_merging, cache_dir_entity_linking):
+    with open(f"{cache_dir_entity_group_merging}/specs_linking.pkl", 'rb') as f:
+        specs, entity_dataset = pkl.load(f)
+
+    with open(f"{cache_dir_entity_group_merging}/ds_cache_linking.pkl", 'rb') as f:
+        ds_cache_grouping = pkl.load(f)
+
+    with open(f"{cache_dir_entity_linking}/ds_cache_linking_kv.pkl", 'rb') as f:
+        ds_cache_linking_kv = pkl.load(f)
+
+    ps_linking = list(itertools.chain.from_iterable(pkl.load(open(ps_fp, 'rb')) for ps_fp in glob.glob(f"{cache_dir_entity_linking}/stage3_*_perfect_ps_linking.pkl")))
+    ps_merging = list(itertools.chain.from_iterable(pkl.load(open(ps_fp, 'rb')) for ps_fp in glob.glob(f"{cache_dir_entity_group_merging}/stage3_*_perfect_ps_same_parent.pkl")))
+    print(f"len(ps_linking) = {len(ps_linking)}")
+    print(f"len(ps_merging) = {len(ps_merging)}")
+    return specs, entity_dataset, ds_cache_grouping, ds_cache_linking_kv
+
+
+def load_programs(cache_dir_entity_group_merging, cache_dir_entity_linking):
+    ps_linking = list(itertools.chain.from_iterable(pkl.load(open(ps_fp, 'rb')) for ps_fp in glob.glob(f"{cache_dir_entity_linking}/stage3_*_perfect_ps_linking.pkl")))
+    ps_merging = list(itertools.chain.from_iterable(pkl.load(open(ps_fp, 'rb')) for ps_fp in glob.glob(f"{cache_dir_entity_group_merging}/stage3_*_perfect_ps_same_parent.pkl")))
+    return ps_merging, ps_linking
 
 
 if __name__ == '__main__':
@@ -28,18 +49,9 @@ if __name__ == '__main__':
                         help='cache directory')
     args = parser.parse_args()
     os.makedirs(f"{args.cache_dir_entity_linking}/inference/", exist_ok=True)
-
-    with open(f"{args.cache_dir_entity_group_merging}/specs_linking.pkl", 'rb') as f:
-        specs, entity_dataset = pkl.load(f)
-
-    with open(f"{args.cache_dir_entity_group_merging}/ds_cache_linking.pkl", 'rb') as f:
-        ds_cache_grouping = pkl.load(f)
-
-    with open(f"{args.cache_dir_entity_linking}/ds_cache_linking_kv.pkl", 'rb') as f:
-        ds_cache_linking_kv = pkl.load(f)
-
-    ps_linking = list(itertools.chain.from_iterable(pkl.load(open(ps_fp, 'rb')) for ps_fp in glob.glob(f"{args.cache_dir_entity_linking}/stage3_*_perfect_ps_linking.pkl")))
-    ps_merging = list(itertools.chain.from_iterable(pkl.load(open(ps_fp, 'rb')) for ps_fp in glob.glob(f"{args.cache_dir_entity_group_merging}/stage3_*_perfect_ps_same_parent.pkl")))
+    specs, entity_dataset, ds_cache_grouping, ds_cache_linking_kv = load_datasample_cache_train(args.cache_dir_entity_group_merging, args.cache_dir_entity_linking)
+    
+    ps_merging, ps_linking = load_programs(args.cache_dir_entity_group_merging, args.cache_dir_entity_linking)
     print(f"len(ps_linking) = {len(ps_linking)}")
     print(f"len(ps_merging) = {len(ps_merging)}")
 

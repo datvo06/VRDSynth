@@ -1,3 +1,4 @@
+
 from utils.funsd_utils import DataSample
 from utils.ps_utils import FindProgram, WordVariable, RelationVariable
 from utils.algorithms import UnionFind
@@ -110,5 +111,3 @@ def link_entity(data, nx_g, ps_merging, ps_linking):
         data['boxes'],
         data['img_fp'])
     return new_data, ent_map
-
-
