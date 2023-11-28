@@ -111,6 +111,7 @@ if __name__ == '__main__':
                     nx_g.nodes[w]['emb'] = all_embs[i][w]
     ps_merging = list(itertools.chain.from_iterable(pkl.load(open(ps_fp, 'rb')) for ps_fp in glob.glob(f"{args.cache_dir_entity_group_merging}/stage3_*_perfect_ps_same_parent.pkl")))
     ps_linking = list(itertools.chain.from_iterable(pkl.load(open(ps_fp, 'rb')) for ps_fp in glob.glob(f"{args.cache_dir_entity_linking}/stage3_*_perfect_ps_linking.pkl")))
+    print(len(ps_merging), len(ps_linking))
     # Also build the spec for testset 
     tt, tf, ft, ff = 0, 0, 0, 0
     for i, (data, nx_g) in tqdm.tqdm(enumerate(zip(entity_dataset, data_sample_set_relation_cache))):
