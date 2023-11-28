@@ -25,7 +25,6 @@ import cv2
 import time
 
 
-
 def get_all_positive_relation_paths_linking(specs: SpecType, relation_set, hops=2, data_sample_set_relation_cache=None):
     data_sample_set_relation = [] if data_sample_set_relation_cache is None else data_sample_set_relation_cache
     path_set_counter = defaultdict(int)
@@ -39,6 +38,17 @@ def get_all_positive_relation_paths_linking(specs: SpecType, relation_set, hops=
     for path_type, count in path_set_counter.items():
         yield path_type, count
 
+
+def synthesize_negative_programs_from_scratch():
+    # 1. needs  
+    pass
+
+
+def synthesize_negative_programs_from_positive_programs(vss):
+    # 1. Enumerate all the path between starting entity and negative entity, the path can be even longer than existing path
+    # this is to get additional information in capturing the common negative between all positive programs
+    # each tt, tf, ft
+    pass
 
 def get_path_specs_linking(dataset, specs: SpecType, relation_set, hops=2, sampling_rate=0.2, data_sample_set_relation_cache=None, cache_dir=None):
     data_sample_set_relation = {} if data_sample_set_relation_cache is None else data_sample_set_relation_cache
