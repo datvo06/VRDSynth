@@ -63,3 +63,4 @@ urllib3==2.0.6
 wcwidth==0.2.8
 xxhash==3.4.1
 yarl==1.9.2
+datasets==2.15.0
