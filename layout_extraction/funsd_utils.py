@@ -162,7 +162,7 @@ class Form:
         return [word for entity in self.entities for word in entity.words]
 
 
-def visualize(img, boxes):
+def visualize(img, boxes: List[BoxLabel], relations: List[Tuple[int, int]] = None):
     for entity in boxes:
         if entity.label not in label_to_color:
             continue
@@ -178,5 +178,9 @@ def visualize(img, boxes):
         res = cv2.addWeighted(cropped_img, alpha, colored_rect, 1 - alpha, 0)
         # image_crop[np.where((image_crop < [168, 168, 168]).all(axis=2))] = label_to_color[entity.label]
         img[box.y0:box.y1, box.x0:box.x1, :] = res
-
+    if relations:
+        for i, j in relations:
+            center_i = (int(boxes[i].x_cen), int(boxes[i].y_cen))
+            center_j = (int(boxes[j].x_cen), int(boxes[j].y_cen))
+            cv2.line(img, center_i, center_j, (0, 0, 255), 2)
     return img
