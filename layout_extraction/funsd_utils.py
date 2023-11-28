@@ -161,6 +161,10 @@ class Form:
     def words(self):
         return [word for entity in self.entities for word in entity.words]
 
+    @property
+    def linking(self):
+        return [linking for entity in self.entities if entity.linking for linking in entity.linking]
+
 
 def visualize(img, boxes: List[BoxLabel], relations: List[Tuple[int, int]] = None):
     for entity in boxes:
