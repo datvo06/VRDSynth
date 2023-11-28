@@ -2,7 +2,6 @@ from utils.ps_run_utils import link_entity
 from utils.funsd_utils import viz_data, viz_data_no_rel, viz_data_entity_mapping
 from utils.ps_utils import construct_entity_linking_specs, construct_entity_merging_specs
 from utils.funsd_utils import load_dataset, viz_data_entity_mapping
-from methods.decisiontree_ps import setup_grammar
 from utils.ps_utils import FindProgram, WordVariable
 import argparse
 import pickle as pkl
@@ -20,10 +19,9 @@ def get_args():
                         type=str,
                         default='funsd_cache_entity_linking',
                         help='cache directory')
+    parser.add_argument('--dataset', type=str, default='funsd', help='dataset name')
+    parser.add_argument('--lang', type=str, default='en', help='language')
     parser.add_argument('--rel_type', type=str, choices=['cluster', 'default', 'legacy'], default='legacy')
-    parser.add_argument('--testing_dir', type=str, default='funsd_dataset/testing_data', help='training directory')
-    parser.add_argument('--upper_float_thres', type=float, default=0.5, help='upper float thres')
-    parser.add_argument('--use_sem', action='store_true', help='use semantic information')
     parser.add_argument('--model', type=str, choices=['layoutlmv3'], default='layoutlmv3')
     args = parser.parse_args()
     return args
@@ -52,19 +50,20 @@ def compare_specs(pred_mapping, gt_linking):
 
 if __name__ == '__main__':
     args = get_args()
+    data_options = {'mode': 'test', 'lang': args.lang}
     os.makedirs(f"{args.cache_dir_entity_linking}/inference_test/", exist_ok=True)
     os.makedirs(f"{args.cache_dir_entity_linking}/viz_test", exist_ok=True)
     os.makedirs(f"{args.cache_dir_entity_linking}/viz_no_rel_test", exist_ok=True)
     os.makedirs(f"{args.cache_dir_entity_linking}/viz_entity_mapping_test", exist_ok=True)
-    setup_grammar(args)
 
     if os.path.exists(f"{args.cache_dir_entity_linking}/testing_dataset.pkl"):
         with open(f"{args.cache_dir_entity_linking}/testing_dataset.pkl", 'rb') as f:
             dataset = pkl.load(f)
     else:
-        dataset = load_dataset(f"{args.testing_dir}/annotations/", f"{args.testing_dir}/images/")
+        dataset = load_dataset(args.dataset, **data_options)
         with open(f"{args.cache_dir_entity_linking}/testing_dataset.pkl", 'wb') as f:
             pkl.dump(dataset, f)
+
 
 
     if os.path.exists(f"{args.cache_dir_entity_linking}/specs_linking_test.pkl"):

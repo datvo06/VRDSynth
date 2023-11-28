@@ -771,8 +771,9 @@ def setup_grammar(args):
 
 def setup_cache_dir(args, task="merge_words"):
     cache_dir = f"cache_{task}_{args.dataset}_{args.mode}_{args.lang}_{args.model}_{args.strategy}_{args.rel_type}_{args.grammar}_{args.use_sem}_{args.upper_float_thres}"
-    args.cache_dir = cache_dir
-    os.makedirs(args.cache_dir, exist_ok=True)
+    os.makedirs(cache_dir, exist_ok=True)
+
+    return cache_dir
 
 
 def setup_dataset(args):
@@ -800,7 +801,7 @@ def setup_specs(args, dataset):
 
 if __name__ == '__main__': 
     args = get_args()
-    setup_cache_dir(args)
+    args.cache_dir = setup_cache_dir(args)
     logger.set_fp(f"{args.cache_dir}/log.json")
     start_time = time.time()
     dataset = setup_dataset(args)

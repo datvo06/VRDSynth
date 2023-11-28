@@ -10,6 +10,8 @@ import itertools
 
 
 def batch_find_program_executor(nx_g, find_programs: List[FindProgram]) -> List[List[Tuple[Dict[WordVariable, str], Dict[RelationVariable, Tuple[WordVariable, WordVariable, int]]]]]:
+    if not find_programs:
+        return []
     # strategy to speed up program executor:
     # find all program that have same set of path (excluding label)
     # iterate through all binding

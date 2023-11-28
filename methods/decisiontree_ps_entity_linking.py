@@ -322,10 +322,16 @@ def setup_specs(args, dataset):
     return specs, entity_dataset
 
 
+def dump_config(args):
+    with open(f"{args.cache_dir}/config_linking.json", "w") as f:
+        json.dump(args.__dict__, f)
+
+
 if __name__ == '__main__': 
     relation_set = dummy_calculate_relation_set(None, None, None)
     args = get_args()
-    setup_cache_dir(args, "entity_linking")
+    args.cache_dir = setup_cache_dir(args, "entity_linking")
+    dump_config(args)
     logger.set_fp(f"{args.cache_dir}/log.json")
     os.makedirs(args.cache_dir, exist_ok=True)
     os.makedirs(f"{args.cache_dir}/viz", exist_ok=True)
