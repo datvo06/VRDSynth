@@ -1,3 +1,4 @@
+from methods.decisiontree_ps import setup_relation
 from utils.ps_run_utils import link_entity
 from utils.funsd_utils import viz_data, viz_data_no_rel, viz_data_entity_mapping
 from utils.ps_utils import construct_entity_linking_specs, construct_entity_merging_specs
@@ -50,6 +51,7 @@ def compare_specs(pred_mapping, gt_linking):
 
 if __name__ == '__main__':
     args = get_args()
+    args = setup_relation(args)
     data_options = {'mode': 'test', 'lang': args.lang}
     os.makedirs(f"{args.cache_dir_entity_linking}/inference_test/", exist_ok=True)
     os.makedirs(f"{args.cache_dir_entity_linking}/viz_test", exist_ok=True)

@@ -744,10 +744,7 @@ def get_args():
     return args
 
 
-def setup_grammar(args):
-    LiteralReplacement['FloatConstant'] = list([FloatConstant(x) for x in np.arange(0.0, args.upper_float_thres + 0.1, 0.1)])
-    if args.use_sem:
-        GrammarReplacement['FloatValue'].append(SemDist)
+def setup_relation(args):
     if args.rel_type == 'default':
         relation_set = dummy_calculate_relation_set(None, None, None)
         args.build_nx_g = lambda data_sample: build_nx_g(data_sample, args.relation_set, y_threshold=10)
@@ -764,7 +761,15 @@ def setup_grammar(args):
         args.build_nx_g = lambda data_sample: build_nx_g_legacy(data_sample)
         args.relation_set = dummy_calculate_relation_set(None, None, None)
         args.relation_set = [args.relation_set[2], args.relation_set[3], args.relation_set[0], args.relation_set[1]] 
-        # Also, remove all the proj from 
+    return args
+
+
+def setup_grammar(args):
+    LiteralReplacement['FloatConstant'] = list([FloatConstant(x) for x in np.arange(0.0, args.upper_float_thres + 0.1, 0.1)])
+    args = setup_relation(args)
+    if args.use_sem:
+        GrammarReplacement['FloatValue'].append(SemDist)
+    if args.rel_type not in {'default', 'cluster'}:
         LiteralReplacement['RelationPropertyConstant'] =  [RelationPropertyConstant('mag')]
     return args
 
