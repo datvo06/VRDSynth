@@ -104,8 +104,9 @@ def load_data(json_fp, img_fp):
     entities_mapping = set()
     with open(json_fp, 'r', encoding="utf-8") as f:
         json_dict = json.load(f)
-        entities = [[] for _ in range(len(json_dict['form']))]
-        for block in json_dict['form']:
+        json_dict = json_dict if isinstance(json_dict, list) else json_dict['form']
+        entities = [[] for _ in range(len(json_dict))]
+        for block in json_dict:
             block_words_and_bbox = block['words']
             block_labels = [block['label']] * len(block_words_and_bbox)
             entities[block['id']] = list(range(len(words), len(words) + len(block_words_and_bbox)))
@@ -115,7 +116,10 @@ def load_data(json_fp, img_fp):
                 words.append(w_bbox['text'])
                 bboxs.append(Bbox(*w_bbox['box']))
             labels.extend(block_labels)
-    entities_mapping = list(entities_mapping)
+    entities_mapping = list(sorted(entities_mapping))
+    for i, pair in enumerate(entities_mapping):
+        print(words[pair[0]], "to", words[pair[1]])
+    print(entities_mapping)
     return DataSample(words, labels, entities, entities_mapping, bboxs, img_fp)
 
 
@@ -213,7 +217,9 @@ def viz_data(data, nx_g):
 
 def viz_data(data, nx_g):
     if isinstance(data.img_fp, str):
-        img = cv2.imread(data.img_fp.replace('.jpg', '.png'))
+        if not os.path.exists(data.img_fp):
+            data.img_fp = data.img_fp.replace('.jpg', '.png')
+        img = cv2.imread(data.img_fp)
     else:
         img = data.img_fp
 
@@ -265,7 +271,9 @@ def viz_data(data, nx_g):
 
 def viz_data_no_rel(data):
     if isinstance(data.img_fp, str):
-        img = cv2.imread(data.img_fp.replace('.jpg', '.png'))
+        if not os.path.exists(data.img_fp):
+            data.img_fp = data.img_fp.replace('.jpg', '.png')
+        img = cv2.imread(data.img_fp)
     else:
         img = data.img_fp
     if len(img.shape) == 2:
@@ -304,7 +312,9 @@ def viz_data_no_rel(data):
 
 def viz_data_entity_mapping(data):
     if isinstance(data.img_fp, str):
-        img = cv2.imread(data.img_fp.replace('.jpg', '.png'))
+        if not os.path.exists(data.img_fp):
+            data.img_fp = data.img_fp.replace('.jpg', '.png')
+        img = cv2.imread(data.img_fp)
     else:
         img = data.img_fp
     if len(img.shape) == 2:

@@ -1,6 +1,7 @@
 from utils.ps_run_utils import link_entity
 from utils.funsd_utils import viz_data, viz_data_no_rel, viz_data_entity_mapping
 from utils.ps_utils import construct_entity_linking_specs, construct_entity_merging_specs
+from utils.ps_funsd_entity_linking_utils import get_parser, load_programs
 from utils.funsd_utils import load_dataset, viz_data_entity_mapping
 from utils.ps_utils import FindProgram, WordVariable
 import argparse
@@ -104,8 +105,7 @@ if __name__ == '__main__':
             for i, nx_g in enumerate(data_sample_set_relation_cache):
                 for w in sorted(nx_g.nodes()):
                     nx_g.nodes[w]['emb'] = all_embs[i][w]
-    ps_merging = list(itertools.chain.from_iterable(pkl.load(open(ps_fp, 'rb')) for ps_fp in glob.glob(f"{args.cache_dir_entity_group_merging}/stage3_*_perfect_ps_same_parent.pkl")))
-    ps_linking = list(itertools.chain.from_iterable(pkl.load(open(ps_fp, 'rb')) for ps_fp in glob.glob(f"{args.cache_dir_entity_linking}/stage3_*_perfect_ps_linking.pkl")))
+    ps_merging, ps_linking = load_programs(args.cache_dir_entity_group_merging, args.cache_dir_entity_linking)
     # Also build the spec for testset 
     tt, tf, ft, ff = 0, 0, 0, 0
     for i, (data, nx_g) in tqdm.tqdm(enumerate(zip(entity_dataset, data_sample_set_relation_cache))):
