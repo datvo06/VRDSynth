@@ -294,7 +294,7 @@ def precision_counter_version_space_based_entity_linking(pos_paths, dataset, spe
             # Adding dependent programs
             for vs_idx, vs in enumerate(vss):
                 if has_child[vs_idx]: continue
-                if vs.tf - covered_tt: continue
+                if vs.tf - covered_tt_perfect: continue
                 if not (vs.tt - covered_tt_perfect): continue
                 covered_tt_perfect |= vs.tt
                 perfect_ps.append(
@@ -303,6 +303,7 @@ def precision_counter_version_space_based_entity_linking(pos_paths, dataset, spe
                             UnionProgram(perfect_ps[:-1])
                         )
                 )
+            print("Number of perfect program after refinement:", len(perfect_ps), len(covered_tt))
 
             new_vss = [vs for vs in new_vss if vs.tt - covered_tt_perfect]
 
