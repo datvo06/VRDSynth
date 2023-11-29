@@ -107,7 +107,7 @@ def build_nx_g(datasample: DataSample, relation_set: Set[Tuple[str, str, str]],
 
 
 def viz_data(data, nx_g):
-    if isinstance(data, str) and not os.path.exists(data.img_fp):
+    if isinstance(data.img_fp, str) and not os.path.exists(data.img_fp):
         data.img_fp = data.img_fp.replace('.jpg', '.png')
     img = cv2.imread(data.img_fp)
     assert img is not None, f"Image {data.img_fp} not found"
@@ -156,7 +156,7 @@ def viz_data(data, nx_g):
 
 
 def viz_data_no_rel(data):
-    if isinstance(data, str) and not os.path.exists(data.img_fp):
+    if isinstance(data.img_fp, str) and not os.path.exists(data.img_fp):
         data.img_fp = data.img_fp.replace('.jpg', '.png')
     img = cv2.imread(data.img_fp)
     for i in range(len(data['boxes'])):
@@ -189,7 +189,7 @@ def viz_data_no_rel(data):
 
 
 def viz_data_entity_mapping(data):
-    if isinstance(data, str) and not os.path.exists(data.img_fp):
+    if isinstance(data.img_fp, str) and not os.path.exists(data.img_fp):
         data.img_fp = data.img_fp.replace('.jpg', '.png')
     img = cv2.imread(data.img_fp)
     for i in range(len(data['boxes'])):
