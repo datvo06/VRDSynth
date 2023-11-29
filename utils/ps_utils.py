@@ -327,7 +327,7 @@ class FindProgram(Program):
             if self.constraint.evaluate(word_binding, relation_binding, nx_g_data):
                 if self.return_variables:
                     out_words.extend(
-                       [(word_binding[w0], word_binding[w]) for w in self.return_variables]])
+                       [(word_binding[w0], word_binding[w]) for w in self.return_variables])
                 else:
                     out_words.append(word_binding)
         if self.return_variables:
