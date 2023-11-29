@@ -218,7 +218,7 @@ def precision_counter_version_space_based_entity_linking(pos_paths, dataset, spe
 
     print("Number of version spaces: ", len(vss))
     max_its = 10
-    perfect_ps, covered_tt, covered_tt_perfect = [], set(), set()
+    perfect_ps, perfect_ps_io_value, perfect_counter_ps, covered_tt, covered_tt_perfect = [], {}, [], set(), set()
     start_time = time.time()
     for it in range(max_its):
         if pexists(f"{cache_dir}/stage3_{it}_linking.pkl"):
@@ -233,8 +233,8 @@ def precision_counter_version_space_based_entity_linking(pos_paths, dataset, spe
                 new_vss = pkl.load(f)
         else:
             new_vss, new_io_to_vs = [], {}
-            perfect_ps, perfect_ps_io_value = [], {}
             has_child = [False] * len(vss)
+            it_pps, it_pcps = [], []
             big_bar = tqdm.tqdm(c2vs.items())
             big_bar.set_description("Stage 3 - Creating New Version Spaces")
             for c, vs_idxs in big_bar:
@@ -253,36 +253,41 @@ def precision_counter_version_space_based_entity_linking(pos_paths, dataset, spe
                         ios.add((i, w_bind[WordVariable("w0")], w_bind[binding_var]))
                     # Now check the tt, tf, ft
                     new_tt, new_tf = (ios & vss[vs_idx].tt), (ios & vss[vs_idx].tf)
-                    if not new_tt: continue
                     new_ft = vss[vs_idx].ft 
+                    io_key = tuple((tuple(new_tt), tuple(new_tf), tuple(new_ft)))
+                    new_program = add_constraint_to_find_program(vss[vs_idx].programs[0], c)
+                    if not new_tt and new_tf:
+                        print(f"Found new counter program")
+                        perfect_counter_ps.append(new_program)
+                        perfect_ps_io_value[io_key] = VersionSpace(new_tt, new_tf, new_ft, [new_program], vs_matches)
+                        continue 
+
+                    if not new_tt: continue
                     old_p, _, _ = get_p_r_f1(vss[vs_idx].tt, vss[vs_idx].tf, vss[vs_idx].ft)
                     new_p, _, _ = get_p_r_f1(new_tt, new_tf, new_ft)
-                    if new_p > old_p:
-                        io_key = tuple((tuple(new_tt), tuple(new_tf), tuple(new_ft)))
-                        if io_key in new_io_to_vs: continue
-                        new_program = add_constraint_to_find_program(vss[vs_idx].programs[0], c)
-                        if new_p == 1.0 and (new_tt - covered_tt_perfect):
-                            if io_key not in perfect_ps_io_value:
-                                perfect_ps.append(new_program)
-                                perfect_ps_io_value[io_key] = VersionSpace(new_tt, new_tf, new_ft, [new_program], vs_matches)
-                                with open(f"{cache_dir}/stage3_{it}_perfect_ps_linking.pkl", "wb") as f:
-                                    pkl.dump(perfect_ps, f)
+                    if io_key in new_io_to_vs: continue
+                    if new_p == 1.0 and (new_tt - covered_tt_perfect):
+                        if io_key not in perfect_ps_io_value:
+                            perfect_ps.append(new_program)
+                            perfect_ps_io_value[io_key] = VersionSpace(new_tt, new_tf, new_ft, [new_program], vs_matches)
+                            with open(f"{cache_dir}/stage3_{it}_perfect_ps_linking.pkl", "wb") as f:
+                                pkl.dump(perfect_ps, f)
 
-                            logger.log(str(len(covered_tt_perfect)), (float(time.time()) - start_time, len(perfect_ps)))
-                            covered_tt_perfect.update(new_tt)
-                            continue
-                        if new_p > old_p: 
-                            if not (new_tt - covered_tt): continue
-                            covered_tt |= new_tt
-                            print(f"Found new increased precision: {old_p} -> {new_p}")
-                            acc += 1
-                        has_child[vs_idx] = True
-                        if io_key not in new_io_to_vs:
-                            new_vs = VersionSpace(new_tt, new_tf, new_ft, [new_program], vs_matches)
-                            new_vss.append(new_vs)
-                            new_io_to_vs[io_key] = new_vs
-                        else:
-                            new_io_to_vs[io_key].programs.append(new_program)
+                        logger.log(str(len(covered_tt_perfect)), (float(time.time()) - start_time, len(perfect_ps)))
+                        covered_tt_perfect.update(new_tt)
+                        continue
+                    if new_p > old_p: 
+                        if not (new_tt - covered_tt): continue
+                        covered_tt |= new_tt
+                        print(f"Found new increased precision: {old_p} -> {new_p}")
+                        acc += 1
+                    has_child[vs_idx] = True
+                    if io_key not in new_io_to_vs:
+                        new_vs = VersionSpace(new_tt, new_tf, new_ft, [new_program], vs_matches)
+                        new_vss.append(new_vs)
+                        new_io_to_vs[io_key] = new_vs
+                    else:
+                        new_io_to_vs[io_key].programs.append(new_program)
                 if not acc:
                     print("Rejecting: ", c)
 
