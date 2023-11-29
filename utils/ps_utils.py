@@ -164,88 +164,15 @@ class Program(Expression):
     def type_name():
         return 'Program'
 
-    def evaluate(self, nx_g_data) -> List[int]:
+    def evaluate(self, nx_g_data) -> List[Tuple[int, int]]:
         raise NotImplementedError
 
+    def collect_find_programs(self):
+        raise NotImplementedError
 
+    def replace_find_programs_with_values(self, values):
+        raise NotImplementedError
 
-class EmptyProgram(Program):
-    def __init__(self):
-        super().__init__()
-
-    @staticmethod
-    def type_name():
-        return 'EmptyProgram'
-
-    @staticmethod
-    def get_arg_type():
-        return []
-
-    def get_args(self):
-        return []
-
-    def evaluate(self, nx_g_data) -> List[int]:
-        return []
-
-    def __str__(self):
-        return '{}'
-
-    def __eq__(self, other):
-        return isinstance(other, EmptyProgram)
-
-
-
-class UnionProgram(Program):
-    def __init__(self, programs: List[Program]):
-        assert isinstance(programs, list)
-        self.programs = programs
-
-    @staticmethod
-    def get_arg_type():
-        return [[Program]]
-
-    @staticmethod
-    def type_name():
-        return 'UnionProgram'
-
-    def get_args(self):
-        return [self.programs]
-
-    def evaluate(self, nx_g_data):
-        return list(set.union(*[set(p.evaluate(nx_g_data)) for p in self.programs]))
-
-    def __str__(self):
-        return '{' + ' | '.join([str(p) for p in self.programs]) + '}'
-
-    def __eq__(self, other):
-        # compare list of programs
-        return set(self.programs) == set(other.programs)
-
-
-class ExcludeProgram(Program):
-    def __init__(self, programs):
-        self.programs = programs
-
-    @staticmethod
-    def get_arg_type():
-        return [[Program]]
-
-    def get_args(self):
-        return [self.programs]
-
-    @staticmethod
-    def type_name():
-        return 'ExcludeProgram'
-
-    def evaluate(self, nx_g_data):
-        return list(set.difference(*[set(p.evaluate(nx_g_data)) for p in self.programs]))
-
-    def __str__(self):
-        return '{' + ' - '.join([str(p) for p in self.programs]) + '}'
-
-    def __eq__(self, other):
-        # compare list of programs
-        return set(self.programs) == set(other.programs)
 
 
 class Literal(Expression):
@@ -366,11 +293,18 @@ class FindProgram(Program):
     def type_name():
         return 'FindProgram'
 
+
+    def collect_find_programs(self):
+        return [self]
+
+    def replace_find_programs_with_values(self, eval_mapping):
+        return FixedSetProgram(eval_mapping(self))
+
     def get_args(self):
         return [self.word_variables, self.relation_variables, self.relation_constraint, self.constraint, self.return_variables]
 
 
-    def evaluate(self, nx_g_data):
+    def evaluate(self, nx_g_data) -> List[Tuple[int, int]]:
         # construct a smaller graph
         nx_graph_query = nx.MultiDiGraph()
         # add nodes
@@ -383,7 +317,8 @@ class FindProgram(Program):
         gm = isomorphism.MultiDiGraphMatcher(nx_g_data, nx_graph_query)
         # iterate over all subgraphs
         out_words = []
-        for subgraph in gm.subgraph_isomorphisms_iter():
+        w0 = WordVariable('w0')
+        for subgraph in gm.subgraph_monomorphisms_iter():
             subgraph = {v: k for k, v in subgraph.items()}
             # get the corresponding binding for word_variables and relation_variables
             word_binding = {w: subgraph[w] for w in self.word_variables}
@@ -391,7 +326,8 @@ class FindProgram(Program):
             # check if the binding satisfies the constraints
             if self.constraint.evaluate(word_binding, relation_binding, nx_g_data):
                 if self.return_variables:
-                    out_words.append([word_binding[w] for w in self.return_variables])
+                    out_words.extend(
+                       [(word_binding[w0], word_binding[w]) for w in self.return_variables]])
                 else:
                     out_words.append(word_binding)
         if self.return_variables:
@@ -419,6 +355,178 @@ class StringValue(Expression):
     @staticmethod
     def type_name():
         return 'StringValue'
+
+
+class FixedSetProgram(Program):
+    def __init__(self, values):
+        self.values = values
+
+    @staticmethod
+    def type_name():
+        return 'FixedSetProgram'
+
+    @staticmethod
+    def get_arg_type():
+        return [[int]]
+
+    def get_args(self):
+        return [self.values]
+
+    def evaluate(self, nx_g_data) -> List[Tuple[int, int]]:
+        return self.values
+
+    def collect_find_programs(self):
+        return []
+
+    def replace_find_programs_with_values(self, values):
+        return self
+
+    def __str__(self):
+        return f'{{{", ".join([str(v) for v in self.values])}}}'
+
+    def __eq__(self, other):
+        return isinstance(other, FixedSetProgram) and self.values == other.values
+
+    def __hash__(self):
+        return hash(str(self))
+
+
+class EmptyProgram(FixedSetProgram):
+    def __init__(self):
+        super().__init__([])
+
+    @staticmethod
+    def type_name():
+        return 'EmptyProgram'
+
+    @staticmethod
+    def get_arg_type():
+        return []
+
+    def get_args(self):
+        return []
+
+    def evaluate(self, nx_g_data) -> List[Tuple[int, int]]:
+        return []
+
+    def collect_find_programs(self):
+        return []
+
+    def replace_find_programs_with_values(self, values):
+        return self
+
+    def __str__(self):
+        return '{}'
+
+    def __eq__(self, other):
+        return isinstance(other, EmptyProgram)
+
+
+    def __hash__(self):
+        return hash(str(self))
+
+
+class UnionProgram(Program):
+    def __init__(self, programs: List[Program]):
+        assert isinstance(programs, list)
+        self.programs = programs
+
+    @staticmethod
+    def get_arg_type():
+        return [[Program]]
+
+    @staticmethod
+    def type_name():
+        return 'UnionProgram'
+
+    def get_args(self):
+        return [self.programs]
+
+    def evaluate(self, nx_g_data) -> List[Tuple[int, int]]:
+        return list(set.union(*[set(p.evaluate(nx_g_data)) for p in self.programs]))
+
+    def collect_find_programs(self):
+        fps = []
+        for p in self.programs:
+            fps.extend(p.collect_find_programs())
+        return fps
+
+    def replace_find_programs_with_values(self, values):
+        return [UnionProgram([p.replace_find_programs_with_values(values) for p in self.programs])]
+
+    def __str__(self):
+        return '{' + ' | '.join([str(p) for p in self.programs]) + '}'
+
+    def __eq__(self, other):
+        # compare list of programs
+        return set(self.programs) == set(other.programs)
+
+
+class ExcludeProgram(Program):
+    def __init__(self, ref_program, excl_programs):
+        self.ref_program = ref_program
+        self.excl_programs = excl_programs
+
+    @staticmethod
+    def get_arg_type():
+        return [Program, [Program]]
+
+    def get_args(self):
+        return [self.ref_program, self.excl_programs]
+
+    @staticmethod
+    def type_name():
+        return 'ExcludeProgram'
+
+    def evaluate(self, nx_g_data) -> List[Tuple[int, int]]:
+        return list(set(self.ref_program.evaluate(nx_g_data)) - set.union(*[set(p.evaluate(nx_g_data)) for p in self.excl_programs]))
+
+    def __str__(self):
+        return f'{{{self.ref_program} - ' + ' | '.join([str(p) for p in self.excl_programs]) + '}}'
+
+    def collect_find_programs(self):
+        fps = []
+        if isinstance(self.ref_program, FindProgram):
+            fps.append(self.ref_program)
+        else:
+            fps.extend(self.ref_program.collect_find_programs())
+        for excl_program in self.excl_programs:
+            if isinstance(excl_program, FindProgram):
+                fps.append(excl_program)
+            else:
+                fps.extend(excl_program.collect_find_programs())
+        return fps
+
+    def replace_find_programs_with_values(self, eval_mapping):
+        if isinstance(self.ref_program, FindProgram):
+            self.ref_program = FixedSetProgram(eval_mapping[self.ref_program])
+        self.excl_programs = [FixedSetProgram(eval_mapping[p]) if isinstance(p, FindProgram) else p.replace_find_programs_with_values(eval_mapping) for p in self.excl_programs]
+        return self
+
+    def reduce(self):
+        ret_reducible = False
+        reducible, new_program = self.ref_program.reduce()
+        ret_reducible |= reducible
+        if reducible:
+            self.ref_program = new_program
+        new_excl_programs = []
+        for excl_program in self.excl_programs:
+            reducible, new_program = excl_program.reduce()
+            ret_reducible |= reducible
+            if reducible:
+                new_excl_programs.append(new_program)
+            else:
+                new_excl_programs.append(excl_program)
+        self.excl_programs = new_excl_programs
+        return ret_reducible, self
+
+
+    def __eq__(self, other):
+        # compare list of programs
+        return isinstance(other, ExcludeProgram) and self.ref_program == other.ref_program and set(self.excl_programs) == set(other.excl_programs)
+
+    def __hash__(self):
+        return hash(self.__str__())
 
 
 class FloatValue(Expression):

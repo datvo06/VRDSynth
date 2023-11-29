@@ -1,4 +1,4 @@
-
+from utils.ps_utils import WordVariable, RelationVariable, ExcludeProgram
 
 class VersionSpace:
     def __init__(self, tt, tf, ft, programs, mappings):
@@ -14,18 +14,27 @@ class VersionSpace:
 def is_counter(vs_main, vs_dependent):
     if not vs_dependent.tt - vs_main.tt:    # The true positive of two set must be disjoint
         return False
-    if len(vs_dependent.tf - vs_main.tt) == len(vs_dependent.ft): # The false positive of dependent must be a subset of main's true positive
+    if len(vs_dependent.tf - vs_main.tt) == 0: # The false positive of dependent must be a subset of main's true positive
+        # TODO: support partial overlap in the future as well
         return False
     return True
 
+def construct_counter_program(main_program, dependent_program):
+    return ExcludeProgram(dependent_program, [main_program])
 
 def join_version_space_counter(vs_main, vs_dependent):
     # Towards the goal of improving precision and recall
     tt_ = vs_dependent.tt
     tf_ = vs_dependent.tf - vs_main.tt
     ft_ = vs_dependent.ft
-    mappings_ = vs_dependent.mappings
+    wr = vs_dependent.programs[0].return_variables[0]
+    out_mappings = set()
+    for i, (w_bind, r_bind) in vs_dependent.mappings:
+        if w_bind[wr] in vs_main.tt:
+            continue
+        out_mappings.add((i, (w_bind, r_bind)))
 
+    return VersionSpace(tt_, tf_, ft_, construct_counter_program(vs_main.programs[0], vs_dependent.programs[0]), out_mappings)
 
 
 def is_joinable(vs1, vs2):

@@ -1,6 +1,11 @@
 from utils.ps_utils import WordVariable, RelationVariable
 from typing import List, Tuple, Dict
 from collections import namedtuple
+import os
+
+
+pexists = os.path.exists
+pjoin = os.path.join
 
 def tuple2mapping(
         tup: Tuple[Tuple[Tuple[WordVariable, int]],

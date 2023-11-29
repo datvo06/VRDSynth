@@ -8,9 +8,9 @@ import itertools
 import functools
 from collections import defaultdict, namedtuple
 from networkx.algorithms import constraint, isomorphism
-from utils.ps_utils import FalseValue, LiteralReplacement, Program, GrammarReplacement, FindProgram, RelationLabelConstant, RelationLabelProperty, TrueValue, WordLabelProperty, WordVariable, RelationVariable, RelationConstraint, LabelEqualConstraint, RelationLabelEqualConstraint, construct_entity_linking_specs, LabelConstant, AndConstraint, LiteralSet, Constraint, Hole, replace_hole, find_holes, SymbolicList, FilterStrategy, fill_hole, Expression, FloatConstant
+from utils.ps_utils import FalseValue, LiteralReplacement, Program, GrammarReplacement, FindProgram, RelationLabelConstant, RelationLabelProperty, TrueValue, UnionProgram, WordLabelProperty, WordVariable, RelationVariable, RelationConstraint, LabelEqualConstraint, RelationLabelEqualConstraint, construct_entity_linking_specs, LabelConstant, AndConstraint, LiteralSet, Constraint, Hole, replace_hole, find_holes, SymbolicList, FilterStrategy, fill_hole, Expression, FloatConstant
 from utils.visualization_script import visualize_program_with_support
-from utils.version_space import VersionSpace
+from utils.version_space import VersionSpace, construct_counter_program
 import json
 import pickle as pkl
 import os
@@ -22,9 +22,10 @@ from functools import lru_cache, partial
 from methods.decisiontree_ps import get_all_path, construct_or_get_initial_programs, batch_find_program_executor, report_metrics, get_valid_cand_find_program, add_constraint_to_find_program, get_args, logger, setup_grammar, setup_cache_dir, setup_dataset
 from methods.decisiontree_ps_entity_grouping import SpecType
 from utils.metrics import get_p_r_f1
-from utils.misc import mapping2tuple, tuple2mapping
+from utils.misc import mapping2tuple, tuple2mapping, pexists, pjoin
 import cv2
 import time
+
 
 
 def get_all_positive_relation_paths_linking(specs: SpecType, relation_set, hops=2, data_sample_set_relation_cache=None):
@@ -63,7 +64,7 @@ def get_path_specs_linking(dataset, specs: SpecType, relation_set, hops=2, sampl
     pos_relations = []
     neg_rels = []
     print("Start mining positive relations")
-    if os.path.exists(f"{cache_dir}/all_positive_paths.pkl"):
+    if pexists(f"{cache_dir}/all_positive_paths.pkl"):
         pos_relations = pkl.load(open(f"{cache_dir}/all_positive_paths.pkl", 'rb'))
     else:
         pos_relations = list(get_all_positive_relation_paths_linking(specs, relation_set, hops=hops, data_sample_set_relation_cache=data_sample_set_relation))
@@ -115,7 +116,7 @@ def collect_program_execution_linking(programs, specs: SpecType, data_sample_set
 
 
 def build_version_space(programs, specs, data_sample_set_relation_cache, logger, cache_dir: Optional[str]):
-    if cache_dir is not None and os.path.exists('{cache_dir}/stage2_linking.pkl'):
+    if cache_dir is not None and pexists('{cache_dir}/stage2_linking.pkl'):
         with open(f"{cache_dir}/stage2_linking.pkl", "rb") as f:
             tt, tf, ft, io_to_program, all_out_mappings = pkl.load(f)
             print(len(tt), len(tf), len(ft))
@@ -201,7 +202,7 @@ def construct_constraints_to_valid_version_spaces(vss):
 
 
 
-def precision_version_space_based_entity_linking(pos_paths, dataset, specs, data_sample_set_relation_cache, cache_dir):
+def precision_counter_version_space_based_entity_linking(pos_paths, dataset, specs, data_sample_set_relation_cache, cache_dir):
     assert cache_dir is not None, "Cache dir must be specified"
     # STAGE 1: Build base relation spaces
     programs = construct_or_get_initial_programs(pos_paths, f"{cache_dir}/stage1_linking.pkl", logger)
@@ -220,17 +221,14 @@ def precision_version_space_based_entity_linking(pos_paths, dataset, specs, data
     perfect_ps, covered_tt, covered_tt_perfect = [], set(), set()
     start_time = time.time()
     for it in range(max_its):
-        if os.path.exists(f"{cache_dir}/stage3_{it}_linking.pkl"):
+        if pexists(f"{cache_dir}/stage3_{it}_linking.pkl"):
             vss, c2vs = pkl.load(open(f"{cache_dir}/stage3_{it}_linking.pkl", "rb"))
         else:
             c2vs = construct_constraints_to_valid_version_spaces(vss)
             # Save this for this iter
             with open(f"{cache_dir}/stage3_{it}_linking.pkl", "wb") as f:
                 pkl.dump([vss, c2vs], f)
-        # Now we have extended_cands
-        # Let's create the set of valid input for each cands
-        # for each constraint, check against each of the original programs
-        if os.path.exists(f"{cache_dir}/stage3_{it}_new_vs_linking.pkl"):
+        if pexists(f"{cache_dir}/stage3_{it}_new_vs_linking.pkl"):
             with open(f"{cache_dir}/stage3_{it}_new_vs_linking.pkl", "rb") as f:
                 new_vss = pkl.load(f)
         else:
@@ -289,14 +287,131 @@ def precision_version_space_based_entity_linking(pos_paths, dataset, specs, data
                     print("Rejecting: ", c)
 
 
-            if os.path.exists(os.path.join(cache_dir, f"stage3_{it}_new_vs_linking.pkl")):
-                with open(os.path.join(cache_dir, f"stage3_{it}_new_vs_linking.pkl"), "rb") as f:
+            print("Number of perfect programs:", len(perfect_ps))
+            with open(pjoin(cache_dir, f"stage3_{it}_perfect_ps_linking.pkl"), "wb") as f:
+                pkl.dump(perfect_ps, f)
+
+            # Adding dependent programs
+            for vs_idx, vs in enumerate(vss):
+                if has_child[vs_idx]: continue
+                if vs.tf - covered_tt: continue
+                if not (vs.tt - covered_tt_perfect): continue
+                covered_tt_perfect |= vs.tt
+                perfect_ps.append(
+                        construct_counter_program(
+                            vs.programs[0],
+                            UnionProgram(perfect_ps[:-1])
+                        )
+                )
+
+            new_vss = [vs for vs in new_vss if vs.tt - covered_tt_perfect]
+
+            if pexists(pjoin(cache_dir, f"stage3_{it}_new_vs_linking.pkl")):
+                with open(pjoin(cache_dir, f"stage3_{it}_new_vs_linking.pkl"), "rb") as f:
                     new_vss = pkl.load(f)
             else:
-                with open(os.path.join(cache_dir, f"stage3_{it}_new_vs_linking.pkl"), "wb") as f:
+                with open(pjoin(cache_dir, f"stage3_{it}_new_vs_linking.pkl"), "wb") as f:
+                    pkl.dump(new_vss, f)
+
+        vss = new_vss
+
+    return programs
+
+
+
+def precision_version_space_based_entity_linking(pos_paths, dataset, specs, data_sample_set_relation_cache, cache_dir):
+    assert cache_dir is not None, "Cache dir must be specified"
+    # STAGE 1: Build base relation spaces
+    programs = construct_or_get_initial_programs(pos_paths, f"{cache_dir}/stage1_linking.pkl", logger)
+    print("Number of programs in stage 1: ", len(programs))
+    # STAGE 2: Build version space
+    tt, tf, ft, io_to_program, all_out_mappings = build_version_space(programs, specs, data_sample_set_relation_cache, logger, cache_dir)
+    io_to_program = build_io_to_proram(tt, tf, ft, all_out_mappings, programs, dataset)
+
+    # STAGE 3: Build version space
+    vss = []
+    for (tt_p, tf_p, ft_p), ps in io_to_program.items():
+        if tt_p: vss.append(VersionSpace(tt_p, tf_p, ft_p, ps, all_out_mappings[ps[0]]))
+
+    print("Number of version spaces: ", len(vss))
+    max_its = 10
+    perfect_ps, covered_tt, covered_tt_perfect = [], set(), set()
+    start_time = time.time()
+    for it in range(max_its):
+        if pexists(f"{cache_dir}/stage3_{it}_linking.pkl"):
+            vss, c2vs = pkl.load(open(f"{cache_dir}/stage3_{it}_linking.pkl", "rb"))
+        else:
+            c2vs = construct_constraints_to_valid_version_spaces(vss)
+            # Save this for this iter
+            with open(f"{cache_dir}/stage3_{it}_linking.pkl", "wb") as f:
+                pkl.dump([vss, c2vs], f)
+        if pexists(f"{cache_dir}/stage3_{it}_new_vs_linking.pkl"):
+            with open(f"{cache_dir}/stage3_{it}_new_vs_linking.pkl", "rb") as f:
+                new_vss = pkl.load(f)
+        else:
+            new_vss, new_io_to_vs = [], {}
+            perfect_ps, perfect_ps_io_value = [], {}
+            has_child = [False] * len(vss)
+            big_bar = tqdm.tqdm(c2vs.items())
+            big_bar.set_description("Stage 3 - Creating New Version Spaces")
+            for c, vs_idxs in big_bar:
+                # Cache to save computation cycles
+                cache, cnt, acc = {}, 0, 0 
+                for vs_idx in vs_idxs:
+                    cnt += 1
+                    big_bar.set_postfix({"cnt" : cnt, 'covered_tt': len(covered_tt), 'covered_tt_perfect': len(covered_tt_perfect)})
+                    vs = vss[vs_idx]
+                    vs_matches = get_intersect_constraint_vs(c, vs, cache)
+                    if not vs_matches: continue
+                    ios = set()
+                    binding_var = vss[vs_idx].programs[0].return_variables[0]
+                    for i, (w_bind, r_bind) in vs_matches:
+                        w_bind, r_bind = tuple2mapping((w_bind, r_bind))
+                        ios.add((i, w_bind[WordVariable("w0")], w_bind[binding_var]))
+                    # Now check the tt, tf, ft
+                    new_tt, new_tf = (ios & vss[vs_idx].tt), (ios & vss[vs_idx].tf)
+                    if not new_tt: continue
+                    new_ft = vss[vs_idx].ft 
+                    old_p, _, _ = get_p_r_f1(vss[vs_idx].tt, vss[vs_idx].tf, vss[vs_idx].ft)
+                    new_p, _, _ = get_p_r_f1(new_tt, new_tf, new_ft)
+                    if new_p > old_p:
+                        io_key = tuple((tuple(new_tt), tuple(new_tf), tuple(new_ft)))
+                        if io_key in new_io_to_vs: continue
+                        new_program = add_constraint_to_find_program(vss[vs_idx].programs[0], c)
+                        if new_p == 1.0 and (new_tt - covered_tt_perfect):
+                            if io_key not in perfect_ps_io_value:
+                                perfect_ps.append(new_program)
+                                perfect_ps_io_value[io_key] = VersionSpace(new_tt, new_tf, new_ft, [new_program], vs_matches)
+                                with open(f"{cache_dir}/stage3_{it}_perfect_ps_linking.pkl", "wb") as f:
+                                    pkl.dump(perfect_ps, f)
+
+                            logger.log(str(len(covered_tt_perfect)), (float(time.time()) - start_time, len(perfect_ps)))
+                            covered_tt_perfect.update(new_tt)
+                            continue
+                        if new_p > old_p: 
+                            if not (new_tt - covered_tt): continue
+                            covered_tt |= new_tt
+                            print(f"Found new increased precision: {old_p} -> {new_p}")
+                            acc += 1
+                        has_child[vs_idx] = True
+                        if io_key not in new_io_to_vs:
+                            new_vs = VersionSpace(new_tt, new_tf, new_ft, [new_program], vs_matches)
+                            new_vss.append(new_vs)
+                            new_io_to_vs[io_key] = new_vs
+                        else:
+                            new_io_to_vs[io_key].programs.append(new_program)
+                if not acc:
+                    print("Rejecting: ", c)
+
+
+            if pexists(pjoin(cache_dir, f"stage3_{it}_new_vs_linking.pkl")):
+                with open(pjoin(cache_dir, f"stage3_{it}_new_vs_linking.pkl"), "rb") as f:
+                    new_vss = pkl.load(f)
+            else:
+                with open(pjoin(cache_dir, f"stage3_{it}_new_vs_linking.pkl"), "wb") as f:
                     pkl.dump(new_vss, f)
             print("Number of perfect programs:", len(perfect_ps))
-            with open(os.path.join(cache_dir, f"stage3_{it}_perfect_ps_linking.pkl"), "wb") as f:
+            with open(pjoin(cache_dir, f"stage3_{it}_perfect_ps_linking.pkl"), "wb") as f:
                 pkl.dump(perfect_ps, f)
 
         vss = new_vss
@@ -305,7 +420,7 @@ def precision_version_space_based_entity_linking(pos_paths, dataset, specs, data
 
 
 def setup_specs(args, dataset):
-    if os.path.exists(f"{args.cache_dir}/specs_linking.pkl"):
+    if pexists(f"{args.cache_dir}/specs_linking.pkl"):
         with open(f"{args.cache_dir}/specs_linking.pkl", 'rb') as f:
             specs, entity_dataset = pkl.load(f)
     else:
@@ -339,7 +454,7 @@ if __name__ == '__main__':
     print(f"Time taken to load daaataset and construct specs: {end_time - start_time}")
     logger.log("construct spec time: ", float(end_time - start_time))       
     start_time = time.time()
-    if os.path.exists(f"{args.cache_dir}/ds_cache_linking_kv.pkl"):
+    if pexists(f"{args.cache_dir}/ds_cache_linking_kv.pkl"):
         with open(f"{args.cache_dir}/ds_cache_linking_kv.pkl", 'rb') as f:
             data_sample_set_relation_cache = pkl.load(f)
     else:
@@ -366,7 +481,7 @@ if __name__ == '__main__':
     if args.use_sem:
         assert args.model in ['layoutlmv3']
         if args.model == 'layoutlmv3':
-            if os.path.exists(f"{args.cache_dir}/embs_layoutlmv3.pkl"):
+            if pexists(f"{args.cache_dir}/embs_layoutlmv3.pkl"):
                 with open(f"{args.cache_dir}/embs_layoutlmv3.pkl", 'rb') as f:
                     all_embs = pkl.load(f)
             else:
@@ -383,7 +498,7 @@ if __name__ == '__main__':
                     nx_g.nodes[w]['emb'] = all_embs[i][w]
     # Now we have the data sample set relation cache
     print("Stage 1 - Constructing Program Space")
-    if os.path.exists(f"{args.cache_dir}/pos_paths_linking_kv.pkl"):
+    if pexists(f"{args.cache_dir}/pos_paths_linking_kv.pkl"):
         with open(f"{args.cache_dir}/pos_paths_linking_kv.pkl", 'rb') as f:
             pos_paths = pkl.load(f)
     else:
@@ -395,4 +510,7 @@ if __name__ == '__main__':
         with open(f"{args.cache_dir}/pos_paths_linking_kv.pkl", 'wb') as f:
             pkl.dump(pos_paths, f)
 
-    programs = precision_version_space_based_entity_linking(pos_paths, entity_dataset, specs, data_sample_set_relation_cache, args.cache_dir)
+    if args.strategy == 'precision':
+        programs = precision_version_space_based_entity_linking(pos_paths, entity_dataset, specs, data_sample_set_relation_cache, args.cache_dir)
+    elif args.strategy == 'precision_counter':
+        programs = precision_counter_version_space_based_entity_linking(pos_paths, entity_dataset, specs, data_sample_set_relation_cache, args.cache_dir)
