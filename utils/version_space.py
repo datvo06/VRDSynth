@@ -1,3 +1,5 @@
+
+
 class VersionSpace:
     def __init__(self, tt, tf, ft, programs, mappings):
         # TT: predicted true, groundtruth true
@@ -6,6 +8,24 @@ class VersionSpace:
         self.programs = programs
         self.parent = None
         self.children = []
+
+
+
+def is_counter(vs_main, vs_dependent):
+    if not vs_dependent.tt - vs_main.tt:    # The true positive of two set must be disjoint
+        return False
+    if len(vs_dependent.tf - vs_main.tt) == len(vs_dependent.ft): # The false positive of dependent must be a subset of main's true positive
+        return False
+    return True
+
+
+def join_version_space_counter(vs_main, vs_dependent):
+    # Towards the goal of improving precision and recall
+    tt_ = vs_dependent.tt
+    tf_ = vs_dependent.tf - vs_main.tt
+    ft_ = vs_dependent.ft
+    mappings_ = vs_dependent.mappings
+
 
 
 def is_joinable(vs1, vs2):

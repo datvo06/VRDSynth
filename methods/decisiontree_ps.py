@@ -24,7 +24,9 @@ import copy
 import multiprocessing
 from multiprocessing import Pool
 from functools import lru_cache, partial
+from utils.metrics import get_p_r_f1
 import time
+from utils.misc import tuple2mapping, mapping2tuple
 
 
 class Logger(object):
@@ -366,20 +368,6 @@ def construct_dataset_idx_2_list_prog(vss, p2vidxs):
     return idx2progs
 
 
-def mapping2tuple(mapping):
-    word_mapping, relation_mapping = mapping
-    word_mapping = tuple((k, v) for k, v in sorted(word_mapping.items()))
-    relation_mapping = tuple((k, v) for k, v in sorted(relation_mapping.items()))
-    return word_mapping, relation_mapping
-
-
-def tuple2mapping(tup):
-    word_mapping, relation_mapping = tup
-    word_mapping = {k: v for k, v in sorted(word_mapping)}
-    relation_mapping = {k: v for k, v in sorted(relation_mapping)}
-    return word_mapping, relation_mapping
-
-
 def collect_program_execution(programs, dataset, data_sample_set_relation_cache, vss = None, vs_map: Optional[Dict]=None):
     idx2progs = None
     if vss is not None and vs_map is not None:
@@ -469,10 +457,6 @@ def agg_pred(p_io_tt, p_io_tf, p_io_ft, good_prec):
     f1 = 2 * precision * recall / (precision + recall)
     print(f"Precision: {precision}, Recall: {recall}, F1: {f1}")
     visualize_program_with_support(dataset, tt, tf, ft, f"program_agg")
-
-
-def get_p_r_f1(tt, tf, ft):
-    return len(tt) / (len(tt) + len(tf)), len(tt) / (len(tt) + len(ft)), 2 * len(tt) / (2 * len(tt) + len(tf) + len(ft))
 
 
 def report_metrics(programs, p_io_tt, p_io_tf, p_io_ft, io_to_program):
@@ -735,7 +719,7 @@ def get_args():
 
     # hyperparam
     parser.add_argument('--rel_type', type=str, choices=['cluster', 'default', 'legacy'], default='default')
-    parser.add_argument('--strategy', type=str, choices=['precision', 'decisiontree', 'precision_counter'], default='precision')
+    parser.add_argument('--strategy', type=str, choices=['precision', 'decisiontree', 'precision_counter', 'precision_ordered'], default='precision')
     parser.add_argument('--grammar', type=str, choices=['default', 'extended'])
     # use sem store true
     parser.add_argument('--use_sem', action='store_true', help='use semantic information')
