@@ -214,7 +214,7 @@ def precision_counter_version_space_based_entity_linking(pos_paths, dataset, spe
     # STAGE 3: Build version space
     vss = []
     for (tt_p, tf_p, ft_p), ps in io_to_program.items():
-        if tt_p: vss.append(VersionSpace(tt_p, tf_p, ft_p, ps, all_out_mappings[ps[0]]))
+        if tt_p: vss.append(VersionSpace(set(tt_p), set(tf_p), set(ft_p), ps, all_out_mappings[ps[0]]))
 
     print("Number of version spaces: ", len(vss))
     max_its = 10
