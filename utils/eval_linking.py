@@ -109,8 +109,8 @@ if __name__ == '__main__':
             for i, nx_g in enumerate(data_sample_set_relation_cache):
                 for w in sorted(nx_g.nodes()):
                     nx_g.nodes[w]['emb'] = all_embs[i][w]
-    ps_merging = list(itertools.chain.from_iterable(pkl.load(open(ps_fp, 'rb')) for ps_fp in glob.glob(f"{args.cache_dir_entity_group_merging}/stage3_*_perfect_ps_same_parent.pkl")))
-    ps_linking = list(itertools.chain.from_iterable(pkl.load(open(ps_fp, 'rb')) for ps_fp in glob.glob(f"{args.cache_dir_entity_linking}/stage3_*_perfect_ps_linking.pkl")))
+    ps_merging = list(set(itertools.chain.from_iterable(pkl.load(open(ps_fp, 'rb')) for ps_fp in glob.glob(f"{args.cache_dir_entity_group_merging}/stage3_*_perfect_ps_same_parent.pkl"))))
+    ps_linking = list(set(itertools.chain.from_iterable(pkl.load(open(ps_fp, 'rb')) for ps_fp in glob.glob(f"{args.cache_dir_entity_linking}/stage3_*_perfect_ps_linking.pkl"))))
     print(len(ps_merging), len(ps_linking))
     # Also build the spec for testset 
     tt, tf, ft, ff = 0, 0, 0, 0
