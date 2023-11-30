@@ -243,7 +243,7 @@ def precision_counter_version_space_based_entity_linking(pos_paths, dataset, spe
                 cache, cnt, acc = {}, 0, 0 
                 for vs_idx in vs_idxs:
                     cnt += 1
-                    big_bar.set_postfix({"cnt" : cnt, 'covered_tt': len(covered_tt), 'covered_tt_perfect': len(covered_tt_perfect)})
+                    big_bar.set_postfix({"cnt" : cnt, 'covered_tt': len(covered_tt), 'covered_tt_perfect': len(covered_tt_perfect), 'covered_tt_counter': covered_tt_counter})
                     vs = vss[vs_idx]
                     vs_matches = get_intersect_constraint_vs(c, vs, cache)
                     if not vs_matches: continue
