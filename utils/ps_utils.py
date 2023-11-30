@@ -298,7 +298,7 @@ class FindProgram(Program):
         return [self]
 
     def replace_find_programs_with_values(self, eval_mapping):
-        return FixedSetProgram(eval_mapping(self))
+        return FixedSetProgram(eval_mapping[self])
 
     def get_args(self):
         return [self.word_variables, self.relation_variables, self.relation_constraint, self.constraint, self.return_variables]
