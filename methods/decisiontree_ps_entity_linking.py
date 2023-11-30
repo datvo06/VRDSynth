@@ -219,6 +219,7 @@ def precision_counter_version_space_based_entity_linking(pos_paths, dataset, spe
     print("Number of version spaces: ", len(vss))
     max_its = 10
     perfect_ps, perfect_ps_io_value, perfect_counter_ps, covered_tt, covered_tt_perfect = [], {}, [], set(), set()
+    covered_tt_counter = set()
     start_time = time.time()
     for it in range(max_its):
         if pexists(f"{cache_dir}/stage3_{it}_linking.pkl"):
@@ -256,10 +257,11 @@ def precision_counter_version_space_based_entity_linking(pos_paths, dataset, spe
                     new_ft = vss[vs_idx].ft 
                     io_key = tuple((tuple(new_tt), tuple(new_tf), tuple(new_ft)))
                     new_program = add_constraint_to_find_program(vss[vs_idx].programs[0], c)
-                    if not new_tt and new_tf:
+                    if not new_tt and new_tf - covered_tt_counter:
                         print(f"Found new counter program")
                         perfect_counter_ps.append(new_program)
                         perfect_ps_io_value[io_key] = VersionSpace(new_tt, new_tf, new_ft, [new_program], vs_matches)
+                        covered_tt_counter |= new_tf
                         continue 
 
                     if not new_tt: continue
@@ -296,13 +298,27 @@ def precision_counter_version_space_based_entity_linking(pos_paths, dataset, spe
             with open(pjoin(cache_dir, f"stage3_{it}_perfect_ps_linking.pkl"), "wb") as f:
                 pkl.dump(perfect_ps, f)
 
-            # Adding dependent programs
-            for vs_idx, vs in enumerate(vss):
+            # Adding dependent programs and counter dependent program
+            for vs_idx, vs in enumerate(new_vss):
                 if has_child[vs_idx]: continue
+                vs_tf = vs.tf - covered_tt_counter
+                use_counter_program = False
+                if len(vs_tf) < len(vs.tf):
+                    use_counter_program = True
                 target_vs_tt = set((x[0], x[-1]) for x in vs.tt)
-                target_vs_tf = set((x[0], x[-1]) for x in vs.tf)
-                if target_vs_tf - covered_tt_perfect: continue
+                target_vs_tf = set((x[0], x[-1]) for x in vs_tf)
+                if not target_vs_tf:
+                    covered_tt_perfect |= vs.tt
+                    perfect_ps.append(
+                        construct_counter_program(
+                            UnionProgram(perfect_counter_ps),
+                            vs.programs[0],
+                        )
+                    )
+                    continue
+
                 target_covered_tt = set((x[0], x[-1]) for x in covered_tt_perfect)
+                if target_vs_tf - target_covered_tt: continue
                 if not (target_vs_tt - target_covered_tt): continue
                 new_vs_tt = target_vs_tt - target_covered_tt
                 new_vs_tt = set([(x[0], x[1], x[2]) for x in vs.tt if x[2] not in new_vs_tt])
@@ -310,9 +326,11 @@ def precision_counter_version_space_based_entity_linking(pos_paths, dataset, spe
                 perfect_ps.append(
                         construct_counter_program(
                             vs.programs[0],
-                            UnionProgram(perfect_ps[:-1])
+                            UnionProgram(perfect_ps[:-1] + ([perfect_counter_ps[-1]] if use_counter_program else [])),
                         )
                 )
+
+
             print("Number of perfect program after refinement:", len(perfect_ps), len(covered_tt_perfect))
             nvss = len(new_vss)
 
