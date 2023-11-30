@@ -307,7 +307,7 @@ def precision_counter_version_space_based_entity_linking(pos_paths, dataset, spe
                     use_counter_program = True
                 target_vs_tt = set((x[0], x[-1]) for x in vs.tt)
                 target_vs_tf = set((x[0], x[-1]) for x in vs_tf)
-                if not target_vs_tt - target_covered_tt:
+                if not vs.tt - covered_tt_perfect:
                     continue
                 if not target_vs_tf:
                     covered_tt_perfect |= vs.tt
