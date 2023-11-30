@@ -10,7 +10,6 @@ class VersionSpace:
         self.children = []
 
 
-
 def is_counter(vs_main, vs_dependent):
     if not vs_dependent.tt - vs_main.tt:    # The true positive of two set must be disjoint
         return False

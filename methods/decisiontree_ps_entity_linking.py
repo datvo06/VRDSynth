@@ -299,18 +299,26 @@ def precision_counter_version_space_based_entity_linking(pos_paths, dataset, spe
             # Adding dependent programs
             for vs_idx, vs in enumerate(vss):
                 if has_child[vs_idx]: continue
-                if vs.tf - covered_tt_perfect: continue
-                if not (vs.tt - covered_tt_perfect): continue
-                covered_tt_perfect |= vs.tt
+                target_vs_tt = set((x[0], x[-1]) for x in vs.tt)
+                target_vs_tf = set((x[0], x[-1]) for x in vs.tf)
+                if target_vs_tf - covered_tt_perfect: continue
+                target_covered_tt = set((x[0], x[-1]) for x in covered_tt_perfect)
+                if not (target_vs_tt - target_covered_tt): continue
+                new_vs_tt = target_vs_tt - target_covered_tt
+                new_vs_tt = set([(x[0], x[1], x[2]) for x in vs.tt if x[2] not in new_vs_tt])
+                covered_tt_perfect |= new_vs_tt
                 perfect_ps.append(
                         construct_counter_program(
                             vs.programs[0],
                             UnionProgram(perfect_ps[:-1])
                         )
                 )
-            print("Number of perfect program after refinement:", len(perfect_ps), len(covered_tt))
+            print("Number of perfect program after refinement:", len(perfect_ps), len(covered_tt_perfect))
+            nvss = len(new_vss)
 
             new_vss = [vs for vs in new_vss if vs.tt - covered_tt_perfect]
+            nvss_after = len(new_vss)
+            print(f"Number of new version spaces after pruning: {nvss} -> {nvss_after}")
 
             if pexists(pjoin(cache_dir, f"stage3_{it}_new_vs_linking.pkl")):
                 with open(pjoin(cache_dir, f"stage3_{it}_new_vs_linking.pkl"), "rb") as f:
