@@ -348,6 +348,8 @@ def precision_counter_version_space_based_entity_linking(pos_paths, dataset, spe
 
             new_vss = [vs for vs in new_vss if vs.tt - covered_tt_perfect]
             nvss_after = len(new_vss)
+            if nvss_after > 10000:  # Too heavy, cannot run
+                break
             print(f"Number of new version spaces after pruning: {nvss} -> {nvss_after}")
 
             if pexists(pjoin(cache_dir, f"stage3_{it}_new_vs_linking.pkl")):
