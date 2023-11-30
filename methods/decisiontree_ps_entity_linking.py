@@ -299,9 +299,9 @@ def precision_counter_version_space_based_entity_linking(pos_paths, dataset, spe
                 pkl.dump(perfect_ps, f)
 
             # Adding dependent programs and counter dependent program
-            u_pcs = UnionProgram(perfect_counter_ps)
-            u_pps = UnionProgram(perfect_ps)
-            u_aps = UnionProgram(perfect_counter_ps + perfect_ps)
+            u_pcs = UnionProgram(perfect_counter_ps[:])
+            u_pps = UnionProgram(perfect_ps[:])
+            u_aps = UnionProgram(perfect_counter_ps[:] + perfect_ps[:])
             extra_pps = []
             extra_covered_tt = set()
             target_covered_tt = set((x[0], x[-1]) for x in covered_tt_perfect)
@@ -333,8 +333,8 @@ def precision_counter_version_space_based_entity_linking(pos_paths, dataset, spe
                 extra_target_covered_tt |= new_vs_tt
                 perfect_ps.append(
                         construct_counter_program(
-                            vs.programs[0],
                             u_aps if use_counter_program else u_pps
+                            vs.programs[0],
                         )
                 )
             perfect_ps += extra_pps
