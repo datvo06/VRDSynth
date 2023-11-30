@@ -299,7 +299,13 @@ def precision_counter_version_space_based_entity_linking(pos_paths, dataset, spe
                 pkl.dump(perfect_ps, f)
 
             # Adding dependent programs and counter dependent program
+            u_pcs = UnionProgram(perfect_counter_ps)
+            u_pps = UnionProgram(perfect_ps)
+            u_aps = UnionProgram(perfect_counter_ps + perfect_ps)
+            extra_pps = []
+            extra_covered_tt = set()
             target_covered_tt = set((x[0], x[-1]) for x in covered_tt_perfect)
+            extra_target_covered_tt = set()
             for vs_idx, vs in enumerate(new_vss):
                 vs_tf = vs.tf - covered_tt_counter
                 use_counter_program = False
@@ -307,31 +313,32 @@ def precision_counter_version_space_based_entity_linking(pos_paths, dataset, spe
                     use_counter_program = True
                 target_vs_tt = set((x[0], x[-1]) for x in vs.tt)
                 target_vs_tf = set((x[0], x[-1]) for x in vs_tf)
-                if not vs.tt - covered_tt_perfect:
+                if not vs.tt - covered_tt_perfect - extra_covered_tt:
                     continue
                 if not target_vs_tf:
-                    covered_tt_perfect |= vs.tt
-                    perfect_ps.append(
+                    extra_covered_tt |= vs.tt
+                    extra_pps.append(
                         construct_counter_program(
-                            UnionProgram(perfect_counter_ps),
-                            vs.programs[0],
+                            u_pcs, vs.programs[0],
                         )
                     )
                     target_covered_tt |= target_vs_tt
                     continue
 
                 if target_vs_tf - target_covered_tt: continue
-                if not (target_vs_tt - target_covered_tt): continue
+                if not (target_vs_tt - target_covered_tt - extra_target_covered_tt): continue
                 new_vs_tt = target_vs_tt - target_covered_tt
                 new_vs_tt = set([(x[0], x[1], x[2]) for x in vs.tt if x[2] not in new_vs_tt])
                 covered_tt_perfect |= new_vs_tt
-                target_covered_tt |= new_vs_tt
+                extra_target_covered_tt |= new_vs_tt
                 perfect_ps.append(
                         construct_counter_program(
                             vs.programs[0],
-                            UnionProgram(perfect_ps[:-1] + ([perfect_counter_ps[-1]] if use_counter_program else [])),
+                            u_aps if use_counter_program else u_pps
                         )
                 )
+            perfect_ps += extra_pps
+            covered_tt_perfect |= extra_covered_tt
 
 
             print("Number of perfect program after refinement:", len(perfect_ps), len(covered_tt_perfect))

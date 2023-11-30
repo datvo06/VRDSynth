@@ -452,7 +452,7 @@ class UnionProgram(Program):
         return fps
 
     def replace_find_programs_with_values(self, values):
-        return [UnionProgram([p.replace_find_programs_with_values(values) for p in self.programs])]
+        return UnionProgram([p.replace_find_programs_with_values(values) for p in self.programs])
 
     def __str__(self):
         return '{' + ' | '.join([str(p) for p in self.programs]) + '}'
@@ -498,10 +498,11 @@ class ExcludeProgram(Program):
         return fps
 
     def replace_find_programs_with_values(self, eval_mapping):
+        ref_program = self.ref_program
         if isinstance(self.ref_program, FindProgram):
-            self.ref_program = FixedSetProgram(eval_mapping[self.ref_program])
-        self.excl_programs = [FixedSetProgram(eval_mapping[p]) if isinstance(p, FindProgram) else p.replace_find_programs_with_values(eval_mapping) for p in self.excl_programs]
-        return self
+            ref_program = FixedSetProgram(eval_mapping[self.ref_program])
+        excl_programs = [FixedSetProgram(eval_mapping[p]) if isinstance(p, FindProgram) else p.replace_find_programs_with_values(eval_mapping) for p in self.excl_programs]
+        return ExcludeProgram(ref_program, excl_programs)
 
     def reduce(self):
         ret_reducible = False
