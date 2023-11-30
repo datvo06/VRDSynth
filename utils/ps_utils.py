@@ -338,7 +338,6 @@ class FindProgram(Program):
     def evaluate_binding(self, word_binding, relation_binding, nx_g_data):
         return self.constraint.evaluate(word_binding, relation_binding, nx_g_data)
 
-    @lru_cache(maxsize=None)
     def __str__(self):
         return f'find(({", ".join([str(w) for w in self.word_variables])}), ({", ".join([str(r) for r in self.relation_variables])}), ({", ".join([str(c) for c in self.relation_constraint])}, {str(self.constraint)}, {", ".join([str(w) for w in self.return_variables])})'
 
@@ -382,7 +381,6 @@ class FixedSetProgram(Program):
     def replace_find_programs_with_values(self, values):
         return self
 
-    @lru_cache(maxsize=None)
     def __str__(self):
         return f'{{{", ".join([str(v) for v in self.values])}}}'
 
@@ -456,7 +454,6 @@ class UnionProgram(Program):
     def replace_find_programs_with_values(self, values):
         return UnionProgram([p.replace_find_programs_with_values(values) for p in self.programs])
 
-    @lru_cache(maxsize=None)
     def __str__(self):
         return '{' + ' | '.join([str(p) for p in self.programs]) + '}'
 
@@ -487,7 +484,6 @@ class ExcludeProgram(Program):
     def evaluate(self, nx_g_data) -> List[Tuple[int, int]]:
         return list(set(self.ref_program.evaluate(nx_g_data)) - set.union(*[set(p.evaluate(nx_g_data)) for p in self.excl_programs]))
 
-    @lru_cache(maxsize=None)
     def __str__(self):
         return f'{{{self.ref_program} - ' + ' | '.join([str(p) for p in self.excl_programs]) + '}}'
 
@@ -504,7 +500,6 @@ class ExcludeProgram(Program):
                 fps.extend(excl_program.collect_find_programs())
         return fps
 
-    @lru_cache(maxsize=None)
     def replace_find_programs_with_values(self, eval_mapping):
         ref_program = self.ref_program
         if isinstance(self.ref_program, FindProgram):
