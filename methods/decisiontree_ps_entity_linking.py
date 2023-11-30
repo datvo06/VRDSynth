@@ -331,6 +331,8 @@ def precision_counter_version_space_based_entity_linking(pos_paths, dataset, spe
 
 
             print("Number of perfect program after refinement:", len(perfect_ps), len(covered_tt_perfect))
+            with open(pjoin(cache_dir, f"stage3_{it}_perfect_ps_linking.pkl"), "wb") as f:
+                pkl.dump(perfect_ps, f)
             nvss = len(new_vss)
 
             new_vss = [vs for vs in new_vss if vs.tt - covered_tt_perfect]

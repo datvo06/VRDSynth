@@ -84,7 +84,6 @@ def merge_words(data, nx_g, ps):
 def link_entity(data, nx_g, ps_merging, ps_linking):
     uf = UnionFind(len(data['boxes']))
     out_bindings_merging = batch_find_program_executor(nx_g, ps_merging)
-    out_bindings_linking = batch_find_program_executor(nx_g, ps_linking)
     ucount = 0
     w0 = WordVariable('w0')
     for j, p_bindings in enumerate(out_bindings_merging):
@@ -95,9 +94,10 @@ def link_entity(data, nx_g, ps_merging, ps_linking):
             ucount += 1
     print(f"Union count: {ucount}")
     w2c = defaultdict(list)
-    find_programs = []
+    find_programs = set()
     for p in ps_linking:
-        find_programs.extend(p.collect_find_programs())
+        find_programs.update(p.collect_find_programs())
+
     out_bindings_linking = batch_find_program_executor(nx_g, find_programs)
     eval_mappings = {}
     for j, p_bindings in enumerate(out_bindings_linking):
