@@ -98,6 +98,8 @@ def link_entity(data, nx_g, ps_merging, ps_linking):
     for p in ps_linking:
         find_programs.update(p.collect_find_programs())
 
+    find_programs = list(find_programs)
+
     out_bindings_linking = batch_find_program_executor(nx_g, find_programs)
     eval_mappings = {}
     for j, p_bindings in enumerate(out_bindings_linking):
