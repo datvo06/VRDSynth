@@ -342,7 +342,7 @@ class FindProgram(Program):
         return f'find(({", ".join([str(w) for w in self.word_variables])}), ({", ".join([str(r) for r in self.relation_variables])}), ({", ".join([str(c) for c in self.relation_constraint])}, {str(self.constraint)}, {", ".join([str(w) for w in self.return_variables])})'
 
     def __hash__(self):
-        return hash(self.__str__())
+        return hash(str(self))
 
     def __eq__(self, other):
         return str(self) == str(other)
@@ -388,7 +388,7 @@ class FixedSetProgram(Program):
         return isinstance(other, FixedSetProgram) and self.values == other.values
 
     def __hash__(self):
-        return hash(self.__str__())
+        return hash(str(self))
 
 
 class EmptyProgram(FixedSetProgram):
@@ -423,7 +423,7 @@ class EmptyProgram(FixedSetProgram):
 
 
     def __hash__(self):
-        return hash(self.__str__())
+        return hash(str(self))
 
 
 class UnionProgram(Program):
@@ -462,7 +462,7 @@ class UnionProgram(Program):
         return set(self.programs) == set(other.programs)
 
     def __hash__(self):
-        return hash(self.__str__())
+        return hash(str(self))
 
 
 class ExcludeProgram(Program):
@@ -1314,7 +1314,7 @@ class FloatLessConstraint(Constraint):
         return False, self
 
     def __hash__(self):
-        return hash(self.__str__)
+        return hash(str(self))
 
 
 class AndConstraint(Constraint):
