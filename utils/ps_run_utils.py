@@ -110,7 +110,7 @@ def link_entity(data, nx_g, ps_merging, ps_linking):
             eval_mappings[find_programs[j]].append((w_binding[w0], wlast))
 
     ps_linking = [p.replace_find_programs_with_values(eval_mappings) for p in ps_linking]
-    pairs = itertools.chain(*[p.evaluate(nx_g) for p in es_linking])
+    pairs = itertools.chain(*[p.evaluate(nx_g) for p in ps_linking])
     w2c = defaultdict(list)
     for w1, w2 in pairs:
         for _w2 in uf.get_group(uf.find(w2)):
