@@ -330,7 +330,7 @@ def precision_counter_version_space_based_entity_linking(pos_paths, dataset, spe
                 covered_tt_perfect |= new_vs_tt
                 perfect_ps.append(
                         construct_counter_program(
-                            u_aps if use_counter_program else u_pps
+                            u_aps if use_counter_program else u_pps,
                             vs.programs[0],
                         )
                 )
