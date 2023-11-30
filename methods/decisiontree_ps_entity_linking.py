@@ -300,7 +300,6 @@ def precision_counter_version_space_based_entity_linking(pos_paths, dataset, spe
 
             # Adding dependent programs and counter dependent program
             for vs_idx, vs in enumerate(new_vss):
-                if has_child[vs_idx]: continue
                 vs_tf = vs.tf - covered_tt_counter
                 use_counter_program = False
                 if len(vs_tf) < len(vs.tf):
