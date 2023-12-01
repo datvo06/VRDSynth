@@ -178,9 +178,9 @@ def precision_version_space_based_grouping(pos_paths, dataset, specs, data_sampl
 
     print("Number of version spaces: ", len(vss))
     max_its = 10
-    pps, io2pps, pcps, covered_tt, covered_tt_perfect = [], {}, [], set(), set()
-    covered_tt_counter = set()
-    covered_tt = set()
+    pps, io2pps, pcps, cov_tt, cov_tt_perfect = [], {}, [], set(), set()
+    cov_tt_counter = set()
+    cov_tt = set()
     start_time = time.time()
     for it in range(max_its):
         if pexists(f"{cache_dir}/stage3_{it}_{TASK}.pkl"):
@@ -204,7 +204,7 @@ def precision_version_space_based_grouping(pos_paths, dataset, specs, data_sampl
                 cache, cnt, acc = {}, 0, 0.
                 for vs_idx in vs_idxs:
                     cnt += 1
-                    big_bar.set_postfix({"cnt" : cnt, 'covered_tt': len(covered_tt), 'covered_tt_perfect': len(covered_tt_perfect)})
+                    big_bar.set_postfix({"cnt" : cnt, 'cov_tt': len(cov_tt), 'cov_tt_perfect': len(cov_tt_perfect)})
                     vs = vss[vs_idx]
                     vs_matches = get_intersect_constraint_vs(vs, c, data_sample_set_relation_cache, cache)
                     if not vs_matches: continue
@@ -214,22 +214,22 @@ def precision_version_space_based_grouping(pos_paths, dataset, specs, data_sampl
                     new_ft = vss[vs_idx].ft 
                     io_key = tuple((tuple(new_tt), tuple(new_tf), tuple(new_ft)))
                     new_program = add_constraint_to_find_program(vss[vs_idx].programs[0], c)
-                    if not new_tt and new_tf - covered_tt_counter:
+                    if not new_tt and new_tf - cov_tt_counter:
                         print(f"Found new counter program")
                         pcps.append(new_program)
                         io2pps[io_key] = VS(new_tt, new_tf, new_ft, [new_program], vs_matches)
-                        covered_tt_counter |= new_tf
+                        cov_tt_counter |= new_tf
                         continue 
 
                     if not new_tt: continue
                     old_p, _, _ = get_p_r_f1(vss[vs_idx].tt, vss[vs_idx].tf, vss[vs_idx].ft)
                     new_p, _, _ = get_p_r_f1(new_tt, new_tf, new_ft)
                     if io_key in new_io_to_vs: continue
-                    if check_add_perfect_program(new_tt, new_tf, new_ft, covered_tt_perfect, io_key, new_program, vs_matches, io2pps, pps, cache_dir, it, logger, TASK, start_time):
+                    if check_add_perfect_program(new_tt, new_tf, new_ft, cov_tt_perfect, io_key, new_program, vs_matches, io2pps, pps, cache_dir, it, logger, TASK, start_time):
                         continue
                     if new_p > old_p: 
-                        if not (new_tt - covered_tt): continue
-                        covered_tt |= new_tt
+                        if not (new_tt - cov_tt): continue
+                        cov_tt |= new_tt
                         print(f"Found new increased precision: {old_p} -> {new_p}")
                         acc += 1
                     has_child[vs_idx] = True
@@ -272,9 +272,9 @@ def precision_counter_version_space_based_grouping(pos_paths, dataset, specs, da
 
     print("Number of version spaces: ", len(vss))
     max_its = 10
-    pps, io2pps, pcps, covered_tt, covered_tt_perfect = [], {}, [], set(), set()
-    covered_tt_counter = set()
-    covered_tt = set()
+    pps, io2pps, pcps, cov_tt, cov_tt_perfect = [], {}, [], set(), set()
+    cov_tt_counter = set()
+    cov_tt = set()
     start_time = time.time()
     for it in range(max_its):
         if pexists(f"{cache_dir}/stage3_{it}_{TASK}.pkl"):
@@ -298,7 +298,7 @@ def precision_counter_version_space_based_grouping(pos_paths, dataset, specs, da
                 cache, cnt, acc = {}, 0, 0 
                 for vs_idx in vs_idxs:
                     cnt += 1
-                    big_bar.set_postfix({"cnt" : cnt, 'covered_tt': len(covered_tt), 'covered_tt_perfect': len(covered_tt_perfect)})
+                    big_bar.set_postfix({"cnt" : cnt, 'cov_tt': len(cov_tt), 'cov_tt_perfect': len(cov_tt_perfect)})
                     vs = vss[vs_idx]
                     vs_matches = get_intersect_constraint_vs(c, vs, data_sample_set_relation_cache, cache)
                     if not vs_matches: continue
@@ -308,22 +308,22 @@ def precision_counter_version_space_based_grouping(pos_paths, dataset, specs, da
                     new_ft = vss[vs_idx].ft 
                     io_key = tuple((tuple(new_tt), tuple(new_tf), tuple(new_ft)))
                     new_program = add_constraint_to_find_program(vss[vs_idx].programs[0], c)
-                    if not new_tt and new_tf - covered_tt_counter:
+                    if not new_tt and new_tf - cov_tt_counter:
                         print(f"Found new counter program")
                         pcps.append(new_program)
                         io2pps[io_key] = VS(new_tt, new_tf, new_ft, [new_program], vs_matches)
-                        covered_tt_counter |= new_tf
+                        cov_tt_counter |= new_tf
                         continue 
 
                     if not new_tt: continue
                     old_p, _, _ = get_p_r_f1(vss[vs_idx].tt, vss[vs_idx].tf, vss[vs_idx].ft)
                     new_p, _, _ = get_p_r_f1(new_tt, new_tf, new_ft)
                     if io_key in new_io_to_vs: continue
-                    if check_add_perfect_program(new_tt, new_tf, new_ft, covered_tt_perfect, io_key, new_program, vs_matches, io2pps, pps, cache_dir, it, logger, TASK, start_time):
+                    if check_add_perfect_program(new_tt, new_tf, new_ft, cov_tt_perfect, io_key, new_program, vs_matches, io2pps, pps, cache_dir, it, logger, TASK, start_time):
                         continue
                     if new_p > old_p: 
-                        if not (new_tt - covered_tt): continue
-                        covered_tt |= new_tt
+                        if not (new_tt - cov_tt): continue
+                        cov_tt |= new_tt
                         print(f"Found new increased precision: {old_p} -> {new_p}")
                         acc += 1
                     has_child[vs_idx] = True
@@ -343,15 +343,15 @@ def precision_counter_version_space_based_grouping(pos_paths, dataset, specs, da
                 pkl.dump(pps, f)
 
             # Adding dependent programs and counter dependent program
-            extra_pps, extra_covered_tt = join_counter_vss(pps, pcps, covered_tt_perfect, new_vss, covered_tt_counter)
+            extra_pps, extra_cov_tt = join_counter_vss(pps, pcps, cov_tt_perfect, new_vss, cov_tt_counter)
             pps += extra_pps
-            covered_tt_perfect |= extra_covered_tt
-            print("Number of perfect program after refinement:", len(pps), len(covered_tt_perfect))
+            cov_tt_perfect |= extra_cov_tt
+            print("Number of perfect program after refinement:", len(pps), len(cov_tt_perfect))
             with open(pjoin(cache_dir, f"stage3_{it}_pps_{TASK}.pkl"), "wb") as f:
                 pkl.dump(pps, f)
             nvss = len(new_vss)
 
-            new_vss = [vs for vs in new_vss if vs.tt - covered_tt_perfect]
+            new_vss = [vs for vs in new_vss if vs.tt - cov_tt_perfect]
             nvss_after = len(new_vss)
             if nvss_after > 10000:  # Too heavy, cannot run
                 break
