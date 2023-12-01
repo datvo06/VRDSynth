@@ -2,12 +2,14 @@ from utils.ps_utils import (
         FalseValue, WordVariable, RelationVariable, ExcludeProgram, 
         FilterStrategy, AndConstraint, FindProgram, Hole, TrueValue, Constraint, LiteralSet, 
         WordLabelProperty, RelationLabelProperty,
+        LabelEqualConstraint, RelationLabelEqualConstraint,
         UnionProgram,
         fill_hole)
 from collections import defaultdict
 from utils.misc import tuple2mapping, mapping2tuple
 from typing import Set
 import copy
+from functools import lru_cache
 
 class VersionSpace:
     def __init__(self, tt, tf, ft, programs, mappings):
