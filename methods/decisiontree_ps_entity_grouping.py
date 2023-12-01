@@ -10,7 +10,7 @@ from collections import defaultdict, namedtuple
 from networkx.algorithms import constraint, isomorphism
 from utils.ps_utils import FalseValue, Program, EmptyProgram, FindProgram, RelationLabelConstant, RelationLabelProperty, TrueValue, WordLabelProperty, WordVariable, RelationVariable, RelationConstraint, LabelEqualConstraint, RelationLabelEqualConstraint, construct_entity_linking_specs, LabelConstant, AndConstraint, LiteralSet, Constraint, Hole, replace_hole, find_holes, SymbolicList, FilterStrategy, fill_hole, Expression, FloatConstant
 from utils.visualization_script import visualize_program_with_support
-from utils.version_space import VersionSpace
+from utils.version_space import VersionSpace as VS, get_intersect_constraint_vs, get_valid_cand_find_program, add_constraint_to_find_program, get_intersect_constraint_vs, construct_constraints_to_valid_version_spaces
 import json
 import pickle as pkl
 import os
@@ -20,9 +20,12 @@ import multiprocessing
 from multiprocessing import Pool
 import cv2
 from functools import lru_cache, partial
-from methods.decisiontree_ps import get_all_path, construct_or_get_initial_programs, batch_find_program_executor, mapping2tuple, tuple2mapping, report_metrics, get_p_r_f1, get_valid_cand_find_program, add_constraint_to_find_program, get_args, logger, setup_grammar
+from methods.decisiontree_ps import check_add_perfect_program, get_all_path, construct_or_get_initial_programs, batch_find_program_executor, mapping2tuple, tuple2mapping, report_metrics, get_p_r_f1, get_args, setup_grammar
+from utils.misc import mapping2tuple, tuple2mapping, pexists, pjoin, mappings2linking_tuples, Logger
 import time
 
+
+logger = Logger()
 SpecType = List[Tuple[int, List[Tuple[int, int]], List[Set[int]]]]
 
 
@@ -49,13 +52,12 @@ def get_path_specs_same_parent(dataset, specs: SpecType, relation_set, hops=2, s
     pos_relations = []
     neg_rels = []
     print("Start mining positive relations")
-    if os.path.exists(f"{cache_dir}/all_positive_paths.pkl"):
+    if pexists(f"{cache_dir}/all_positive_paths.pkl"):
         pos_relations = pkl.load(open(f"{cache_dir}/all_positive_paths.pkl", 'rb'))
     else:
         pos_relations = list(get_all_positive_relation_paths_same_parent(specs, relation_set, hops=hops, data_sample_set_relation_cache=data_sample_set_relation))
         pkl.dump(pos_relations, open(f"{cache_dir}/all_positive_paths.pkl", 'wb'))
     return pos_relations
-
 
 
 
@@ -103,15 +105,8 @@ def collect_program_execution_same_parent(programs, specs: SpecType, data_sample
     return tt, ft, tf, all_out_mappings
 
 
-
-def three_stages_bottom_up_version_space_based_same_parent(pos_paths, dataset, specs, data_sample_set_relation_cache, cache_dir=None):
-    # STAGE 1: Build base relation spaces
-    programs = construct_or_get_initial_programs(pos_paths, f"{cache_dir}/stage1_same_parent.pkl", logger=logger)
-    print("Number of programs in stage 1: ", len(programs))
-    # STAGE 2: Build version space
-    # Start by getting the output of each program
-    # Load the following: vs_io, vs_io_neg, p_io, p_io_neg, io_to_program
-    if cache_dir is not None and os.path.exists('{cache_dir}/stage2_same_parent.pkl'):
+def build_version_space(programs, specs, data_sample_set_relation_cache, logger, cache_dir: str):
+    if pexists('{cache_dir}/stage2_same_parent.pkl'):
         with open(f"{cache_dir}/stage2_same_parent.pkl", "rb") as f:
             tt, tf, ft, io_to_program, all_out_mappings = pkl.load(f)
             print(len(tt), len(tf), len(ft))
@@ -131,7 +126,10 @@ def three_stages_bottom_up_version_space_based_same_parent(pos_paths, dataset, s
         if cache_dir is not None:
             with open(f"{cache_dir}/stage2_same_parent.pkl", "wb") as f:
                 pkl.dump([tt, tf, ft, io_to_program, all_out_mappings], f)
+    return tt, tf, ft, io_to_program, all_out_mappings
 
+
+def build_io_to_program(tt, tf, ft, all_out_mappings, programs, dataset):
     w2e = [defaultdict(set) for _ in range(len(dataset))]
     for i, _, entities in specs:
         for e in entities:
@@ -156,8 +154,6 @@ def three_stages_bottom_up_version_space_based_same_parent(pos_paths, dataset, s
                 rem = w2e[i][w0bind] - w2otherwords[i][w0bind] - {w0bind}
                 ft[p].update([(i, w0bind, w) for w in rem])
         io_to_program[tuple(tt[p]), tuple(tf[p]), tuple(ft[p])].append(p)
-
-        
     all_word_pairs = defaultdict(set)
     for p in programs:
         wret = p.return_variables[0]
@@ -165,45 +161,43 @@ def three_stages_bottom_up_version_space_based_same_parent(pos_paths, dataset, s
             w_bind, r_bind = tuple2mapping((w_bind, r_bind))
             all_word_pairs[p].add((i, w_bind[w0], w_bind[wret]))
         assert all_word_pairs[p] == (tt[p] | tf[p])
+    return io_to_program
+
+
+def precision_version_space_based_same_parent(pos_paths, dataset, specs, data_sample_set_relation_cache, cache_dir):
+    assert cache_dir is not None, "cache_dir must be specified"
+    # STAGE 1: Build base relation spaces
+    programs = construct_or_get_initial_programs(pos_paths, f"{cache_dir}/stage1_same_parent.pkl", logger=logger)
+    print("Number of programs in stage 1: ", len(programs))
+    # STAGE 2: Build version space
+    tt, tf, ft, io_to_program, all_out_mappings = build_version_space(programs, specs, data_sample_set_relation_cache, logger, cache_dir)
+    io_to_program = build_io_to_program(tt, tf, ft, all_out_mappings, programs, dataset)
     # STAGE 3: Build version space
     vss = []
     for (tt_p, tf_p, ft_p), ps in io_to_program.items():
         if tt_p or tf_p:
-            vss.append(VersionSpace(tt_p, tf_p, ft_p, ps, all_out_mappings[ps[0]]))
+            vss.append(VS(tt_p, tf_p, ft_p, ps, all_out_mappings[ps[0]]))
 
     print("Number of version spaces: ", len(vss))
     max_its = 10
-    perfect_ps = []
+    pps, io2pps, perfect_counter_ps, covered_tt, covered_tt_perfect = [], {}, [], set(), set()
+    covered_tt_counter = set()
     covered_tt = set()
-    covered_tt_perfect = set()
     start_time = time.time()
     for it in range(max_its):
-        if cache_dir and os.path.exists(f"{cache_dir}/stage3_{it}_same_parent.pkl"):
+        if cache_dir and pexists(f"{cache_dir}/stage3_{it}_same_parent.pkl"):
             vss, c2vs = pkl.load(open(f"{cache_dir}/stage3_{it}_same_parent.pkl", "rb"))
         else:
-            c2vs = defaultdict(set)
-            for i, vs in enumerate(vss):
-                try:
-                    old_p, old_r, old_f1 = get_p_r_f1(vs.tt, vs.tf, vs.ft)
-                except:
-                    continue
-                for p in vs.programs:
-                    cs = get_valid_cand_find_program(vs, p)
-                    for c in cs:
-                        c2vs[c].add(i)
+            c2vs = construct_constraints_to_valid_version_spaces(vss)
             # Save this for this iter
-            if cache_dir:
-                with open(f"{cache_dir}/stage3_{it}_same_parent.pkl", "wb") as f:
-                    pkl.dump([vss, c2vs], f)
-        # Now we have extended_cands
-        # Let's create the set of valid input for each cands
-        # for each constraint, check against each of the original programs
-        if cache_dir and os.path.exists(f"{cache_dir}/stage3_{it}_new_vs_same_parent.pkl"):
+            with open(f"{cache_dir}/stage3_{it}_same_parent.pkl", "wb") as f:
+                pkl.dump([vss, c2vs], f)
+        
+        if pexists(f"{cache_dir}/stage3_{it}_new_vs_same_parent.pkl"):
             with open(f"{cache_dir}/stage3_{it}_new_vs_same_parent.pkl", "rb") as f:
                 new_vss = pkl.load(f)
         else:
             new_vss, new_io_to_vs = [], {}
-            perfect_ps, perfect_ps_io_value = [], set()
             has_child = [False] * len(vss)
             big_bar = tqdm.tqdm(c2vs.items())
             big_bar.set_description("Stage 3 - Creating New Version Spaces")
@@ -213,93 +207,54 @@ def three_stages_bottom_up_version_space_based_same_parent(pos_paths, dataset, s
                 for vs_idx in vs_idxs:
                     cnt += 1
                     big_bar.set_postfix({"cnt" : cnt, 'covered_tt': len(covered_tt), 'covered_tt_perfect': len(covered_tt_perfect)})
-                    vs_intersect_mapping = set()
                     vs = vss[vs_idx]
-                    for i, (w_bind, r_bind) in vs.mappings:
-                        nx_g = data_sample_set_relation_cache[i]
-                        if (i, (w_bind, r_bind)) in cache:
-                            if cache[(i, (w_bind, r_bind))]:
-                                vs_intersect_mapping.add((i, (w_bind, r_bind)))
-                        else:
-                            w_bind, r_bind = tuple2mapping((w_bind, r_bind))
-                            val = c.evaluate(w_bind, r_bind, nx_g)
-                            if val:
-                                cache[(i, mapping2tuple((w_bind, r_bind)))] = True
-                                vs_intersect_mapping.add((i, mapping2tuple((w_bind, r_bind))))
-                            else:
-                                cache[(i, mapping2tuple((w_bind, r_bind)))] = False
-                    # each constraint combined with each vs will lead to another vs
-                    if not vs_intersect_mapping:        # There is no more candidate
-                        continue
-                    ios = set()
-                    binding_var = vss[vs_idx].programs[0].return_variables[0]
-                    for i, (word_binding, relation_binding) in vs_intersect_mapping:
-                        word_binding, relation_binding = tuple2mapping((word_binding, relation_binding))
-                        ios.add((i, word_binding[WordVariable("w0")], word_binding[binding_var]))
-                    if not ios:
-                        continue
+                    vs_matches = get_intersect_constraint_vs(vs, c, data_sample_set_relation_cache, cache)
+                    if not vs_matches: continue
+                    ios = mappings2linking_tuples(vss[vs_idx].programs[0], vs_matches)
                     # Now check the tt, tf, ft
-                    new_tt = ios.intersection(vss[vs_idx].tt)
-                    new_tf = ios.intersection(vss[vs_idx].tf)
-                    # theoretically, ft should stay the same
-                    new_ft = vss[vs_idx].ft
-                    if not new_tt and not new_ft:
-                        continue
-                    try:
-                        old_p, old_r, old_f1 = get_p_r_f1(vss[vs_idx].tt, vss[vs_idx].tf, vss[vs_idx].ft)
-                    except:
-                        continue
-                    try:
-                        new_p, new_r, new_f1 = get_p_r_f1(new_tt, new_tf, new_ft)
-                    except:
-                        continue
-                    if new_p > old_p or (new_p < old_p and new_r > 0):
-                        io_key = tuple((tuple(new_tt), tuple(new_tf), tuple(new_ft)))
-                        if io_key in new_io_to_vs:
-                            continue
-                        new_program = add_constraint_to_find_program(vss[vs_idx].programs[0], c)
-                        if new_p == 1.0 and (new_tt - covered_tt_perfect):
-                            if io_key not in perfect_ps_io_value:
-                                perfect_ps.append(new_program)
-                                perfect_ps_io_value.add(io_key)
-                                with open(f"{cache_dir}/stage3_{it}_perfect_ps_same_parent.pkl", "wb") as f:
-                                    pkl.dump(perfect_ps, f)
+                    new_tt, new_tf = (ios & vss[vs_idx].tt), (ios & vss[vs_idx].tf)
+                    new_ft = vss[vs_idx].ft 
+                    io_key = tuple((tuple(new_tt), tuple(new_tf), tuple(new_ft)))
+                    new_program = add_constraint_to_find_program(vss[vs_idx].programs[0], c)
+                    if not new_tt and new_tf - covered_tt_counter:
+                        print(f"Found new counter program")
+                        perfect_counter_ps.append(new_program)
+                        io2pps[io_key] = VS(new_tt, new_tf, new_ft, [new_program], vs_matches)
+                        covered_tt_counter |= new_tf
+                        continue 
 
-                            logger.log(str(len(covered_tt_perfect)), (float(time.time()) - start_time, len(perfect_ps)))
-                            covered_tt_perfect.update(new_tt)
+                    if not new_tt: continue
+                    old_p, _, _ = get_p_r_f1(vss[vs_idx].tt, vss[vs_idx].tf, vss[vs_idx].ft)
+                    new_p, _, _ = get_p_r_f1(new_tt, new_tf, new_ft)
+                    if io_key in new_io_to_vs: continue
+                    if check_add_perfect_program(new_tt, new_tf, new_ft, covered_tt_perfect, io_key, new_program, vs_matches, io2pps, pps, cache_dir, it, logger, "grouping"):
+                        continue
+                    if new_p > old_p: 
+                        if not (new_tt - covered_tt):
                             continue
-                        if new_p > old_p: 
-                            if not (new_tt - covered_tt):
-                                continue
-                            covered_tt |= new_tt
-                            print(f"Found new increased precision: {old_p} -> {new_p}")
-                            acc += 1
-                        has_child[vs_idx] = True
+                        covered_tt |= new_tt
+                        print(f"Found new increased precision: {old_p} -> {new_p}")
+                        acc += 1
+                    has_child[vs_idx] = True
 
-                        if new_p == 0.0 and new_r > 0.0:
-                            acc += 1
-                            print(f"Found new decreased precision: {old_p} -> {new_p}")
-                            if io_key not in perfect_ps_io_value:
-                                perfect_ps.append(new_program)
-                            continue
-                        if io_key not in new_io_to_vs:
-                            new_vs = VersionSpace(new_tt, new_tf, new_ft, [new_program], vs_intersect_mapping)
-                            new_vss.append(new_vs)
-                            new_io_to_vs[io_key] = new_vs
-                        else:
-                            new_io_to_vs[io_key].programs.append(new_program)
+                    if io_key not in new_io_to_vs:
+                        new_vs = VS(new_tt, new_tf, new_ft, [new_program], vs_matches)
+                        new_vss.append(new_vs)
+                        new_io_to_vs[io_key] = new_vs
+                    else:
+                        new_io_to_vs[io_key].programs.append(new_program)
                 if not acc:
                     print("Rejecting: ", c)
 
 
-            if cache_dir and os.path.exists(os.path.join(cache_dir, f"stage3_{it}_new_vs_same_parent.pkl")):
-                with open(os.path.join(cache_dir, f"stage3_{it}_new_vs_same_parent.pkl"), "wb") as f:
+            if cache_dir and pexists(pjoin(cache_dir, f"stage3_{it}_new_vs_same_parent.pkl")):
+                with open(pjoin(cache_dir, f"stage3_{it}_new_vs_same_parent.pkl"), "wb") as f:
                     pkl.dump(new_vss, f)
             # perfect_ps = perfect_ps + list(itertools.chain.from_iterable(vs.programs for vs, hc in zip(vss, has_child) if not hc))
-            print("Number of perfect programs:", len(perfect_ps))
+            print("Number of perfect programs:", len(pps))
             if cache_dir:
-                with open(os.path.join(cache_dir, f"stage3_{it}_perfect_ps_same_parent.pkl"), "wb") as f:
-                    pkl.dump(perfect_ps, f)
+                with open(pjoin(cache_dir, f"stage3_{it}_pps_grouping.pkl"), "wb") as f:
+                    pkl.dump(pps, f)
 
         vss = new_vss
 
@@ -316,7 +271,7 @@ if __name__ == '__main__':
 
     start_time = time.time()
 
-    if os.path.exists(f"{args.cache_dir}/dataset.pkl"):
+    if pexists(f"{args.cache_dir}/dataset.pkl"):
         with open(f"{args.cache_dir}/dataset.pkl", 'rb') as f:
             dataset = pkl.load(f)
     else:
@@ -324,7 +279,7 @@ if __name__ == '__main__':
         with open(f"{args.cache_dir}/dataset.pkl", 'wb') as f:
             pkl.dump(dataset, f)
 
-    if os.path.exists(f"{args.cache_dir}/specs_linking.pkl"):
+    if pexists(f"{args.cache_dir}/specs_linking.pkl"):
         with open(f"{args.cache_dir}/specs_linking.pkl", 'rb') as f:
             specs, entity_dataset = pkl.load(f)
     else:
@@ -336,7 +291,7 @@ if __name__ == '__main__':
             pkl.dump((specs, entity_dataset), f)
         
     start_time = time.time()
-    if os.path.exists(f"{args.cache_dir}/ds_cache_linking.pkl"):
+    if pexists(f"{args.cache_dir}/ds_cache_linking.pkl"):
         with open(f"{args.cache_dir}/ds_cache_linking.pkl", 'rb') as f:
             data_sample_set_relation_cache = pkl.load(f)
     else:
@@ -359,7 +314,7 @@ if __name__ == '__main__':
     if args.use_sem:
         assert args.model in ['layoutlmv3']
         if args.model == 'layoutlmv3':
-            if os.path.exists(f"{args.cache_dir}/embs_layoutlmv3.pkl"):
+            if pexists(f"{args.cache_dir}/embs_layoutlmv3.pkl"):
                 with open(f"{args.cache_dir}/embs_layoutlmv3.pkl", 'rb') as f:
                     all_embs = pkl.load(f)
             else:
@@ -377,7 +332,7 @@ if __name__ == '__main__':
 
     # Now we have the data sample set relation cache
     print("Stage 1 - Constructing Program Space")
-    if os.path.exists(f"{args.cache_dir}/pos_paths_linking.pkl"):
+    if pexists(f"{args.cache_dir}/pos_paths_linking.pkl"):
         with open(f"{args.cache_dir}/pos_paths_linking.pkl", 'rb') as f:
             pos_paths = pkl.load(f)
     else:

@@ -15,7 +15,7 @@ from networkx.algorithms import constraint, isomorphism
 from utils.ps_utils import FalseValue, LiteralReplacement, Program, EmptyProgram, GrammarReplacement, FindProgram, RelationLabelConstant, RelationLabelProperty, TrueValue, WordLabelProperty, WordVariable, RelationVariable, RelationConstraint, LabelEqualConstraint, RelationLabelEqualConstraint, construct_entity_merging_specs, SpecIterator, LabelConstant, AndConstraint, LiteralSet, Constraint, Hole, replace_hole, find_holes, SymbolicList, FilterStrategy, fill_hole, Expression, FloatConstant, RelationPropertyConstant, SemDist
 from utils.ps_run_utils import batch_find_program_executor, merge_words
 from utils.visualization_script import visualize_program_with_support
-from utils.version_space import VersionSpace
+from utils.version_space import VersionSpace as VS, get_valid_cand_find_program, add_constraint_to_find_program
 import json
 import pickle as pkl
 import os
@@ -25,26 +25,26 @@ import multiprocessing
 from multiprocessing import Pool
 from functools import lru_cache, partial
 from utils.metrics import get_p_r_f1
+from utils.misc import pexists, pjoin
 import time
-from utils.misc import tuple2mapping, mapping2tuple
-
-
-class Logger(object):
-    def __init__(self):
-        self.dict_data = {}
-
-    def log(self, key: str, value: Any):
-        self.dict_data[key] = value
-        self.write()
-
-    def set_fp(self, fp):
-        self.fp = fp
-
-    def write(self):
-        with open(self.fp, 'w') as f:
-            json.dump(self.dict_data, f)
-
+from utils.misc import tuple2mapping, mapping2tuple, Logger
 logger = Logger()
+
+
+def check_add_perfect_program(new_tt, new_tf, new_ft, covered_tt_perfect, io_key, new_program, vs_matches, io2pps, pps, cache_dir, it, logger, task):
+    assert task in {'word_merging', 'grouping', 'linking'}
+    if not new_tf and (new_tt - covered_tt_perfect):
+        if io_key not in io2pps:
+            pps.append(new_program)
+            io2pps[io_key] = VS(new_tt, new_tf, new_ft, [new_program], vs_matches)
+            with open(f"{cache_dir}/stage3_{it}_pps_{task}.pkl", "wb") as f:
+                pkl.dump(pps, f)
+
+        logger.log(str(len(covered_tt_perfect)), (float(time.time()) - start_time, len(pps)))
+        covered_tt_perfect.update(new_tt)
+        return True
+    return False
+
 
 def get_all_path(nx_g, w1, w2, hops=2):
     path_set_counter = defaultdict(int)
@@ -108,7 +108,7 @@ def get_path_specs(dataset, specs: List[Tuple[int, List[List[int]]]], relation_s
     pos_relations = []
     neg_rels = []
     print("Start mining positive relations")
-    if os.path.exists(f"{args.cache_dir}/all_positive_paths.pkl"):
+    if pexists(f"{args.cache_dir}/all_positive_paths.pkl"):
         pos_relations = pkl.load(open(f"{args.cache_dir}/all_positive_paths.pkl", 'rb'))
     else:
         pos_relations = list(get_all_positive_relation_paths(dataset, specs, relation_set, hops=hops, data_sample_set_relation_cache=data_sample_set_relation))
@@ -152,139 +152,6 @@ def fill_multi_hole(path, holes, max_depth=3):
 
 
 
-class WordInBoundFilter(FilterStrategy):
-    def __init__(self, find_program):
-        self.word_set = find_program.word_variables
-        self.rel_set = find_program.relation_variables
-    
-    def check_valid(self, program):
-        if isinstance(program, WordVariable):
-            return program in self.word_set
-        if isinstance(program, RelationVariable):
-            return program in self.rel_set
-        return True
-
-    def __hash__(self) -> int:
-        return hash((self.word_set, self.rel_set))
-
-    def __eq__(self, o: object) -> bool:
-        if not isinstance(o, WordInBoundFilter):
-            return False
-        return self.word_set == o.word_set and self.rel_set == o.rel_set
-
-
-class NoDuplicateConstraintFilter(FilterStrategy):
-    def __init__(self, constraint):
-        self.constraint_set = set(self.gather_all_constraint(constraint))
-
-    def gather_all_constraint(self, constraint):
-        if isinstance(constraint, AndConstraint):
-            lhs_constraints = self.gather_all_constraint(constraint.lhs)
-            rhs_constraints = self.gather_all_constraint(constraint.rhs)
-            return lhs_constraints + rhs_constraints
-        else:
-            return [constraint]
-
-    def check_valid(self, program):
-        if isinstance(program, Constraint):
-            return program not in self.constraint_set
-        return True
-
-    def __hash__(self) -> int:
-        return hash(self.constraint_set)
-
-    def __eq__(self, o: object) -> bool:
-        if not isinstance(o, NoDuplicateConstraintFilter):
-            return False
-        return self.constraint_set == o.constraint_set
-
-
-
-class NoDuplicateLabelConstraintFilter(FilterStrategy):
-    def __init__(self, constraint):
-        self.constraint_set = set(NoDuplicateLabelConstraintFilter.gather_all_constraint(constraint))
-        self.word_label = set()
-        for constraint in self.constraint_set:
-            if isinstance(constraint, LabelEqualConstraint):
-                if isinstance(constraint.lhs, WordLabelProperty):
-                    self.word_label.add(constraint.lhs.word_variable)
-                elif isinstance(constraint.rhs, WordLabelProperty):
-                    self.word_label.add(constraint.rhs.word_variable)
-        self.rel_label = set()
-        for constraint in self.constraint_set:
-            if isinstance(constraint, RelationLabelEqualConstraint):
-                if isinstance(constraint.lhs, RelationLabelProperty):
-                    self.rel_label.add(constraint.lhs.relation_variable)
-                elif isinstance(constraint.rhs, RelationLabelProperty):
-                    self.rel_label.add(constraint.rhs.relation_variable)
-
-    @staticmethod
-    @lru_cache(maxsize=None)
-    def gather_all_constraint(constraint):
-        if isinstance(constraint, AndConstraint):
-            lhs_constraints = NoDuplicateLabelConstraintFilter.gather_all_constraint(constraint.lhs)
-            rhs_constraints = NoDuplicateLabelConstraintFilter.gather_all_constraint(constraint.rhs)
-            return lhs_constraints + rhs_constraints
-        else:
-            return [constraint]
-
-    def check_valid(self, program):
-        if isinstance(program, WordLabelProperty):
-            return program.word_variable not in self.word_label
-        if isinstance(program, RelationLabelProperty):
-            return program.relation_variable not in self.rel_label
-        return True
-
-    def __hash__(self) -> int:
-        return hash(self.constraint_set)
-
-    def __eq__(self, o: object) -> bool:
-        if not isinstance(o, NoDuplicateConstraintFilter):
-            return False
-        return self.constraint_set == o.constraint_set
-
-
-class DistinguishPropertyFilter(FilterStrategy):
-    def __init__(self, mappings):
-        pass
-
-
-class RemoveFilteredConstraint(FilterStrategy):
-    def __init__(self, constraint_set):
-        self.constraint_set = constraint_set
-
-
-class CompositeFilter(FilterStrategy):
-    def __init__(self, filters):
-        self.filters = filters
-
-    def check_valid(self, program):
-        for filter in self.filters:
-            if not filter.check_valid(program):
-                return False
-        return True
-
-
-def get_valid_cand_find_program(version_space: VersionSpace, program: FindProgram):
-    if program.type_name() in LiteralSet:
-        return []
-    hole = Hole(Constraint)
-    filterer = CompositeFilter([WordInBoundFilter(program), NoDuplicateConstraintFilter(program.constraint), NoDuplicateLabelConstraintFilter(program.constraint)])
-    candidates = fill_hole(hole, 4, filterer)
-    args = program.get_args()
-    out_cands = []
-    for cand in candidates:
-        if isinstance(cand, TrueValue) or isinstance(cand, FalseValue):
-            continue
-        out_cands.append(cand)
-    return out_cands
-
-def add_constraint_to_find_program(find_program, constraint):
-    args = find_program.get_args()[:]
-    args = copy.deepcopy(args)
-    args[3] = AndConstraint(args[3], constraint)
-    return FindProgram(*args)
-
 
 def test_add_constraint_to_find_program():
     find_program = FindProgram([WordVariable("w0"), WordVariable("w1")],
@@ -305,7 +172,7 @@ def test_add_constraint_to_find_program():
                                    RelationLabelEqualConstraint(RelationLabelProperty(RelationVariable("r0")), RelationLabelProperty(RelationVariable("r0")))), constraint),
          [WordVariable("w1")])
 
-def extend_program_general(version_space: VersionSpace, program: FindProgram):
+def extend_program_general(version_space: VS, program: FindProgram):
     all_cands = get_valid_cand_find_program(version_space, program)
     out_cands = []
     args = program.get_args()
@@ -491,7 +358,7 @@ def report_metrics_program(p_io_tt: Dict[Expression, set], p_io_tf: Dict[Express
 
 
 def construct_or_get_initial_programs(pos_paths, cache_fp, logger=logger):
-    if os.path.exists(cache_fp):
+    if pexists(cache_fp):
         with open(cache_fp, "rb") as f:
             programs = pkl.load(f)
     else:
@@ -510,8 +377,8 @@ def three_stages_bottom_up_version_space_based(all_positive_paths, dataset, spec
     # STAGE 2: Build version space
     # Start by getting the output of each program
     # Load the following: vs_io, vs_io_neg, p_io, p_io_neg, io_to_program
-    if cache_dir is not None and os.path.exists(os.path.join(cache_dir, 'stage2.pkl')):
-        with open(os.path.join(cache_dir, "stage2.pkl"), "rb") as f:
+    if cache_dir is not None and pexists(pjoin(cache_dir, 'stage2.pkl')):
+        with open(pjoin(cache_dir, "stage2.pkl"), "rb") as f:
             tt, tf, ft, io_to_program, all_out_mappings = pkl.load(f)
             print(len(tt), len(tf), len(ft))
     else:
@@ -528,7 +395,7 @@ def three_stages_bottom_up_version_space_based(all_positive_paths, dataset, spec
         io_to_program = defaultdict(list)
         report_metrics(programs, tt, tf, ft, io_to_program)
         if cache_dir is not None:
-            with open(os.path.join(cache_dir, "stage2.pkl"), "wb") as f:
+            with open(pjoin(cache_dir, "stage2.pkl"), "wb") as f:
                 pkl.dump([tt, tf, ft, io_to_program, all_out_mappings], f)
 
     ## This is simply sanity checking
@@ -568,7 +435,7 @@ def three_stages_bottom_up_version_space_based(all_positive_paths, dataset, spec
     # STAGE 3: Build version space
     vss = []
     for (tt_p, tf_p, ft_p), ps in io_to_program.items():
-        vss.append(VersionSpace(tt_p, tf_p, ft_p, ps, all_out_mappings[ps[0]]))
+        vss.append(VS(tt_p, tf_p, ft_p, ps, all_out_mappings[ps[0]]))
 
     print("Number of version spaces: ", len(vss))
     max_its = 10
@@ -577,8 +444,8 @@ def three_stages_bottom_up_version_space_based(all_positive_paths, dataset, spec
     covered_tt = set()
     covered_tt_perfect = set()
     for it in range(max_its):
-        if cache_dir and os.path.exists(os.path.join(cache_dir, f"stage3_{it}.pkl")):
-            vss, c2vs = pkl.load(open(os.path.join(cache_dir, f"stage3_{it}.pkl"), "rb"))
+        if cache_dir and pexists(pjoin(cache_dir, f"stage3_{it}.pkl")):
+            vss, c2vs = pkl.load(open(pjoin(cache_dir, f"stage3_{it}.pkl"), "rb"))
         else:
             c2vs = defaultdict(set)
             for i, vs in enumerate(vss):
@@ -592,13 +459,13 @@ def three_stages_bottom_up_version_space_based(all_positive_paths, dataset, spec
                         c2vs[c].add(i)
             # Save this for this iter
             if cache_dir:
-                with open(os.path.join(cache_dir, f"stage3_{it}.pkl"), "wb") as f:
+                with open(pjoin(cache_dir, f"stage3_{it}.pkl"), "wb") as f:
                     pkl.dump([vss, c2vs], f)
         # Now we have extended_cands
         # Let's create the set of valid input for each cands
         # for each constraint, check against each of the original programs
-        if cache_dir and os.path.exists(os.path.join(cache_dir, f"stage3_{it}_new_vs.pkl")):
-            with open(os.path.join(cache_dir, f"stage3_{it}_new_vs.pkl"), "rb") as f:
+        if cache_dir and pexists(pjoin(cache_dir, f"stage3_{it}_new_vs.pkl")):
+            with open(pjoin(cache_dir, f"stage3_{it}_new_vs.pkl"), "rb") as f:
                 new_vss = pkl.load(f)
         else:
             new_vss = []
@@ -657,14 +524,7 @@ def three_stages_bottom_up_version_space_based(all_positive_paths, dataset, spec
                         if io_key in new_io_to_vs:
                             continue
                         new_program = add_constraint_to_find_program(vss[vs_idx].programs[0], c)
-                        if new_p >= 1.0 and (new_tt - covered_tt_perfect):
-                            if io_key not in perfect_ps_io_value:
-                                perfect_ps.append(new_program)
-                                perfect_ps_io_value.add(io_key)
-                                with open(os.path.join(cache_dir, f"stage3_{it}_perfect_ps.pkl"), "wb") as f:
-                                    pkl.dump(perfect_ps, f)
-                            logger.log(str(len(covered_tt_perfect)), (float(time.time()) - start_time, len(perfect_ps)))
-                            covered_tt_perfect.update(new_tt)
+                        if check_add_perfect_program(new_tt, new_tf, new_ft, covered_tt_perfect, io_key, new_program, vs_intersect_mapping, perfect_ps_io_value, perfect_ps, cache_dir, it, logger, 'word_merging'):
                             continue
                         if new_p > old_p: 
                             if not (new_tt - covered_tt):
@@ -673,15 +533,8 @@ def three_stages_bottom_up_version_space_based(all_positive_paths, dataset, spec
                             print(f"Found new increased precision: {old_p} -> {new_p}")
                             acc += 1
                         has_child[vs_idx] = True
-
-                        if new_p == 0.0 and new_r > 0.0:
-                            acc += 1
-                            print(f"Found new decreased precision: {old_p} -> {new_p}")
-                            if io_key not in perfect_ps_io_value:
-                                perfect_ps.append(new_program)
-                            continue
                         if io_key not in new_io_to_vs:
-                            new_vs = VersionSpace(new_tt, new_tf, new_ft, [new_program], vs_intersect_mapping)
+                            new_vs = VS(new_tt, new_tf, new_ft, [new_program], vs_intersect_mapping)
                             new_vss.append(new_vs)
                             new_io_to_vs[io_key] = new_vs
                         else:
@@ -690,13 +543,13 @@ def three_stages_bottom_up_version_space_based(all_positive_paths, dataset, spec
                     print("Rejecting: ", c)
 
 
-            if cache_dir and os.path.exists(os.path.join(cache_dir, f"stage3_{it}_new_vs.pkl")):
-                with open(os.path.join(cache_dir, f"stage3_{it}_new_vs.pkl"), "wb") as f:
+            if cache_dir and pexists(pjoin(cache_dir, f"stage3_{it}_new_vs.pkl")):
+                with open(pjoin(cache_dir, f"stage3_{it}_new_vs.pkl"), "wb") as f:
                     pkl.dump(new_vss, f)
             # perfect_ps = perfect_ps + list(itertools.chain.from_iterable(vs.programs for vs, hc in zip(vss, has_child) if not hc))
             print("Number of perfect programs:", len(perfect_ps))
             if cache_dir:
-                with open(os.path.join(cache_dir, f"stage3_{it}_perfect_ps.pkl"), "wb") as f:
+                with open(pjoin(cache_dir, f"stage3_{it}_perfect_ps.pkl"), "wb") as f:
                     pkl.dump(perfect_ps, f)
 
         vss = new_vss
@@ -734,7 +587,7 @@ def setup_relation(args):
         args.build_nx_g = lambda data_sample: build_nx_g(data_sample, args.relation_set, y_threshold=10)
         args.relation_set = relation_set
     elif args.rel_type == 'cluster':
-        if os.path.exists(f"{args.cache_dir}/relation_set.pkl"):
+        if pexists(f"{args.cache_dir}/relation_set.pkl"):
             relation_set = pkl.load(open('{args.cache_dir}/relation_set.pkl', 'rb'))
         else:
             relation_set = calculate_relation_set(dataset, 5, 10)
@@ -767,7 +620,7 @@ def setup_cache_dir(args, task="merge_words"):
 
 def setup_dataset(args):
     dataset_opts = {'lang': args.lang, 'mode': args.mode}
-    if os.path.exists(f"{args.cache_dir}/dataset.pkl"):
+    if pexists(f"{args.cache_dir}/dataset.pkl"):
         with open(f"{args.cache_dir}/dataset.pkl", 'rb') as f:
             dataset = pkl.load(f)
     else:
@@ -778,7 +631,7 @@ def setup_dataset(args):
 
 
 def setup_specs(args, dataset):
-    if os.path.exists(f"{args.cache_dir}/specs.pkl"):
+    if pexists(f"{args.cache_dir}/specs.pkl"):
         with open(f"{args.cache_dir}/specs.pkl", 'rb') as f:
             specs = pkl.load(f)
     else:
@@ -801,7 +654,7 @@ if __name__ == '__main__':
     logger.log("construct spec time: ", float(end_time - start_time))
 
     start_time = time.time()
-    if os.path.exists(f"{args.cache_dir}/data_sample_set_relation_cache.pkl"):
+    if pexists(f"{args.cache_dir}/data_sample_set_relation_cache.pkl"):
         with open(f"{args.cache_dir}/data_sample_set_relation_cache.pkl", 'rb') as f:
             data_sample_set_relation_cache = pkl.load(f)
     else:
@@ -822,7 +675,7 @@ if __name__ == '__main__':
     if args.use_sem:
         assert args.model in ['layoutlmv3']
         if args.model == 'layoutlmv3':
-            if os.path.exists(f"{args.cache_dir}/embs_layoutlmv3.pkl"):
+            if pexists(f"{args.cache_dir}/embs_layoutlmv3.pkl"):
                 with open(f"{args.cache_dir}/embs_layoutlmv3.pkl", 'rb') as f:
                     all_embs = pkl.load(f)
             else:
@@ -841,7 +694,7 @@ if __name__ == '__main__':
     # Now we have the data sample set relation cache
     print("Stage 1 - Constructing Program Space")
     start_time = time.time()
-    if os.path.exists(f"{args.cache_dir}/all_positive_paths.pkl"):
+    if pexists(f"{args.cache_dir}/all_positive_paths.pkl"):
         with open(f"{args.cache_dir}/all_positive_paths.pkl", 'rb') as f:
             pos_paths = pkl.load(f)
     else:

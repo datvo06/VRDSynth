@@ -10,7 +10,7 @@ from collections import defaultdict, namedtuple
 from networkx.algorithms import constraint, isomorphism
 from utils.ps_utils import FalseValue, LiteralReplacement, Program, GrammarReplacement, FindProgram, RelationLabelConstant, RelationLabelProperty, TrueValue, UnionProgram, WordLabelProperty, WordVariable, RelationVariable, RelationConstraint, LabelEqualConstraint, RelationLabelEqualConstraint, construct_entity_linking_specs, LabelConstant, AndConstraint, LiteralSet, Constraint, Hole, replace_hole, find_holes, SymbolicList, FilterStrategy, fill_hole, Expression, FloatConstant
 from utils.visualization_script import visualize_program_with_support
-from utils.version_space import VersionSpace, construct_counter_program
+from utils.version_space import VersionSpace as VS, construct_counter_program, construct_constraints_to_valid_version_spaces, get_intersect_constraint_vs, join_counter_vss
 import json
 import pickle as pkl
 import os
@@ -19,10 +19,10 @@ import copy
 import multiprocessing
 from multiprocessing import Pool
 from functools import lru_cache, partial
-from methods.decisiontree_ps import get_all_path, construct_or_get_initial_programs, batch_find_program_executor, report_metrics, get_valid_cand_find_program, add_constraint_to_find_program, get_args, logger, setup_grammar, setup_cache_dir, setup_dataset
+from methods.decisiontree_ps import get_all_path, construct_or_get_initial_programs, batch_find_program_executor, report_metrics, add_constraint_to_find_program, get_args, logger, setup_grammar, setup_cache_dir, setup_dataset, check_add_perfect_program
 from methods.decisiontree_ps_entity_grouping import SpecType
 from utils.metrics import get_p_r_f1
-from utils.misc import mapping2tuple, tuple2mapping, pexists, pjoin
+from utils.misc import mapping2tuple, tuple2mapping, pexists, pjoin, mappings2linking_tuples
 import cv2
 import time
 
@@ -45,10 +45,6 @@ def get_all_positive_relation_paths_linking(specs: SpecType, relation_set, hops=
 def synthesize_negative_programs_from_scratch():
     # 1. for each header and key, identify a set of negative relations
     # These relations
-    pass
-
-
-def ordered_synthesize_programs():
     pass
 
 
@@ -115,8 +111,9 @@ def collect_program_execution_linking(programs, specs: SpecType, data_sample_set
     return tt, ft, tf, all_out_mappings
 
 
-def build_version_space(programs, specs, data_sample_set_relation_cache, logger, cache_dir: Optional[str]):
-    if cache_dir is not None and pexists('{cache_dir}/stage2_linking.pkl'):
+def build_version_space(programs, specs, data_sample_set_relation_cache, logger, cache_dir: str):
+    assert cache_dir is not None, "Cache dir must be specified"
+    if pexists('{cache_dir}/stage2_linking.pkl'):
         with open(f"{cache_dir}/stage2_linking.pkl", "rb") as f:
             tt, tf, ft, io_to_program, all_out_mappings = pkl.load(f)
             print(len(tt), len(tf), len(ft))
@@ -133,13 +130,12 @@ def build_version_space(programs, specs, data_sample_set_relation_cache, logger,
         print(len(programs), len(tt))
         io_to_program = defaultdict(list)
         report_metrics(programs, tt, tf, ft, io_to_program)
-        if cache_dir is not None:
-            with open(f"{cache_dir}/stage2_linking.pkl", "wb") as f:
-                pkl.dump([tt, tf, ft, io_to_program, all_out_mappings], f)
+        with open(f"{cache_dir}/stage2_linking.pkl", "wb") as f:
+            pkl.dump([tt, tf, ft, io_to_program, all_out_mappings], f)
     return tt, tf, ft, io_to_program, all_out_mappings
 
 
-def build_io_to_proram(tt, tf, ft, all_out_mappings, programs, dataset):
+def build_io_to_program(tt, tf, ft, all_out_mappings, programs, dataset):
     tt, tf, ft = [defaultdict(set) for _ in range(3)]
     w0 = WordVariable("w0")
     w2e = [defaultdict(set) for _ in range(len(dataset))]
@@ -173,33 +169,6 @@ def build_io_to_proram(tt, tf, ft, all_out_mappings, programs, dataset):
     return io_to_program
 
 
-def get_intersect_constraint_vs(c, vs, cache) -> Set:
-    vs_matches = set()
-    for i, (w_bind, r_bind) in vs.mappings:
-        nx_g = data_sample_set_relation_cache[i]
-        if (i, (w_bind, r_bind)) in cache:
-            if cache[(i, (w_bind, r_bind))]:
-                vs_matches.add((i, (w_bind, r_bind)))
-        else:
-            w_bind, r_bind = tuple2mapping((w_bind, r_bind))
-            val = c.evaluate(w_bind, r_bind, nx_g)
-            if val:
-                cache[(i, mapping2tuple((w_bind, r_bind)))] = True
-                vs_matches.add((i, mapping2tuple((w_bind, r_bind))))
-            else:
-                cache[(i, mapping2tuple((w_bind, r_bind)))] = False
-    return vs_matches
-
-
-def construct_constraints_to_valid_version_spaces(vss):
-    c2vs = defaultdict(set)
-    for i, vs in enumerate(vss):
-        for p in vs.programs:
-            cs = get_valid_cand_find_program(vs, p)
-            for c in cs:
-                c2vs[c].add(i)
-    return c2vs
-
 
 
 def precision_counter_version_space_based_entity_linking(pos_paths, dataset, specs, data_sample_set_relation_cache, cache_dir):
@@ -209,16 +178,16 @@ def precision_counter_version_space_based_entity_linking(pos_paths, dataset, spe
     print("Number of programs in stage 1: ", len(programs))
     # STAGE 2: Build version space
     tt, tf, ft, io_to_program, all_out_mappings = build_version_space(programs, specs, data_sample_set_relation_cache, logger, cache_dir)
-    io_to_program = build_io_to_proram(tt, tf, ft, all_out_mappings, programs, dataset)
+    io_to_program = build_io_to_program(tt, tf, ft, all_out_mappings, programs, dataset)
 
     # STAGE 3: Build version space
     vss = []
     for (tt_p, tf_p, ft_p), ps in io_to_program.items():
-        if tt_p: vss.append(VersionSpace(set(tt_p), set(tf_p), set(ft_p), ps, all_out_mappings[ps[0]]))
+        if tt_p: vss.append(VS(set(tt_p), set(tf_p), set(ft_p), ps, all_out_mappings[ps[0]]))
 
     print("Number of version spaces: ", len(vss))
     max_its = 10
-    perfect_ps, perfect_ps_io_value, perfect_counter_ps, covered_tt, covered_tt_perfect = [], {}, [], set(), set()
+    pps, io2pps, pcps, covered_tt, covered_tt_perfect = [], {}, [], set(), set()
     covered_tt_counter = set()
     start_time = time.time()
     for it in range(max_its):
@@ -235,7 +204,6 @@ def precision_counter_version_space_based_entity_linking(pos_paths, dataset, spe
         else:
             new_vss, new_io_to_vs = [], {}
             has_child = [False] * len(vss)
-            it_pps, it_pcps = [], []
             big_bar = tqdm.tqdm(c2vs.items())
             big_bar.set_description("Stage 3 - Creating New Version Spaces")
             for c, vs_idxs in big_bar:
@@ -245,13 +213,9 @@ def precision_counter_version_space_based_entity_linking(pos_paths, dataset, spe
                     cnt += 1
                     big_bar.set_postfix({"cnt" : cnt, 'covered_tt': len(covered_tt), 'covered_tt_perfect': len(covered_tt_perfect), 'covered_tt_counter': len(covered_tt_counter)})
                     vs = vss[vs_idx]
-                    vs_matches = get_intersect_constraint_vs(c, vs, cache)
+                    vs_matches = get_intersect_constraint_vs(c, vs, data_sample_set_relation_cache, cache)
                     if not vs_matches: continue
-                    ios = set()
-                    binding_var = vss[vs_idx].programs[0].return_variables[0]
-                    for i, (w_bind, r_bind) in vs_matches:
-                        w_bind, r_bind = tuple2mapping((w_bind, r_bind))
-                        ios.add((i, w_bind[WordVariable("w0")], w_bind[binding_var]))
+                    ios = mappings2linking_tuples(vss[vs_idx].programs[0], vs_matches)
                     # Now check the tt, tf, ft
                     new_tt, new_tf = (ios & vss[vs_idx].tt), (ios & vss[vs_idx].tf)
                     new_ft = vss[vs_idx].ft 
@@ -259,8 +223,8 @@ def precision_counter_version_space_based_entity_linking(pos_paths, dataset, spe
                     new_program = add_constraint_to_find_program(vss[vs_idx].programs[0], c)
                     if not new_tt and new_tf - covered_tt_counter:
                         print(f"Found new counter program")
-                        perfect_counter_ps.append(new_program)
-                        perfect_ps_io_value[io_key] = VersionSpace(new_tt, new_tf, new_ft, [new_program], vs_matches)
+                        pcps.append(new_program)
+                        io2pps[io_key] = VS(new_tt, new_tf, new_ft, [new_program], vs_matches)
                         covered_tt_counter |= new_tf
                         continue 
 
@@ -268,15 +232,7 @@ def precision_counter_version_space_based_entity_linking(pos_paths, dataset, spe
                     old_p, _, _ = get_p_r_f1(vss[vs_idx].tt, vss[vs_idx].tf, vss[vs_idx].ft)
                     new_p, _, _ = get_p_r_f1(new_tt, new_tf, new_ft)
                     if io_key in new_io_to_vs: continue
-                    if new_p == 1.0 and (new_tt - covered_tt_perfect):
-                        if io_key not in perfect_ps_io_value:
-                            perfect_ps.append(new_program)
-                            perfect_ps_io_value[io_key] = VersionSpace(new_tt, new_tf, new_ft, [new_program], vs_matches)
-                            with open(f"{cache_dir}/stage3_{it}_perfect_ps_linking.pkl", "wb") as f:
-                                pkl.dump(perfect_ps, f)
-
-                        logger.log(str(len(covered_tt_perfect)), (float(time.time()) - start_time, len(perfect_ps)))
-                        covered_tt_perfect.update(new_tt)
+                    if check_add_perfect_program(new_tt, new_tf, new_ft, covered_tt_perfect, io_key, new_program, vs_matches, io2pps, pps, cache_dir, it, logger, 'linking'):
                         continue
                     if new_p > old_p: 
                         if not (new_tt - covered_tt): continue
@@ -285,7 +241,7 @@ def precision_counter_version_space_based_entity_linking(pos_paths, dataset, spe
                         acc += 1
                     has_child[vs_idx] = True
                     if io_key not in new_io_to_vs:
-                        new_vs = VersionSpace(new_tt, new_tf, new_ft, [new_program], vs_matches)
+                        new_vs = VS(new_tt, new_tf, new_ft, [new_program], vs_matches)
                         new_vss.append(new_vs)
                         new_io_to_vs[io_key] = new_vs
                     else:
@@ -294,53 +250,17 @@ def precision_counter_version_space_based_entity_linking(pos_paths, dataset, spe
                     print("Rejecting: ", c)
 
 
-            print("Number of perfect programs:", len(perfect_ps))
-            with open(pjoin(cache_dir, f"stage3_{it}_perfect_ps_linking.pkl"), "wb") as f:
-                pkl.dump(perfect_ps, f)
+            print("Number of perfect programs:", len(pps))
+            with open(pjoin(cache_dir, f"stage3_{it}_pps_linking.pkl"), "wb") as f:
+                pkl.dump(pps, f)
 
             # Adding dependent programs and counter dependent program
-            u_pcs = UnionProgram(perfect_counter_ps[:])
-            u_pps = UnionProgram(perfect_ps[:])
-            u_aps = UnionProgram(perfect_counter_ps[:] + perfect_ps[:])
-            extra_pps = []
-            extra_covered_tt = set()
-            target_covered_tt = set((x[0], x[-1]) for x in covered_tt_perfect)
-            for vs_idx, vs in enumerate(new_vss):
-                vs_tf = vs.tf - covered_tt_counter
-                use_counter_program = False
-                if len(vs_tf) < len(vs.tf):
-                    use_counter_program = True
-                target_vs_tt = set((x[0], x[-1]) for x in vs.tt)
-                target_vs_tf = set((x[0], x[-1]) for x in vs_tf)
-                if not vs.tt - covered_tt_perfect - extra_covered_tt:
-                    continue
-                if not target_vs_tf:
-                    extra_covered_tt |= vs.tt
-                    extra_pps.append(
-                        construct_counter_program(
-                            u_pcs, vs.programs[0],
-                        )
-                    )
-                    continue
-
-                if target_vs_tf - target_covered_tt: continue
-                if not (target_vs_tt - target_covered_tt): continue
-                new_vs_tt = target_vs_tt - target_covered_tt
-                new_vs_tt = set([(x[0], x[1], x[2]) for x in vs.tt if x[2] not in new_vs_tt])
-                covered_tt_perfect |= new_vs_tt
-                perfect_ps.append(
-                        construct_counter_program(
-                            u_aps if use_counter_program else u_pps,
-                            vs.programs[0],
-                        )
-                )
-            perfect_ps += extra_pps
+            extra_pps, extra_covered_tt = join_counter_vss(pps, pcps, covered_tt_perfect, new_vss, covered_tt_counter)
+            pps += extra_pps
             covered_tt_perfect |= extra_covered_tt
-
-
-            print("Number of perfect program after refinement:", len(perfect_ps), len(covered_tt_perfect))
-            with open(pjoin(cache_dir, f"stage3_{it}_perfect_ps_linking.pkl"), "wb") as f:
-                pkl.dump(perfect_ps, f)
+            print("Number of perfect program after refinement:", len(pps), len(covered_tt_perfect))
+            with open(pjoin(cache_dir, f"stage3_{it}_pps_linking.pkl"), "wb") as f:
+                pkl.dump(pps, f)
             nvss = len(new_vss)
 
             new_vss = [vs for vs in new_vss if vs.tt - covered_tt_perfect]
@@ -369,12 +289,12 @@ def precision_version_space_based_entity_linking(pos_paths, dataset, specs, data
     print("Number of programs in stage 1: ", len(programs))
     # STAGE 2: Build version space
     tt, tf, ft, io_to_program, all_out_mappings = build_version_space(programs, specs, data_sample_set_relation_cache, logger, cache_dir)
-    io_to_program = build_io_to_proram(tt, tf, ft, all_out_mappings, programs, dataset)
+    io_to_program = build_io_to_program(tt, tf, ft, all_out_mappings, programs, dataset)
 
     # STAGE 3: Build version space
     vss = []
     for (tt_p, tf_p, ft_p), ps in io_to_program.items():
-        if tt_p: vss.append(VersionSpace(tt_p, tf_p, ft_p, ps, all_out_mappings[ps[0]]))
+        if tt_p: vss.append(VS(tt_p, tf_p, ft_p, ps, all_out_mappings[ps[0]]))
 
     print("Number of version spaces: ", len(vss))
     max_its = 10
@@ -393,7 +313,7 @@ def precision_version_space_based_entity_linking(pos_paths, dataset, specs, data
                 new_vss = pkl.load(f)
         else:
             new_vss, new_io_to_vs = [], {}
-            perfect_ps, perfect_ps_io_value = [], {}
+            pps, io2pps= [], {}
             has_child = [False] * len(vss)
             big_bar = tqdm.tqdm(c2vs.items())
             big_bar.set_description("Stage 3 - Creating New Version Spaces")
@@ -404,13 +324,9 @@ def precision_version_space_based_entity_linking(pos_paths, dataset, specs, data
                     cnt += 1
                     big_bar.set_postfix({"cnt" : cnt, 'covered_tt': len(covered_tt), 'covered_tt_perfect': len(covered_tt_perfect)})
                     vs = vss[vs_idx]
-                    vs_matches = get_intersect_constraint_vs(c, vs, cache)
+                    vs_matches = get_intersect_constraint_vs(c, vs, data_sample_set_relation_cache, cache)
                     if not vs_matches: continue
-                    ios = set()
-                    binding_var = vss[vs_idx].programs[0].return_variables[0]
-                    for i, (w_bind, r_bind) in vs_matches:
-                        w_bind, r_bind = tuple2mapping((w_bind, r_bind))
-                        ios.add((i, w_bind[WordVariable("w0")], w_bind[binding_var]))
+                    ios = mappings2linking_tuples(vs.programs[0], vs_matches)
                     # Now check the tt, tf, ft
                     new_tt, new_tf = (ios & vss[vs_idx].tt), (ios & vss[vs_idx].tf)
                     if not new_tt: continue
@@ -421,15 +337,7 @@ def precision_version_space_based_entity_linking(pos_paths, dataset, specs, data
                         io_key = tuple((tuple(new_tt), tuple(new_tf), tuple(new_ft)))
                         if io_key in new_io_to_vs: continue
                         new_program = add_constraint_to_find_program(vss[vs_idx].programs[0], c)
-                        if new_p == 1.0 and (new_tt - covered_tt_perfect):
-                            if io_key not in perfect_ps_io_value:
-                                perfect_ps.append(new_program)
-                                perfect_ps_io_value[io_key] = VersionSpace(new_tt, new_tf, new_ft, [new_program], vs_matches)
-                                with open(f"{cache_dir}/stage3_{it}_perfect_ps_linking.pkl", "wb") as f:
-                                    pkl.dump(perfect_ps, f)
-
-                            logger.log(str(len(covered_tt_perfect)), (float(time.time()) - start_time, len(perfect_ps)))
-                            covered_tt_perfect.update(new_tt)
+                        if check_add_perfect_program(new_tt, new_tf, new_ft, covered_tt_perfect, io_key, new_program, vs_matches, io2pps, pps, cache_dir, it, logger, 'linking'):
                             continue
                         if new_p > old_p: 
                             if not (new_tt - covered_tt): continue
@@ -438,7 +346,7 @@ def precision_version_space_based_entity_linking(pos_paths, dataset, specs, data
                             acc += 1
                         has_child[vs_idx] = True
                         if io_key not in new_io_to_vs:
-                            new_vs = VersionSpace(new_tt, new_tf, new_ft, [new_program], vs_matches)
+                            new_vs = VS(new_tt, new_tf, new_ft, [new_program], vs_matches)
                             new_vss.append(new_vs)
                             new_io_to_vs[io_key] = new_vs
                         else:
@@ -454,7 +362,7 @@ def precision_version_space_based_entity_linking(pos_paths, dataset, specs, data
                 with open(pjoin(cache_dir, f"stage3_{it}_new_vs_linking.pkl"), "wb") as f:
                     pkl.dump(new_vss, f)
             print("Number of perfect programs:", len(perfect_ps))
-            with open(pjoin(cache_dir, f"stage3_{it}_perfect_ps_linking.pkl"), "wb") as f:
+            with open(pjoin(cache_dir, f"stage3_{it}_pps_linking.pkl"), "wb") as f:
                 pkl.dump(perfect_ps, f)
 
         vss = new_vss
