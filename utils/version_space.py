@@ -260,6 +260,7 @@ def join_counter_vss(pps, pcps, covered_tt_perfect, new_vss, covered_tt_counter)
         if not (target_vs_tt - target_covered_tt): continue
         new_vs_tt = target_vs_tt - target_covered_tt
         new_vs_tt = set([(x[0], x[1], x[2]) for x in vs.tt if x[2] not in new_vs_tt])
+        extra_covered_tt |= new_vs_tt
         pps.append(
                 construct_counter_program(
                     u_aps if use_counter_program else u_pps,
