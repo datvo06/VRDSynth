@@ -269,6 +269,7 @@ class RelationConstraint(Expression):
 
 class FindProgram(Program):
     def __init__(self, word_variables, relation_variables, relation_constraints, constraint, return_variables):
+        self.cache_hash = None
         self.word_variables = word_variables
         # assert that all word variables are unique
         assert len(self.word_variables) == len(set(self.word_variables))
@@ -342,7 +343,9 @@ class FindProgram(Program):
         return f'find(({", ".join([str(w) for w in self.word_variables])}), ({", ".join([str(r) for r in self.relation_variables])}), ({", ".join([str(c) for c in self.relation_constraint])}, {str(self.constraint)}, {", ".join([str(w) for w in self.return_variables])})'
 
     def __hash__(self):
-        return hash(str(self))
+        if self.cache_hash is None:
+            self.cache_hash = hash(str(self))
+        return self.cache_hash
 
     def __eq__(self, other):
         return str(self) == str(other)
@@ -430,6 +433,7 @@ class UnionProgram(Program):
     def __init__(self, programs: List[Program]):
         assert isinstance(programs, list)
         self.programs = programs
+        self.cache_hash = None
 
     @staticmethod
     def get_arg_type():
@@ -462,13 +466,16 @@ class UnionProgram(Program):
         return set(self.programs) == set(other.programs)
 
     def __hash__(self):
-        return hash(str(self))
+        if self.cache_hash is None:
+            self.cache_hash = hash(str(self))
+        return self.cache_hash
 
 
 class ExcludeProgram(Program):
     def __init__(self, ref_program, excl_programs):
         self.ref_program = ref_program
         self.excl_programs = excl_programs
+        self.cache_hash = None
 
     @staticmethod
     def get_arg_type():
@@ -530,8 +537,9 @@ class ExcludeProgram(Program):
         return isinstance(other, ExcludeProgram) and self.ref_program == other.ref_program and set(self.excl_programs) == set(other.excl_programs)
 
     def __hash__(self):
-        return hash(self.__str__())
-
+        if self.cache_hash is None:
+            self.cache_hash = hash(str(self))
+        return self.cache_hash
 
 class FloatValue(Expression):
     def evaluate(self, word_binding, relation_binding, nx_g_data) -> float:
