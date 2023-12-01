@@ -225,7 +225,7 @@ def precision_version_space_based_grouping(pos_paths, dataset, specs, data_sampl
                     old_p, _, _ = get_p_r_f1(vss[vs_idx].tt, vss[vs_idx].tf, vss[vs_idx].ft)
                     new_p, _, _ = get_p_r_f1(new_tt, new_tf, new_ft)
                     if io_key in new_io_to_vs: continue
-                    if check_add_perfect_program(new_tt, new_tf, new_ft, covered_tt_perfect, io_key, new_program, vs_matches, io2pps, pps, cache_dir, it, logger, TASK):
+                    if check_add_perfect_program(new_tt, new_tf, new_ft, covered_tt_perfect, io_key, new_program, vs_matches, io2pps, pps, cache_dir, it, logger, TASK, start_time):
                         continue
                     if new_p > old_p: 
                         if not (new_tt - covered_tt): continue
