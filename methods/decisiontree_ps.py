@@ -31,17 +31,17 @@ from utils.misc import tuple2mapping, mapping2tuple, Logger
 logger = Logger()
 
 
-def check_add_perfect_program(new_tt, new_tf, new_ft, covered_tt_perfect, io_key, new_program, vs_matches, io2pps, pps, cache_dir, it, logger, task, start_time):
+def check_add_perfect_program(new_tt, new_tf, new_ft, cov_tt_perfect, io_key, new_program, vs_matches, io2pps, pps, cache_dir, it, logger, task, start_time):
     assert task in {'word_merging', 'grouping', 'linking'}
-    if not new_tf and (new_tt - covered_tt_perfect):
+    if not new_tf and (new_tt - cov_tt_perfect):
         if io_key not in io2pps:
             pps.append(new_program)
             io2pps[io_key] = VS(new_tt, new_tf, new_ft, [new_program], vs_matches)
             with open(f"{cache_dir}/stage3_{it}_pps_{task}.pkl", "wb") as f:
                 pkl.dump(pps, f)
 
-        logger.log(str(len(covered_tt_perfect)), (float(time.time()) - start_time, len(pps)))
-        covered_tt_perfect.update(new_tt)
+        logger.log(str(len(cov_tt_perfect)), (float(time.time()) - start_time, len(pps)))
+        cov_tt_perfect.update(new_tt)
         return True
     return False
 
@@ -441,8 +441,8 @@ def three_stages_bottom_up_version_space_based(all_positive_paths, dataset, spec
     max_its = 10
     perfect_ps = []
     start_time = time.time()
-    covered_tt = set()
-    covered_tt_perfect = set()
+    cov_tt = set()
+    cov_tt_perfect = set()
     for it in range(max_its):
         if cache_dir and pexists(pjoin(cache_dir, f"stage3_{it}.pkl")):
             vss, c2vs = pkl.load(open(pjoin(cache_dir, f"stage3_{it}.pkl"), "rb"))
@@ -481,7 +481,7 @@ def three_stages_bottom_up_version_space_based(all_positive_paths, dataset, spec
                 cache, cnt, acc = {}, 0, 0 
                 for vs_idx in vs_idxs:
                     cnt += 1
-                    big_bar.set_postfix({"cnt" : cnt, 'covered_tt': len(covered_tt), 'covered_tt_perfect': len(covered_tt_perfect)})
+                    big_bar.set_postfix({"cnt" : cnt, 'cov_tt': len(cov_tt), 'cov_tt_perfect': len(cov_tt_perfect)})
                     vs_intersect_mapping = set()
                     vs = vss[vs_idx]
                     for i, (w_bind, r_bind) in vs.mappings:
@@ -524,12 +524,12 @@ def three_stages_bottom_up_version_space_based(all_positive_paths, dataset, spec
                         if io_key in new_io_to_vs:
                             continue
                         new_program = add_constraint_to_find_program(vss[vs_idx].programs[0], c)
-                        if check_add_perfect_program(new_tt, new_tf, new_ft, covered_tt_perfect, io_key, new_program, vs_intersect_mapping, perfect_ps_io_value, perfect_ps, cache_dir, it, logger, 'word_merging'):
+                        if check_add_perfect_program(new_tt, new_tf, new_ft, cov_tt_perfect, io_key, new_program, vs_intersect_mapping, perfect_ps_io_value, perfect_ps, cache_dir, it, logger, 'word_merging', start_time):
                             continue
                         if new_p > old_p: 
-                            if not (new_tt - covered_tt):
+                            if not (new_tt - cov_tt):
                                 continue
-                            covered_tt |= new_tt
+                            cov_tt |= new_tt
                             print(f"Found new increased precision: {old_p} -> {new_p}")
                             acc += 1
                         has_child[vs_idx] = True
