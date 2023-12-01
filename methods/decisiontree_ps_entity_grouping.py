@@ -385,9 +385,8 @@ def setup_specs(args, dataset, task):
 
 if __name__ == '__main__': 
     args = get_args()
-    os.makedirs(args.cache_dir, exist_ok=True)
-    os.makedirs(f"{args.cache_dir}/viz", exist_ok=True)
     args.cache_dir = setup_cache_dir(args, "entity_grouping")
+    os.makedirs(f"{args.cache_dir}/viz", exist_ok=True)
     logger.set_fp(f"{args.cache_dir}/log.json")
 
     args = setup_grammar(args)
