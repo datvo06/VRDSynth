@@ -343,6 +343,8 @@ class FindProgram(Program):
         return f'find(({", ".join([str(w) for w in self.word_variables])}), ({", ".join([str(r) for r in self.relation_variables])}), ({", ".join([str(c) for c in self.relation_constraint])}, {str(self.constraint)}, {", ".join([str(w) for w in self.return_variables])})'
 
     def __hash__(self):
+        if not hasattr(self, 'cache_hash'):
+            self.cache_hash = None
         if self.cache_hash is None:
             self.cache_hash = hash(str(self))
         return self.cache_hash
@@ -466,6 +468,8 @@ class UnionProgram(Program):
         return set(self.programs) == set(other.programs)
 
     def __hash__(self):
+        if not hasattr(self, 'cache_hash'):
+            self.cache_hash = None
         if self.cache_hash is None:
             self.cache_hash = hash(str(self))
         return self.cache_hash
@@ -537,6 +541,8 @@ class ExcludeProgram(Program):
         return isinstance(other, ExcludeProgram) and self.ref_program == other.ref_program and set(self.excl_programs) == set(other.excl_programs)
 
     def __hash__(self):
+        if not hasattr(self, 'cache_hash'):
+            self.cache_hash = None
         if self.cache_hash is None:
             self.cache_hash = hash(str(self))
         return self.cache_hash
