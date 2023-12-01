@@ -31,7 +31,7 @@ from utils.misc import tuple2mapping, mapping2tuple, Logger
 logger = Logger()
 
 
-def check_add_perfect_program(new_tt, new_tf, new_ft, covered_tt_perfect, io_key, new_program, vs_matches, io2pps, pps, cache_dir, it, logger, task):
+def check_add_perfect_program(new_tt, new_tf, new_ft, covered_tt_perfect, io_key, new_program, vs_matches, io2pps, pps, cache_dir, it, logger, task, start_time):
     assert task in {'word_merging', 'grouping', 'linking'}
     if not new_tf and (new_tt - covered_tt_perfect):
         if io_key not in io2pps:

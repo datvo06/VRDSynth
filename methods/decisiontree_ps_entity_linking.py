@@ -18,13 +18,16 @@ import tqdm
 import copy
 import multiprocessing
 from multiprocessing import Pool
-from functools import lru_cache, partial
 from methods.decisiontree_ps import get_all_path, construct_or_get_initial_programs, batch_find_program_executor, report_metrics, add_constraint_to_find_program, get_args, logger, setup_grammar, setup_cache_dir, setup_dataset, check_add_perfect_program
 from methods.decisiontree_ps_entity_grouping import SpecType
 from utils.metrics import get_p_r_f1
 from utils.misc import mapping2tuple, tuple2mapping, pexists, pjoin, mappings2linking_tuples
+from methods.decisiontree_ps_entity_grouping import setup_specs
 import cv2
 import time
+
+
+TASK = "linking"
 
 
 
@@ -113,8 +116,8 @@ def collect_program_execution_linking(programs, specs: SpecType, data_sample_set
 
 def build_version_space(programs, specs, data_sample_set_relation_cache, logger, cache_dir: str):
     assert cache_dir is not None, "Cache dir must be specified"
-    if pexists('{cache_dir}/stage2_linking.pkl'):
-        with open(f"{cache_dir}/stage2_linking.pkl", "rb") as f:
+    if pexists('{cache_dir}/stage2_{TASK}.pkl'):
+        with open(f"{cache_dir}/stage2_{TASK}.pkl", "rb") as f:
             tt, tf, ft, io_to_program, all_out_mappings = pkl.load(f)
             print(len(tt), len(tf), len(ft))
     else:
@@ -130,7 +133,7 @@ def build_version_space(programs, specs, data_sample_set_relation_cache, logger,
         print(len(programs), len(tt))
         io_to_program = defaultdict(list)
         report_metrics(programs, tt, tf, ft, io_to_program)
-        with open(f"{cache_dir}/stage2_linking.pkl", "wb") as f:
+        with open(f"{cache_dir}/stage2_{TASK}.pkl", "wb") as f:
             pkl.dump([tt, tf, ft, io_to_program, all_out_mappings], f)
     return tt, tf, ft, io_to_program, all_out_mappings
 
@@ -174,7 +177,7 @@ def build_io_to_program(tt, tf, ft, all_out_mappings, programs, dataset):
 def precision_counter_version_space_based_entity_linking(pos_paths, dataset, specs, data_sample_set_relation_cache, cache_dir):
     assert cache_dir is not None, "Cache dir must be specified"
     # STAGE 1: Build base relation spaces
-    programs = construct_or_get_initial_programs(pos_paths, f"{cache_dir}/stage1_linking.pkl", logger)
+    programs = construct_or_get_initial_programs(pos_paths, f"{cache_dir}/stage1_{TASK}.pkl", logger)
     print("Number of programs in stage 1: ", len(programs))
     # STAGE 2: Build version space
     tt, tf, ft, io_to_program, all_out_mappings = build_version_space(programs, specs, data_sample_set_relation_cache, logger, cache_dir)
@@ -191,15 +194,15 @@ def precision_counter_version_space_based_entity_linking(pos_paths, dataset, spe
     covered_tt_counter = set()
     start_time = time.time()
     for it in range(max_its):
-        if pexists(f"{cache_dir}/stage3_{it}_linking.pkl"):
-            vss, c2vs = pkl.load(open(f"{cache_dir}/stage3_{it}_linking.pkl", "rb"))
+        if pexists(f"{cache_dir}/stage3_{it}_{TASK}.pkl"):
+            vss, c2vs = pkl.load(open(f"{cache_dir}/stage3_{it}_{TASK}.pkl", "rb"))
         else:
             c2vs = construct_constraints_to_valid_version_spaces(vss)
             # Save this for this iter
-            with open(f"{cache_dir}/stage3_{it}_linking.pkl", "wb") as f:
+            with open(f"{cache_dir}/stage3_{it}_{TASK}.pkl", "wb") as f:
                 pkl.dump([vss, c2vs], f)
-        if pexists(f"{cache_dir}/stage3_{it}_new_vs_linking.pkl"):
-            with open(f"{cache_dir}/stage3_{it}_new_vs_linking.pkl", "rb") as f:
+        if pexists(f"{cache_dir}/stage3_{it}_new_vs_{TASK}.pkl"):
+            with open(f"{cache_dir}/stage3_{it}_new_vs_{TASK}.pkl", "rb") as f:
                 new_vss = pkl.load(f)
         else:
             new_vss, new_io_to_vs = [], {}
@@ -232,7 +235,7 @@ def precision_counter_version_space_based_entity_linking(pos_paths, dataset, spe
                     old_p, _, _ = get_p_r_f1(vss[vs_idx].tt, vss[vs_idx].tf, vss[vs_idx].ft)
                     new_p, _, _ = get_p_r_f1(new_tt, new_tf, new_ft)
                     if io_key in new_io_to_vs: continue
-                    if check_add_perfect_program(new_tt, new_tf, new_ft, covered_tt_perfect, io_key, new_program, vs_matches, io2pps, pps, cache_dir, it, logger, 'linking'):
+                    if check_add_perfect_program(new_tt, new_tf, new_ft, covered_tt_perfect, io_key, new_program, vs_matches, io2pps, pps, cache_dir, it, logger, TASK, start_time):
                         continue
                     if new_p > old_p: 
                         if not (new_tt - covered_tt): continue
@@ -251,7 +254,7 @@ def precision_counter_version_space_based_entity_linking(pos_paths, dataset, spe
 
 
             print("Number of perfect programs:", len(pps))
-            with open(pjoin(cache_dir, f"stage3_{it}_pps_linking.pkl"), "wb") as f:
+            with open(pjoin(cache_dir, f"stage3_{it}_pps_{TASK}.pkl"), "wb") as f:
                 pkl.dump(pps, f)
 
             # Adding dependent programs and counter dependent program
@@ -259,7 +262,7 @@ def precision_counter_version_space_based_entity_linking(pos_paths, dataset, spe
             pps += extra_pps
             covered_tt_perfect |= extra_covered_tt
             print("Number of perfect program after refinement:", len(pps), len(covered_tt_perfect))
-            with open(pjoin(cache_dir, f"stage3_{it}_pps_linking.pkl"), "wb") as f:
+            with open(pjoin(cache_dir, f"stage3_{it}_pps_{TASK}.pkl"), "wb") as f:
                 pkl.dump(pps, f)
             nvss = len(new_vss)
 
@@ -269,11 +272,11 @@ def precision_counter_version_space_based_entity_linking(pos_paths, dataset, spe
                 break
             print(f"Number of new version spaces after pruning: {nvss} -> {nvss_after}")
 
-            if pexists(pjoin(cache_dir, f"stage3_{it}_new_vs_linking.pkl")):
-                with open(pjoin(cache_dir, f"stage3_{it}_new_vs_linking.pkl"), "rb") as f:
+            if pexists(pjoin(cache_dir, f"stage3_{it}_new_vs_{TASK}.pkl")):
+                with open(pjoin(cache_dir, f"stage3_{it}_new_vs_{TASK}.pkl"), "rb") as f:
                     new_vss = pkl.load(f)
             else:
-                with open(pjoin(cache_dir, f"stage3_{it}_new_vs_linking.pkl"), "wb") as f:
+                with open(pjoin(cache_dir, f"stage3_{it}_new_vs_{TASK}.pkl"), "wb") as f:
                     pkl.dump(new_vss, f)
 
         vss = new_vss
@@ -370,17 +373,6 @@ def precision_version_space_based_entity_linking(pos_paths, dataset, specs, data
     return programs
 
 
-def setup_specs(args, dataset):
-    if pexists(f"{args.cache_dir}/specs_linking.pkl"):
-        with open(f"{args.cache_dir}/specs_linking.pkl", 'rb') as f:
-            specs, entity_dataset = pkl.load(f)
-    else:
-        specs, entity_dataset = construct_entity_linking_specs(dataset)
-
-        with open(f"{args.cache_dir}/specs_linking.pkl", 'wb') as f:
-            pkl.dump((specs, entity_dataset), f)
-    return specs, entity_dataset
-
 
 def dump_config(args):
     with open(f"{args.cache_dir}/config_linking.json", "w") as f:
@@ -400,10 +392,11 @@ if __name__ == '__main__':
     args = setup_grammar(args)
     start_time = time.time()
     dataset = setup_dataset(args)
-    specs, entity_dataset = setup_specs(args, dataset)
+    specs, entity_dataset = setup_specs(args, dataset, 'linking')
     end_time = time.time()
     print(f"Time taken to load daaataset and construct specs: {end_time - start_time}")
     logger.log("construct spec time: ", float(end_time - start_time))       
+
     start_time = time.time()
     if pexists(f"{args.cache_dir}/ds_cache_linking_kv.pkl"):
         with open(f"{args.cache_dir}/ds_cache_linking_kv.pkl", 'rb') as f:
