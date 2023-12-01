@@ -201,7 +201,7 @@ def precision_version_space_based_grouping(pos_paths, dataset, specs, data_sampl
             big_bar.set_description("Stage 3 - Creating New Version Spaces")
             for c, vs_idxs in big_bar:
                 # Cache to save computation cycles
-                cache, cnt, acc = {}, 0, 0 
+                cache, cnt, acc = {}, 0, 0.
                 for vs_idx in vs_idxs:
                     cnt += 1
                     big_bar.set_postfix({"cnt" : cnt, 'covered_tt': len(covered_tt), 'covered_tt_perfect': len(covered_tt_perfect)})
@@ -300,7 +300,7 @@ def precision_counter_version_space_based_grouping(pos_paths, dataset, specs, da
                     cnt += 1
                     big_bar.set_postfix({"cnt" : cnt, 'covered_tt': len(covered_tt), 'covered_tt_perfect': len(covered_tt_perfect)})
                     vs = vss[vs_idx]
-                    vs_matches = get_intersect_constraint_vs(vs, c, data_sample_set_relation_cache, cache)
+                    vs_matches = get_intersect_constraint_vs(c, vs, data_sample_set_relation_cache, cache)
                     if not vs_matches: continue
                     ios = mappings2linking_tuples(vss[vs_idx].programs[0], vs_matches)
                     # Now check the tt, tf, ft

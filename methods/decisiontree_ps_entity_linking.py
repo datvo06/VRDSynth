@@ -340,7 +340,7 @@ def precision_version_space_based_entity_linking(pos_paths, dataset, specs, data
                         io_key = tuple((tuple(new_tt), tuple(new_tf), tuple(new_ft)))
                         if io_key in new_io_to_vs: continue
                         new_program = add_constraint_to_find_program(vss[vs_idx].programs[0], c)
-                        if check_add_perfect_program(new_tt, new_tf, new_ft, covered_tt_perfect, io_key, new_program, vs_matches, io2pps, pps, cache_dir, it, logger, 'linking'):
+                        if check_add_perfect_program(new_tt, new_tf, new_ft, covered_tt_perfect, io_key, new_program, vs_matches, io2pps, pps, cache_dir, it, logger, 'linking', start_time):
                             continue
                         if new_p > old_p: 
                             if not (new_tt - covered_tt): continue
