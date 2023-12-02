@@ -8,7 +8,7 @@ import torch
 from unilm.layoutlmft.layoutlmft.evaluation import re_score
 from transformers import TrainingArguments
 from unilm.layoutlmft.layoutlmft.trainers import XfunReTrainer
-
+import sys
 from typing import Optional, Union
 
 @dataclass
@@ -91,8 +91,7 @@ def compute_metrics(p):
     return score
 
 
-
-dataset = load_dataset("nielsr/XFUN", "xfun.fr")
+dataset = load_dataset("nielsr/XFUN", f"xfun.{sys.argv[1]}")
 train_dataset = dataset['train']
 test_dataset = dataset['validation']
 
@@ -128,3 +127,4 @@ trainer = XfunReTrainer(
     compute_metrics=compute_metrics,
 )
 trainer.train()
+trainer.evaluate()
