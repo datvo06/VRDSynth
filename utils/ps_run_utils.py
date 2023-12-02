@@ -81,38 +81,37 @@ def merge_words(data, nx_g, ps):
     return uf, data
 
 
-def link_entity(data, nx_g, ps_merging, ps_linking):
-    uf = UnionFind(len(data['boxes']))
-    out_bindings_merging = batch_find_program_executor(nx_g, ps_merging)
-    ucount = 0
-    w0 = WordVariable('w0')
-    for j, p_bindings in enumerate(out_bindings_merging):
-        return_var = ps_merging[j].return_variables[0]
-        for w_binding, r_binding in p_bindings:
-            wlast = w_binding[return_var]
-            uf.union(w_binding[w0], wlast)
-            ucount += 1
-    print(f"Union count: {ucount}")
-    w2c = defaultdict(list)
+def batch_program_executor(nx_g, ps):
     find_programs = set()
-    for p in ps_linking:
+    for p in ps:
         find_programs.update(p.collect_find_programs())
-
     find_programs = list(find_programs)
-
-    out_bindings_linking = batch_find_program_executor(nx_g, find_programs)
+    out_bindings = batch_find_program_executor(nx_g, find_programs)
     eval_mappings = {}
-    for j, p_bindings in enumerate(out_bindings_linking):
+    w0 = WordVariable('w0')
+    for j, p_bindings in enumerate(out_bindings):
         return_var = find_programs[j].return_variables[0]
         eval_mappings[find_programs[j]] = []
         for w_binding, r_binding in p_bindings:
             wlast = w_binding[return_var]
             eval_mappings[find_programs[j]].append((w_binding[w0], wlast))
+    ps = [p.replace_find_programs_with_values(eval_mappings) for p in ps]
+    pairs = itertools.chain(*[p.evaluate(nx_g) for p in ps])
+    return pairs
 
-    ps_linking = [p.replace_find_programs_with_values(eval_mappings) for p in ps_linking]
-    pairs = itertools.chain(*[p.evaluate(nx_g) for p in ps_linking])
+
+
+def link_entity(data, nx_g, ps_merging, ps_linking):
+    uf = UnionFind(len(data['boxes']))
+    pairs_merging = batch_program_executor(nx_g, ps_merging)
+    pairs_linking = batch_program_executor(nx_g, ps_linking)
+    ucount = 0
+    for w1, w2 in pairs_merging:
+        uf.union(w1, w2)
+        ucount += 1
+    print(f"Union count: {ucount}")
     w2c = defaultdict(list)
-    for w1, w2 in pairs:
+    for w1, w2 in pairs_linking:
         for _w2 in uf.get_group(uf.find(w2)):
             w2c[w1].append(_w2)
 
