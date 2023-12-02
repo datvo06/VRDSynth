@@ -1,0 +1,9 @@
+rm -rf layoutxlm-*finetuned-xfund-*-re/checkpoint-500
+rm -rf layoutxlm-*finetuned-xfund-*-re/checkpoint-1000
+rm -rf layoutxlm-*finetuned-xfund-*-re/checkpoint-1500
+rm -rf layoutxlm-*finetuned-xfund-*-re/checkpoint-2000
+rm -rf layoutxlm-*finetuned-xfund-*-re/checkpoint-2500
+rm -rf layoutxlm-*finetuned-xfund-*-re/checkpoint-3000
+rm -rf layoutxlm-*finetuned-xfund-*-re/checkpoint-3500
+rm -rf layoutxlm-*finetuned-xfund-*-re/checkpoint-4000
+rm -rf layoutxlm-*finetuned-xfund-*-re/checkpoint-4500
