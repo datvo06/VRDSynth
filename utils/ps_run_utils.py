@@ -81,30 +81,26 @@ def merge_words(data, nx_g, ps):
     return uf, data
 
 
-def batch_program_executor(nx_g, ps):
-    find_programs = set()
-    for p in ps:
-        find_programs.update(p.collect_find_programs())
-    find_programs = list(find_programs)
-    out_bindings = batch_find_program_executor(nx_g, find_programs)
+def batch_program_executor(nx_g, ps, fps):
+    out_bindings = batch_find_program_executor(nx_g, fps)
     eval_mappings = {}
     w0 = WordVariable('w0')
     for j, p_bindings in enumerate(out_bindings):
-        return_var = find_programs[j].return_variables[0]
-        eval_mappings[find_programs[j]] = []
+        return_var = fps[j].return_variables[0]
+        eval_mappings[fps[j]] = []
         for w_binding, r_binding in p_bindings:
             wlast = w_binding[return_var]
-            eval_mappings[find_programs[j]].append((w_binding[w0], wlast))
+            eval_mappings[fps[j]].append((w_binding[w0], wlast))
     ps = [p.replace_find_programs_with_values(eval_mappings) for p in ps]
     pairs = itertools.chain(*[p.evaluate(nx_g) for p in ps])
     return pairs
 
 
 
-def link_entity(data, nx_g, ps_merging, ps_linking):
+def link_entity(data, nx_g, ps_merging, ps_linking, fps_merging, fps_linking):
     uf = UnionFind(len(data['boxes']))
-    pairs_merging = batch_program_executor(nx_g, ps_merging)
-    pairs_linking = batch_program_executor(nx_g, ps_linking)
+    pairs_merging = batch_program_executor(nx_g, ps_merging, fps_merging)
+    pairs_linking = batch_program_executor(nx_g, ps_linking, fps_linking)
     ucount = 0
     for w1, w2 in pairs_merging:
         uf.union(w1, w2)

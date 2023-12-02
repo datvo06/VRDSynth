@@ -111,11 +111,18 @@ if __name__ == '__main__':
                     nx_g.nodes[w]['emb'] = all_embs[i][w]
     ps_merging = list(set(itertools.chain.from_iterable(pkl.load(open(ps_fp, 'rb')) for ps_fp in glob.glob(f"{args.cache_dir_entity_grouping}/stage3_*_pps_grouping.pkl"))))
     ps_linking = list(set(itertools.chain.from_iterable(pkl.load(open(ps_fp, 'rb')) for ps_fp in glob.glob(f"{args.cache_dir_entity_linking}/stage3_*_pps_linking.pkl"))))
+    fps_merging, fps_linking = set(), set() 
     print(len(ps_merging), len(ps_linking))
+    for p in ps_merging:
+        fps_merging.update(p.collect_find_programs())
+    for p in ps_linking:
+        fps_linking.update(p.collect_find_programs())
+    fps_merging = list(fps_merging)
+    fps_linking = list(fps_linking)
     # Also build the spec for testset 
     tt, tf, ft, ff = 0, 0, 0, 0
     for i, (data, nx_g) in tqdm.tqdm(enumerate(zip(entity_dataset, data_sample_set_relation_cache))):
-        new_data, ent_map = link_entity(data, nx_g, ps_merging, ps_linking)
+        new_data, ent_map = link_entity(data, nx_g, ps_merging, ps_linking, fps_merging, fps_linking)
         new_tt, new_tf, new_ft, new_ff = compare_specs(ent_map, specs[i][1])
         tt += new_tt
         tf += new_tf
