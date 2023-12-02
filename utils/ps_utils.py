@@ -62,9 +62,13 @@ def construct_entity_linking_specs(dataset: List[DataSample]):
     for i, datasample in enumerate(dataset):
         entity_datasample = construct_entity_level_data(datasample)
         entity_dataset.append(entity_datasample)
-        parent_entities = defaultdict(set)
+        entities_parents = defaultdict(set)
         for e1, e2 in entity_datasample.entities_map:
-            parent_entities[e1].add(e2)
+            entities_parents[e2].add(e1)
+        parent_entities = defaultdict(set)
+        for e2 in parent_entities:
+            parents_set = tuple(entities_parents[e2])
+            parent_entities[parents_set].add(e2)
         specs.append((i, datasample.entities_map, list(parent_entities.values())))
     return specs, entity_dataset
 
