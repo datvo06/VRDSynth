@@ -127,4 +127,4 @@ trainer = XfunReTrainer(
     compute_metrics=compute_metrics,
 )
 trainer.train()
-trainer.evaluate()
+print(trainer.evaluate())
