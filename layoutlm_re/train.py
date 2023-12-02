@@ -98,7 +98,7 @@ test_dataset = dataset['validation']
 tokenizer = AutoTokenizer.from_pretrained("microsoft/layoutxlm-base")
 model = LayoutLMv2ForRelationExtraction.from_pretrained("microsoft/layoutxlm-base")
 feature_extractor = LayoutLMv2FeatureExtractor(apply_ocr=False)
-training_args = TrainingArguments(output_dir="layoutxlm-finetuned-xfund-fr-re",
+training_args = TrainingArguments(output_dir=f"layoutxlm-finetuned-xfund-{sys.argv[1]}-re",
                                   overwrite_output_dir=True,
                                   remove_unused_columns=False,
                                   # fp16=True, -> led to a loss of 0
