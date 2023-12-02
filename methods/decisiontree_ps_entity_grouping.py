@@ -242,14 +242,23 @@ def precision_version_space_based_grouping(pos_paths, dataset, specs, data_sampl
                 if not acc:
                     print("Rejecting: ", c)
 
-
-            if pexists(pjoin(cache_dir, f"stage3_{it}_new_vs_{TASK}.pkl")):
-                with open(pjoin(cache_dir, f"stage3_{it}_new_vs_{TASK}.pkl"), "wb") as f:
-                    pkl.dump(new_vss, f)
-            # perfect_ps = perfect_ps + list(itertools.chain.from_iterable(vs.programs for vs, hc in zip(vss, has_child) if not hc))
             print("Number of perfect programs:", len(pps))
             with open(pjoin(cache_dir, f"stage3_{it}_pps_{TASK}.pkl"), "wb") as f:
                 pkl.dump(pps, f)
+            nvss = len(new_vss)
+            new_vss = [vs for vs in new_vss if vs.tt - cov_tt_perfect]
+            nvss_after = len(new_vss)
+            print(f"Number of new version spaces after pruning: {nvss} -> {nvss_after}")
+
+            if pexists(pjoin(cache_dir, f"stage3_{it}_new_vs_{TASK}.pkl")):
+                with open(pjoin(cache_dir, f"stage3_{it}_new_vs_{TASK}.pkl"), "rb") as f:
+                    new_vss = pkl.load(f)
+            else:
+                with open(pjoin(cache_dir, f"stage3_{it}_new_vs_{TASK}.pkl"), "wb") as f:
+                    pkl.dump(new_vss, f)
+            if nvss_after > 10000:  # Too heavy, cannot run
+                break
+            
 
         vss = new_vss
 
