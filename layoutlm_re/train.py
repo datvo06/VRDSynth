@@ -107,7 +107,6 @@ training_args = TrainingArguments(output_dir=f"layoutxlm-finetuned-xfund-{sys.ar
                                   per_device_eval_batch_size=2,
                                   warmup_ratio=0.1,
                                   learning_rate=1e-5,
-                                  push_to_hub=True,
                                   )
 
 data_collator = DataCollatorForKeyValueExtraction(
