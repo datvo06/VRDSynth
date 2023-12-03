@@ -170,10 +170,10 @@ class Funsd(datasets.GeneratorBasedBuilder):
                 ]
                 if item["label"] == "other":
                         label = ["O"] * len(bbox)
-                    else:
-                        label = [f"I-{item['label'].upper()}"] * len(bbox)
-                        label[0] = f"B-{item['label'].upper()}"
-                    tokenized_inputs.update({"bbox": bbox, "labels": label})
+                else:
+                    label = [f"I-{item['label'].upper()}"] * len(bbox)
+                    label[0] = f"B-{item['label'].upper()}"
+                tokenized_inputs.update({"bbox": bbox, "labels": label})
                 if label[0] != "O":
                     entity_id_to_index_map[item["id"]] = len(entities)
                     entities.append(
@@ -186,78 +186,78 @@ class Funsd(datasets.GeneratorBasedBuilder):
                 for i in tokenized_doc:
                         tokenized_doc[i] = tokenized_doc[i] + tokenized_inputs[i]
 
-                relations = list(set(relations))
-                relations = [rel for rel in relations if rel[0] not in empty_entity and rel[1] not in empty_entity]
-                kvrelations = []
-                for rel in relations:
-                    pair = [id2label[rel[0]], id2label[rel[1]]]
-                    if pair == ["question", "answer"]:
-                        kvrelations.append(
-                            {"head": entity_id_to_index_map[rel[0]], "tail": entity_id_to_index_map[rel[1]]}
-                        )
-                    elif pair == ["answer", "question"]:
-                        kvrelations.append(
-                            {"head": entity_id_to_index_map[rel[1]], "tail": entity_id_to_index_map[rel[0]]}
-                        )
-                    else:
-                        continue
-
-                def get_relation_span(rel):
-                    bound = []
-                    for entity_index in [rel["head"], rel["tail"]]:
-                        bound.append(entities[entity_index]["start"])
-                        bound.append(entities[entity_index]["end"])
-                    return min(bound), max(bound)
-
-                relations = sorted(
-                    [
-                        {
-                            "head": rel["head"],
-                            "tail": rel["tail"],
-                            "start_index": get_relation_span(rel)[0],
-                            "end_index": get_relation_span(rel)[1],
-                        }
-                        for rel in kvrelations
-                    ],
-                    key=lambda x: x["head"],
-                )
-                chunk_size = 512
-                for chunk_id, index in enumerate(range(0, len(tokenized_doc["input_ids"]), chunk_size)):
-                    item = {}
-                    for k in tokenized_doc:
-                        item[k] = tokenized_doc[k][index : index + chunk_size]
-                    entities_in_this_span = []
-                    global_to_local_map = {}
-                    for entity_id, entity in enumerate(entities):
-                        if (
-                            index <= entity["start"] < index + chunk_size
-                            and index <= entity["end"] < index + chunk_size
-                        ):
-                            entity["start"] = entity["start"] - index
-                            entity["end"] = entity["end"] - index
-                            global_to_local_map[entity_id] = len(entities_in_this_span)
-                            entities_in_this_span.append(entity)
-                    relations_in_this_span = []
-                    for relation in relations:
-                        if (
-                            index <= relation["start_index"] < index + chunk_size
-                            and index <= relation["end_index"] < index + chunk_size
-                        ):
-                            relations_in_this_span.append(
-                                {
-                                    "head": global_to_local_map[relation["head"]],
-                                    "tail": global_to_local_map[relation["tail"]],
-                                    "start_index": relation["start_index"] - index,
-                                    "end_index": relation["end_index"] - index,
-                                }
-                            )
-                    item.update(
-                        {
-                            "id": f"{guid}_{chunk_id}",
-                            "image": image,
-                            "original_image": original_image,
-                            "entities": entities_in_this_span,
-                            "relations": relations_in_this_span,
-                        }
+            relations = list(set(relations))
+            relations = [rel for rel in relations if rel[0] not in empty_entity and rel[1] not in empty_entity]
+            kvrelations = []
+            for rel in relations:
+                pair = [id2label[rel[0]], id2label[rel[1]]]
+                if pair == ["question", "answer"]:
+                    kvrelations.append(
+                        {"head": entity_id_to_index_map[rel[0]], "tail": entity_id_to_index_map[rel[1]]}
                     )
-                    yield f"{guid}_{chunk_id}", item
+                elif pair == ["answer", "question"]:
+                    kvrelations.append(
+                        {"head": entity_id_to_index_map[rel[1]], "tail": entity_id_to_index_map[rel[0]]}
+                    )
+                else:
+                    continue
+
+            def get_relation_span(rel):
+                bound = []
+                for entity_index in [rel["head"], rel["tail"]]:
+                    bound.append(entities[entity_index]["start"])
+                    bound.append(entities[entity_index]["end"])
+                return min(bound), max(bound)
+
+            relations = sorted(
+                [
+                    {
+                        "head": rel["head"],
+                        "tail": rel["tail"],
+                        "start_index": get_relation_span(rel)[0],
+                        "end_index": get_relation_span(rel)[1],
+                    }
+                    for rel in kvrelations
+                ],
+                key=lambda x: x["head"],
+            )
+            chunk_size = 512
+            for chunk_id, index in enumerate(range(0, len(tokenized_doc["input_ids"]), chunk_size)):
+                item = {}
+                for k in tokenized_doc:
+                    item[k] = tokenized_doc[k][index : index + chunk_size]
+                entities_in_this_span = []
+                global_to_local_map = {}
+                for entity_id, entity in enumerate(entities):
+                    if (
+                        index <= entity["start"] < index + chunk_size
+                        and index <= entity["end"] < index + chunk_size
+                    ):
+                        entity["start"] = entity["start"] - index
+                        entity["end"] = entity["end"] - index
+                        global_to_local_map[entity_id] = len(entities_in_this_span)
+                        entities_in_this_span.append(entity)
+                relations_in_this_span = []
+                for relation in relations:
+                    if (
+                        index <= relation["start_index"] < index + chunk_size
+                        and index <= relation["end_index"] < index + chunk_size
+                    ):
+                        relations_in_this_span.append(
+                            {
+                                "head": global_to_local_map[relation["head"]],
+                                "tail": global_to_local_map[relation["tail"]],
+                                "start_index": relation["start_index"] - index,
+                                "end_index": relation["end_index"] - index,
+                            }
+                        )
+                item.update(
+                    {
+                        "id": f"{guid}_{chunk_id}",
+                        "image": image,
+                        "original_image": original_image,
+                        "entities": entities_in_this_span,
+                        "relations": relations_in_this_span,
+                    }
+                )
+                yield f"{guid}_{chunk_id}", item
