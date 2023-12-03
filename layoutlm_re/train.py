@@ -91,7 +91,7 @@ def compute_metrics(p):
     return score
 
 
-dataset = load_dataset("nielsr/XFUN", f"xfun.{sys.argv[1]}")
+dataset = load_dataset("R0bk/XFUN", f"xfun.{sys.argv[1]}")
 train_dataset = dataset['train']
 test_dataset = dataset['validation']
 
