@@ -153,6 +153,7 @@ class Funsd(datasets.GeneratorBasedBuilder):
                         bbox.append(None)
                         continue
                     text_length += offset[1] - offset[0]
+                    print(text_length)
                     tmp_box = []
                     while ocr_length < text_length:
                         ocr_word = item["words"].pop(0)
