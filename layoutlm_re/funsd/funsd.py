@@ -153,9 +153,8 @@ class Funsd(datasets.GeneratorBasedBuilder):
                         bbox.append(None)
                         continue
                     text_length += offset[1] - offset[0]
-                    print(text_length)
                     tmp_box = []
-                    while ocr_length < text_length:
+                    while ocr_length < text_length and item['words']:
                         ocr_word = item["words"].pop(0)
                         ocr_length += len(
                             self.tokenizer._tokenizer.normalizer.normalize_str(ocr_word["text"].strip())
