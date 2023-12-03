@@ -301,22 +301,23 @@ def precision_version_space_based_entity_linking(pos_paths, dataset, specs, data
 
     print("Number of version spaces: ", len(vss))
     max_its = 10
-    perfect_ps, cov_tt, cov_tt_perfect = [], set(), set()
+
+    pps, io2pps, pcps, cov_tt, cov_tt_perfect = [], {}, [], set(), set()
+    cov_tt_counter = set()
     start_time = time.time()
     for it in range(max_its):
-        if pexists(f"{cache_dir}/stage3_{it}_linking.pkl"):
-            vss, c2vs = pkl.load(open(f"{cache_dir}/stage3_{it}_linking.pkl", "rb"))
+        if pexists(f"{cache_dir}/stage3_{it}_{TASK}.pkl"):
+            vss, c2vs = pkl.load(open(f"{cache_dir}/stage3_{it}_{TASK}.pkl", "rb"))
         else:
             c2vs = construct_constraints_to_valid_version_spaces(vss)
             # Save this for this iter
-            with open(f"{cache_dir}/stage3_{it}_linking.pkl", "wb") as f:
+            with open(f"{cache_dir}/stage3_{it}_{TASK}.pkl", "wb") as f:
                 pkl.dump([vss, c2vs], f)
-        if pexists(f"{cache_dir}/stage3_{it}_new_vs_linking.pkl"):
-            with open(f"{cache_dir}/stage3_{it}_new_vs_linking.pkl", "rb") as f:
+        if pexists(f"{cache_dir}/stage3_{it}_new_vs_{TASK}.pkl"):
+            with open(f"{cache_dir}/stage3_{it}_new_vs_{TASK}.pkl", "rb") as f:
                 new_vss = pkl.load(f)
         else:
             new_vss, new_io_to_vs = [], {}
-            pps, io2pps= [], {}
             has_child = [False] * len(vss)
             big_bar = tqdm.tqdm(c2vs.items())
             big_bar.set_description("Stage 3 - Creating New Version Spaces")
@@ -325,52 +326,67 @@ def precision_version_space_based_entity_linking(pos_paths, dataset, specs, data
                 cache, cnt, acc = {}, 0, 0 
                 for vs_idx in vs_idxs:
                     cnt += 1
-                    big_bar.set_postfix({"cnt" : cnt, 'cov_tt': len(cov_tt), 'cov_tt_perfect': len(cov_tt_perfect)})
+                    big_bar.set_postfix({"cnt" : cnt, 'cov_tt': len(cov_tt), 'cov_tt_perfect': len(cov_tt_perfect), 'cov_tt_counter': len(cov_tt_counter)})
                     vs = vss[vs_idx]
                     vs_matches = get_intersect_constraint_vs(c, vs, data_sample_set_relation_cache, cache)
                     if not vs_matches: continue
-                    ios = mappings2linking_tuples(vs.programs[0], vs_matches)
+                    ios = mappings2linking_tuples(vss[vs_idx].programs[0], vs_matches)
                     # Now check the tt, tf, ft
                     new_tt, new_tf = (ios & vss[vs_idx].tt), (ios & vss[vs_idx].tf)
-                    if not new_tt: continue
                     new_ft = vss[vs_idx].ft 
+                    io_key = tuple((tuple(new_tt), tuple(new_tf), tuple(new_ft)))
+                    new_program = add_constraint_to_find_program(vss[vs_idx].programs[0], c)
+                    if not new_tt and new_tf - cov_tt_counter:
+                        print(f"Found new counter program")
+                        pcps.append(new_program)
+                        io2pps[io_key] = VS(new_tt, new_tf, new_ft, [new_program], vs_matches)
+                        cov_tt_counter |= new_tf
+                        continue 
+
+                    if not new_tt: continue
                     old_p, _, _ = get_p_r_f1(vss[vs_idx].tt, vss[vs_idx].tf, vss[vs_idx].ft)
                     new_p, _, _ = get_p_r_f1(new_tt, new_tf, new_ft)
-                    if new_p > old_p:
-                        io_key = tuple((tuple(new_tt), tuple(new_tf), tuple(new_ft)))
-                        if io_key in new_io_to_vs: continue
-                        new_program = add_constraint_to_find_program(vss[vs_idx].programs[0], c)
-                        if check_add_perfect_program(new_tt, new_tf, new_ft, cov_tt_perfect, io_key, new_program, vs_matches, io2pps, pps, cache_dir, it, logger, 'linking', start_time):
-                            continue
-                        if new_p > old_p: 
-                            if not (new_tt - cov_tt): continue
-                            cov_tt |= new_tt
-                            print(f"Found new increased precision: {old_p} -> {new_p}")
-                            acc += 1
-                        has_child[vs_idx] = True
-                        if io_key not in new_io_to_vs:
-                            new_vs = VS(new_tt, new_tf, new_ft, [new_program], vs_matches)
-                            new_vss.append(new_vs)
-                            new_io_to_vs[io_key] = new_vs
-                        else:
-                            new_io_to_vs[io_key].programs.append(new_program)
+                    if io_key in new_io_to_vs: continue
+                    if check_add_perfect_program(new_tt, new_tf, new_ft, cov_tt_perfect, io_key, new_program, vs_matches, io2pps, pps, cache_dir, it, logger, TASK, start_time):
+                        continue
+                    if new_p > old_p: 
+                        if not (new_tt - cov_tt): continue
+                        cov_tt |= new_tt
+                        print(f"Found new increased precision: {old_p} -> {new_p}")
+                        acc += 1
+                    has_child[vs_idx] = True
+                    if io_key not in new_io_to_vs:
+                        new_vs = VS(new_tt, new_tf, new_ft, [new_program], vs_matches)
+                        new_vss.append(new_vs)
+                        new_io_to_vs[io_key] = new_vs
+                    else:
+                        new_io_to_vs[io_key].programs.append(new_program)
                 if not acc:
                     print("Rejecting: ", c)
 
 
-            if pexists(pjoin(cache_dir, f"stage3_{it}_new_vs_linking.pkl")):
-                with open(pjoin(cache_dir, f"stage3_{it}_new_vs_linking.pkl"), "rb") as f:
+            print("Number of perfect programs:", len(pps))
+            with open(pjoin(cache_dir, f"stage3_{it}_pps_{TASK}.pkl"), "wb") as f:
+                pkl.dump(pps, f)
+
+            nvss = len(new_vss)
+            new_vss = [vs for vs in new_vss if vs.tt - cov_tt_perfect]
+            nvss_after = len(new_vss)
+            if nvss_after > 10000:  # Too heavy, cannot run
+                break
+            print(f"Number of new version spaces after pruning: {nvss} -> {nvss_after}")
+
+            if pexists(pjoin(cache_dir, f"stage3_{it}_new_vs_{TASK}.pkl")):
+                with open(pjoin(cache_dir, f"stage3_{it}_new_vs_{TASK}.pkl"), "rb") as f:
                     new_vss = pkl.load(f)
             else:
-                with open(pjoin(cache_dir, f"stage3_{it}_new_vs_linking.pkl"), "wb") as f:
+                with open(pjoin(cache_dir, f"stage3_{it}_new_vs_{TASK}.pkl"), "wb") as f:
                     pkl.dump(new_vss, f)
-            print("Number of perfect programs:", len(perfect_ps))
-            with open(pjoin(cache_dir, f"stage3_{it}_pps_linking.pkl"), "wb") as f:
-                pkl.dump(perfect_ps, f)
 
         vss = new_vss
 
     return programs
+
 
 
 
