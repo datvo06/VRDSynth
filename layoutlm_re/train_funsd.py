@@ -90,7 +90,7 @@ def compute_metrics(p):
     return score
 
 
-dataset = load_dataset("nielsr/FUNSD")
+dataset = load_dataset("./funsd")
 train_dataset = dataset['train']
 test_dataset = dataset['validation']
 
