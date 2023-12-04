@@ -82,8 +82,9 @@ if __name__ == '__main__':
             pkl.dump((specs, entity_dataset), f)
         
 
-    if os.path.exists(f"{args.cache_dir_entity_linking}/data_sample_set_relation_cache_test.pkl"):
-        with open(f"{args.cache_dir_entity_linking}/data_sample_set_relation_cache_test.pkl", 'rb') as f:
+    test_data_sample_set_fp = f"{args.cache_dir_entity_linking}/data_sample_set_relation_cache_test.pkl" if not args.use_layoutlm_output else f"{args.cache_dir_entity_linking}/data_sample_set_relation_cache_test_use_layoutxlm.pkl"
+    if os.path.exists(test_data_sample_set_fp):
+        with open(test_data_sample_set_fp, 'rb') as f:
             data_sample_set_relation_cache = pkl.load(f)
     else:
         data_sample_set_relation_cache = []
@@ -96,7 +97,7 @@ if __name__ == '__main__':
             cv2.imwrite(f"{args.cache_dir_entity_linking}/viz_test/{i}.png", img)
             cv2.imwrite(f"{args.cache_dir_entity_linking}/viz_no_rel_test/{i}.png", img_no_rel)
             cv2.imwrite(f"{args.cache_dir_entity_linking}/viz_entity_mapping_test/{i}.png", img_ent_map)
-        with open(f"{args.cache_dir_entity_linking}/data_sample_set_relation_cache_test.pkl", 'wb') as f:
+        with open(test_data_sample_set_fp, 'wb') as f:
             pkl.dump(data_sample_set_relation_cache, f)
 
     if args.use_sem:
