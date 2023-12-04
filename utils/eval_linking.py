@@ -25,7 +25,7 @@ def get_args():
     parser.add_argument('--dataset', type=str, default='funsd', help='dataset name')
     parser.add_argument('--lang', type=str, default='en', help='language')
     parser.add_argument('--rel_type', type=str, choices=['cluster', 'default', 'legacy'], default='legacy')
-    parser.add_argument('--use_layoutxlm_output', type=bool, default=False, help='use semantic features')
+    parser.add_argument('--use_layoutlm_output', type=bool, default=False, help='use semantic features')
     parser.add_argument('--use_sem', type=bool, default=False, help='use semantic features')
     parser.add_argument('--model', type=str, choices=['layoutlmv3'], default='layoutlmv3')
     args = parser.parse_args()
