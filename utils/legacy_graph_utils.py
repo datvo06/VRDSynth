@@ -479,8 +479,8 @@ def from_funsd_datasample(data):
     return [(e1.index, e2.index, lbl) for (e1, e2, lbl) in g.es]
 
 
-def build_nx_g_legacy(data):
-    edges = from_funsd_datasample(data)
+def build_nx_g_legacy(data, sem_edges=None):
+    edges = from_funsd_datasample(data) + ([] if not sem_edges else sem_edges)
     # build a networkx graph
     nx_g = nx.MultiDiGraph()
     for i, j, etype in edges:

@@ -1,5 +1,4 @@
 from transformers import AutoTokenizer, AutoModelForTokenClassification
-from transformers import LayoutLMv2ForRelationExtraction
 from transformers import LayoutLMv2ForRelationExtraction, AutoTokenizer, LayoutLMv2FeatureExtractor 
 from layoutlm_re.train_funsd import DataCollatorForKeyValueExtraction
 from layoutlm_re.transformers.examples.research_projects.lxmert.utils import chunk
@@ -19,11 +18,28 @@ import tqdm
 
 feature_extractor = LayoutLMv2FeatureExtractor(apply_ocr=False)
 
-def load_model(dataset, lang):
-    tokenizer_pre = AutoTokenizer.from_pretrained("xlm-roberta-base")
-    tokenizer = AutoTokenizer.from_pretrained("microsoft/layoutxlm-base")
-    relation_extraction_model = LayoutLMv2ForRelationExtraction.from_pretrained(f"layoutlm_re/layoutxlm-finetuned-{dataset}-{lang}-re/checkpoint-5000")
-    return tokenizer_pre, tokenizer, relation_extraction_model
+tokenizer_dict = {}
+model_dict = {}
+tokenizer_pre = AutoTokenizer.from_pretrained("xlm-roberta-base")
+collator_dict = {}
+
+
+
+def load_tokenizer_model_collator(dataset, lang):
+    if (dataset, lang) not in tokenizer_dict:
+        tokenizer = AutoTokenizer.from_pretrained("microsoft/layoutxlm-base")
+        relation_extraction_model = LayoutLMv2ForRelationExtraction.from_pretrained(f"layoutlm_re/layoutxlm-finetuned-{dataset}-{lang}-re/checkpoint-5000")
+        tokenizer_dict[(dataset, lang)] = tokenizer
+        model_dict[(dataset, lang)] = relation_extraction_model
+        collator_dict[(dataset, lang)] = DataCollatorForKeyValueExtraction(
+            feature_extractor,
+            tokenizer,
+            pad_to_multiple_of=8,
+            padding="max_length",
+            max_length=512,
+        )
+    return tokenizer_dict[(dataset, lang)], model_dict[(dataset, lang)], collator_dict[(dataset, lang)]
+
 
 label2num = {"HEADER":0, "QUESTION":1, "ANSWER":2}
 
@@ -173,21 +189,15 @@ if __name__ == '__main__':
     parser.add_argument("--lang", type=str, default="en")
     args = parser.parse_args()
     args.cache_dir = get_cache_dir(args)
-    tokenizer_pre, tokenizer, model = load_model(args.dataset, args.lang)
-    data_collator = DataCollatorForKeyValueExtraction(
-        feature_extractor,
-        tokenizer,
-        pad_to_multiple_of=8,
-        padding="max_length",
-        max_length=512,
-    )
+    tokenizer, model, collator = load_tokenizer_model_collator(args.dataset, args.lang)
+    
     dataset = load_dataset(args.dataset, lang=args.lang, mode='test')
     times = []
     bar = tqdm.tqdm(dataset)
     os.makedirs(f"{args.cache_dir}/inference", exist_ok=True)
     for i, data_sample in enumerate(bar):
         start = time.time()
-        entities_map = infer(model, tokenizer_pre, tokenizer, data_collator, data_sample)
+        entities_map = infer(model, tokenizer_pre, tokenizer, collator, data_sample)
         times.append(time.time() - start)
         data_sample = construct_entity_level_data(data_sample)
         data_sample.entities_map = entities_map

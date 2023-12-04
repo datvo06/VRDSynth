@@ -21,6 +21,7 @@ import pickle as pkl
 import os
 import tqdm
 import copy
+from layoutlm_re.inference import infer, load_tokenizer_model_collator, tokenizer_pre
 import multiprocessing
 from multiprocessing import Pool
 from functools import lru_cache, partial
@@ -576,9 +577,16 @@ def get_args():
     parser.add_argument('--grammar', type=str, choices=['default', 'extended'])
     # use sem store true
     parser.add_argument('--use_sem', action='store_true', help='use semantic information')
-    parser.add_argument('--model', type=str, choices=['layoutlmv3'], default='layoutlmv3')
+    parser.add_argument('--use_layoutlm_output', action='store_true', help='use semantic information')
+    parser.add_argument('--model', type=str, choices=['layoutxlm'], default='layoutxlm')
     args = parser.parse_known_args()[0]
     return args
+
+def build_nx_g_legacy_sem(data_sample, dataset, lang):
+    tokenizer, model, collator = load_tokenizer_model_collator(dataset, lang)
+    entities_map = infer(model, tokenizer_pre, tokenizer, collator, data_sample)
+    entities_map = [(i, j, 5) for i, j in entities_map]
+    return build_nx_g_legacy(data_sample, sem_edges=entities_map)
 
 
 def setup_relation(args):
@@ -598,6 +606,9 @@ def setup_relation(args):
         args.build_nx_g = lambda data_sample: build_nx_g_legacy(data_sample)
         args.relation_set = dummy_calculate_relation_set(None, None, None)
         args.relation_set = [args.relation_set[2], args.relation_set[3], args.relation_set[0], args.relation_set[1]] 
+        if args.use_layoutlm_output:
+            args.relation_set.append((-1, -1))
+            args.build_nx_g = lambda data_sample: build_nx_g_legacy_sem(data_sample, args.dataset, args.lang)
     return args
 
 
@@ -608,6 +619,8 @@ def setup_grammar(args):
         GrammarReplacement['FloatValue'].append(SemDist)
     if args.rel_type not in {'default', 'cluster'}:
         LiteralReplacement['RelationPropertyConstant'] =  [RelationPropertyConstant('mag')]
+    if args.use_layoutlm_output:
+        LiteralReplacement['RelationLabelConstant'].append(4)
     return args
 
 
