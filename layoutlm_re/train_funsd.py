@@ -90,39 +90,40 @@ def compute_metrics(p):
     return score
 
 
-dataset = load_dataset("./funsd")
-train_dataset = dataset['train']
-test_dataset = dataset['validation']
+if __name__ == '__main__':
+    dataset = load_dataset("./layoutlm_re/funsd")
+    train_dataset = dataset['train']
+    test_dataset = dataset['validation']
 
-tokenizer = AutoTokenizer.from_pretrained("microsoft/layoutxlm-base")
-model = LayoutLMv2ForRelationExtraction.from_pretrained("microsoft/layoutxlm-base")
-feature_extractor = LayoutLMv2FeatureExtractor(apply_ocr=False)
-training_args = TrainingArguments(output_dir=f"layoutxlm-finetuned-funsd-en-re",
-                                  overwrite_output_dir=True,
-                                  remove_unused_columns=False,
-                                  # fp16=True, -> led to a loss of 0
-                                  max_steps=5000,
-                                  per_device_train_batch_size=2,
-                                  per_device_eval_batch_size=2,
-                                  warmup_ratio=0.1,
-                                  learning_rate=1e-5,
-                                  )
+    tokenizer = AutoTokenizer.from_pretrained("microsoft/layoutxlm-base")
+    model = LayoutLMv2ForRelationExtraction.from_pretrained("microsoft/layoutxlm-base")
+    feature_extractor = LayoutLMv2FeatureExtractor(apply_ocr=False)
+    training_args = TrainingArguments(output_dir=f"layoutxlm-finetuned-funsd-en-re",
+                                      overwrite_output_dir=True,
+                                      remove_unused_columns=False,
+                                      # fp16=True, -> led to a loss of 0
+                                      max_steps=5000,
+                                      per_device_train_batch_size=2,
+                                      per_device_eval_batch_size=2,
+                                      warmup_ratio=0.1,
+                                      learning_rate=1e-5,
+                                      )
 
-data_collator = DataCollatorForKeyValueExtraction(
-    feature_extractor,
-    tokenizer,
-    pad_to_multiple_of=8,
-    padding="max_length",
-    max_length=512,
-)
-trainer = XfunReTrainer(
-    model=model,
-    args=training_args,
-    train_dataset=train_dataset,
-    eval_dataset=test_dataset,
-    tokenizer=tokenizer,
-    data_collator=data_collator,
-    compute_metrics=compute_metrics,
-)
-trainer.train()
-print(trainer.evaluate())
+    data_collator = DataCollatorForKeyValueExtraction(
+        feature_extractor,
+        tokenizer,
+        pad_to_multiple_of=8,
+        padding="max_length",
+        max_length=512,
+    )
+    trainer = XfunReTrainer(
+        model=model,
+        args=training_args,
+        train_dataset=train_dataset,
+        eval_dataset=test_dataset,
+        tokenizer=tokenizer,
+        data_collator=data_collator,
+        compute_metrics=compute_metrics,
+    )
+    trainer.train()
+    print(trainer.evaluate())

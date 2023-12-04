@@ -11,6 +11,8 @@ import itertools
 import glob
 import tqdm
 import cv2
+import time
+import numpy as np
 
 
 def get_args():
@@ -121,8 +123,11 @@ if __name__ == '__main__':
     fps_linking = list(fps_linking)
     # Also build the spec for testset 
     tt, tf, ft, ff = 0, 0, 0, 0
+    times = []
     for i, (data, nx_g) in tqdm.tqdm(enumerate(zip(entity_dataset, data_sample_set_relation_cache))):
+        st = time.time()
         new_data, ent_map = link_entity(data, nx_g, ps_merging, ps_linking, fps_merging, fps_linking)
+        times.append(time.time() - st)
         new_tt, new_tf, new_ft, new_ff = compare_specs(ent_map, specs[i][1])
         tt += new_tt
         tf += new_tf
@@ -131,11 +136,17 @@ if __name__ == '__main__':
         img = viz_data_entity_mapping(new_data)
         cv2.imwrite(f"{args.cache_dir_entity_linking}/inference_test/inference_{i}.png", img)
     # Write the result to log
+    mean, std = np.mean(times), np.std(times)
     with open(f"{args.cache_dir_entity_linking}/inference_test/result.txt", 'w') as f:
         f.write(f"tt: {tt}, tf: {tf}, ft: {ft}, ff: {ff}\n")
         f.write(f"precision: {tt / (tt + tf)}\n")
         f.write(f"recall: {tt / (tt + ft)}\n")
         f.write(f"f1: {2 * tt / (2 * tt + tf + ft)}\n")
+        f.write(f"mean: {mean}, std: {std} (secs)\n")
+
+
+    # Average and std of times
+    print(f"mean: {mean}, std: {std} (secs)")
     
     # Print to screen
     print(f"tt: {tt}, tf: {tf}, ft: {ft}, ff: {ff}")
