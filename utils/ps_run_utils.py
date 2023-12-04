@@ -111,7 +111,7 @@ def link_entity(data, nx_g, ps_merging, ps_linking, fps_merging, fps_linking, ps
 
     if use_rem_sem:
         pairs_counter = batch_program_executor(nx_g, ps_counter, fps_linking)
-        pairs_sem = [(i, j) for i, j, _ in nx_g.edges() if nx_g.edges[i, j]['lbl'] == 5]
+        pairs_sem = [(i, j) for i, j, k in nx_g.edges(key=True) if nx_g.edges[i, j]['lbl'] == 5]
         pairs_sem = [(i, j) for i, j in pairs_sem if (i, j) not in pairs_counter]
         pairs_linking = itertools.chain(pairs_linking, pairs_sem)
 
