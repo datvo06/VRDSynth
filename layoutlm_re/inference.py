@@ -14,9 +14,10 @@ from utils.misc import pexists
 feature_extractor = LayoutLMv2FeatureExtractor(apply_ocr=False)
 
 def load_model(dataset, lang):
+    tokenizer_pre = AutoTokenizer.from_pretrained("xlm-roberta-base")
     tokenizer = AutoTokenizer.from_pretrained("microsoft/layoutxlm-base")
     relation_extraction_model = LayoutLMv2ForRelationExtraction.from_pretrained(f"layoutlm_re/layoutxlm-finetuned-{dataset}-{lang}-re/checkpoint-5000")
-    return tokenizer, relation_extraction_model
+    return tokenizer_pre, tokenizer, relation_extraction_model
 
 
 def get_line_bbox(tokenized_inputs, tokenizer, line_words, line_bboxs, size=224):
@@ -126,8 +127,8 @@ def convert_data_sample_to_input(data_sample, tokenizer):
     return chunks, chunk_entities, entity_dict
 
 
-def infer(model, tokenizer, data_sample):
-    chunks, chunk_entities, entity_dict = convert_data_sample_to_input(data_sample, tokenizer)
+def infer(model, tokenizer_pre, tokenizer, data_sample):
+    chunks, chunk_entities, entity_dict = convert_data_sample_to_input(data_sample, tokenizer_pre)
     entities_map = []
     with torch.no_grad():
         for chunk, chunk_entity in zip(chunks, chunk_entities):
@@ -146,7 +147,7 @@ if __name__ == '__main__':
     parser.add_argument("--dataset", type=str, default="fusnd")
     parser.add_argument("--lang", type=str, default="en")
     args = parser.parse_args()
-    tokenizer, model = load_model(args.dataset, args.lang)
+    tokenizer_pre, tokenizer, model = load_model(args.dataset, args.lang)
     '''
     data_collator = DataCollatorForKeyValueExtraction(
         feature_extractor,
@@ -160,7 +161,7 @@ if __name__ == '__main__':
     times = []
     for data_sample in dataset:
         start = time.time()
-        entities_map = infer(model, tokenizer, data_sample)
+        entities_map = infer(model, tokenizer_pre, tokenizer, data_sample)
         times.append(time.time() - start)
 
     avg_time = sum(times) / len(times)
