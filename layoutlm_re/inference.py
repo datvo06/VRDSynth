@@ -10,6 +10,7 @@ import argparse
 import time
 import numpy as np
 from utils.misc import pexists
+import tqdm
 
 feature_extractor = LayoutLMv2FeatureExtractor(apply_ocr=False)
 
@@ -170,7 +171,8 @@ if __name__ == '__main__':
     )
     dataset = load_dataset(args.dataset, lang=args.lang, mode='test')
     times = []
-    for data_sample in dataset:
+    bar = tqdm.tqdm(dataset)
+    for data_sample in bar:
         start = time.time()
         entities_map = infer(model, tokenizer_pre, tokenizer, data_collator, data_sample)
         times.append(time.time() - start)
