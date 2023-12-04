@@ -147,6 +147,7 @@ def infer(model, tokenizer_pre, tokenizer, collator, data_sample):
                     )
             for relation in outputs.pred_relations[0]:
                 hid, tid = relation['head'], relation['tail']
+                print(hid, tid, chunk_entity)
                 entities_map.append((chunk_entity[hid], chunk_entity[tid]))
     return entities_map
 
