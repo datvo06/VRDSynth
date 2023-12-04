@@ -2,6 +2,7 @@ from transformers import AutoTokenizer, AutoModelForTokenClassification
 from transformers import LayoutLMv2ForRelationExtraction
 from transformers import LayoutLMv2ForRelationExtraction, AutoTokenizer, LayoutLMv2FeatureExtractor 
 from layoutlm_re.train_funsd import DataCollatorForKeyValueExtraction
+from layoutlm_re.transformers.examples.research_projects.lxmert.utils import chunk
 from layoutlm_re.xfun import load_image, simplify_bbox, normalize_bbox, merge_bbox
 from utils.funsd_utils import viz_data, viz_data_no_rel, viz_data_entity_mapping
 from utils.data_sample import DataSample
@@ -61,7 +62,7 @@ def convert_data_sample_to_input(data_sample, tokenizer):
     image, size = load_image(data_sample.img_fp, size=224)
     original_image, _ = load_image(data_sample.img_fp)
     tokenized_doc = {"input_ids": [], "bbox": [], "labels": []}
-    entities_to_index_map = {i: i for i in range(len(data_sample.entities))}
+    entities_to_index_map = {}
     entities = []
     empty_ents = set()
     id2label = {}
@@ -98,6 +99,7 @@ def convert_data_sample_to_input(data_sample, tokenizer):
                     "label": ent_label.upper(),
                 }
             )
+            entities_to_index_map[len(entities) - 1] = i
         for key in tokenized_doc:
             tokenized_doc[key] = tokenized_doc[key] + tokenized_inputs[key]
     chunk_size = 512
@@ -137,13 +139,12 @@ def convert_data_sample_to_input(data_sample, tokenizer):
     entity_dict = {'start': [entity[0] for i, entity in enumerate(data_sample.entities) if i not in empty_ents],
         'end': [entity[-1] for i, entity in enumerate(data_sample.entities) if i not in empty_ents],
         'label': [id2label[i] for i in range(len(entities)) if i not in empty_ents]}
-    while not chunk_entities[-1]:
-        chunk_entities.pop()
-    return chunks, chunk_entities, entity_dict
+    chunk_entities = chunk_entities[:len(chunks)]
+    return chunks, chunk_entities, entity_dict, entities_to_index_map
 
 
 def infer(model, tokenizer_pre, tokenizer, collator, data_sample):
-    chunks, chunk_entities, entity_dict = convert_data_sample_to_input(data_sample, tokenizer_pre)
+    chunks, chunk_entities, entity_dict, entities_to_index_map = convert_data_sample_to_input(data_sample, tokenizer_pre)
     entities_map = []
     with torch.no_grad():
         for chunk, chunk_entity in zip(chunks, chunk_entities):
@@ -154,8 +155,9 @@ def infer(model, tokenizer_pre, tokenizer, collator, data_sample):
                     )
             for relation in outputs.pred_relations[0]:
                 hid, tid = relation['head_id'], relation['tail_id']
-                if hid in chunk_entity and tid in chunk_entity:
-                    entities_map.append((hid, tid))
+                print(hid, tid, len(chunk_entity), min(chunk_entity), max(chunk_entity))
+                if hid < len(chunk_entity) and tid < len(chunk_entity):
+                    entities_map.append((entities_to_index_map[chunk_entity[hid]], entities_to_index_map[chunk_entity[tid]]))
     return entities_map
 
 
