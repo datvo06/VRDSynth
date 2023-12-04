@@ -132,6 +132,8 @@ def convert_data_sample_to_input(data_sample, tokenizer):
     entity_dict = {'start': [entity[0] for i, entity in enumerate(data_sample.entities) if i not in empty_ents],
         'end': [entity[-1] for i, entity in enumerate(data_sample.entities) if i not in empty_ents],
         'label': [id2label[i] for i in range(len(entities)) if i not in empty_ents]}
+    while not chunk_entities[-1]:
+        chunk_entities.pop()
     return chunks, chunk_entities, entity_dict
 
 
@@ -147,7 +149,6 @@ def infer(model, tokenizer_pre, tokenizer, collator, data_sample):
                     )
             for relation in outputs.pred_relations[0]:
                 hid, tid = relation['head_id'], relation['tail_id']
-                print(hid, tid, chunk_entity)
                 if hid in chunk_entity and tid in chunk_entity:
                     entities_map.append((hid, tid))
                 entities_map.append((chunk_entity[hid], chunk_entity[tid]))
