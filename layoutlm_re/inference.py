@@ -13,7 +13,7 @@ import numpy as np
 feature_extractor = LayoutLMv2FeatureExtractor(apply_ocr=False)
 
 def load_model(dataset, lang):
-    tokenizer = AutoTokenizer.from_pretrained("xlm-roberta-base")
+    tokenizer = AutoTokenizer.from_pretrained("microsoft/layoutxlm-base")
     relation_extraction_model = LayoutLMv2ForRelationExtraction.from_pretrained(f"layoutlm_re/layoutxlm-finetuned-{dataset}-{lang}-re")
     return tokenizer, relation_extraction_model
 
