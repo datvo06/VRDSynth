@@ -65,7 +65,7 @@ def convert_data_sample_to_input(data_sample, tokenizer):
         line_words = [data_sample["words"][w] for w in ent]
         line_bboxs = [data_sample["boxes"][w] for w in ent]
         tokenized_inputs = tokenizer(
-            list([data_sample["words"][w] for w in ent]),
+            ' '.join(list([data_sample["words"][w] for w in ent])),
             add_special_tokens=False,
             return_offsets_mapping=True,
             return_attention_mask=False,
