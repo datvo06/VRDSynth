@@ -151,7 +151,7 @@ if __name__ == '__main__':
         max_length=512,
     )
     '''
-    dataset = load_dataset(args.dataset, lang=args.lang)
+    dataset = load_dataset(args.dataset, lang=args.lang, mode='val')
     times = []
     for data_sample in dataset:
         start = time.time()
