@@ -139,6 +139,7 @@ def infer(model, tokenizer_pre, tokenizer, collator, data_sample):
     with torch.no_grad():
         for chunk, chunk_entity in zip(chunks, chunk_entities):
             chunk = collator([chunk])
+            chunk['relation'] = [{'start_index': [], 'end_index': [], 'head': [], 'tail': []}]
             outputs = model(
                     **chunk
                     )
