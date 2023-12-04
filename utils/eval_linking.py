@@ -1,5 +1,5 @@
 from methods.decisiontree_ps import setup_relation
-from utils.ps_run_utils import link_entity
+from utils.ps_run_utils import link_entity, get_counter_programs
 from utils.funsd_utils import viz_data, viz_data_no_rel, viz_data_entity_mapping
 from utils.ps_utils import construct_entity_linking_specs, construct_entity_merging_specs
 from utils.funsd_utils import load_dataset, viz_data_entity_mapping
@@ -26,6 +26,7 @@ def get_args():
     parser.add_argument('--lang', type=str, default='en', help='language')
     parser.add_argument('--rel_type', type=str, choices=['cluster', 'default', 'legacy'], default='legacy')
     parser.add_argument('--use_layoutlm_output', type=bool, default=False, help='use semantic features')
+    parser.add_argument('--take_non_countered_layoutlm_output', type=bool, default=False, help='use semantic features')
     parser.add_argument('--use_sem', type=bool, default=False, help='use semantic features')
     parser.add_argument('--model', type=str, choices=['layoutlmv3'], default='layoutlmv3')
     args = parser.parse_args()
@@ -121,6 +122,9 @@ if __name__ == '__main__':
         fps_merging.update(p.collect_find_programs())
     for p in ps_linking:
         fps_linking.update(p.collect_find_programs())
+    ps_counter = []
+    if args.use_layoutlm_output and args.take_non_countered_layoutlm_output:
+        ps_counter = get_counter_programs(ps_linking)
     fps_merging = list(fps_merging)
     fps_linking = list(fps_linking)
     # Also build the spec for testset 
@@ -128,7 +132,7 @@ if __name__ == '__main__':
     times = []
     for i, (data, nx_g) in tqdm.tqdm(enumerate(zip(entity_dataset, data_sample_set_relation_cache))):
         st = time.time()
-        new_data, ent_map = link_entity(data, nx_g, ps_merging, ps_linking, fps_merging, fps_linking)
+        new_data, ent_map = link_entity(data, nx_g, ps_merging, ps_linking, fps_merging, fps_linking, ps_counter, args.use_layoutlm_output)
         times.append(time.time() - st)
         new_tt, new_tf, new_ft, new_ff = compare_specs(ent_map, specs[i][1])
         tt += new_tt

@@ -1,5 +1,5 @@
 from utils.funsd_utils import DataSample
-from utils.ps_utils import FindProgram, WordVariable, RelationVariable
+from utils.ps_utils import FindProgram, WordVariable, RelationVariable, ExcludeProgram
 from utils.algorithms import UnionFind
 from networkx import isomorphism
 import networkx as nx
@@ -96,11 +96,25 @@ def batch_program_executor(nx_g, ps, fps):
     return pairs
 
 
+def get_counter_programs(ps_linking):
+    counter_programs = set()
+    for p in ps_linking:
+        if isinstance(p, ExcludeProgram):
+            counter_programs.update(p.excl_programs)
+    return counter_programs
 
-def link_entity(data, nx_g, ps_merging, ps_linking, fps_merging, fps_linking):
+
+def link_entity(data, nx_g, ps_merging, ps_linking, fps_merging, fps_linking, ps_counter=[], use_rem_sem=False):
     uf = UnionFind(len(data['boxes']))
     pairs_merging = batch_program_executor(nx_g, ps_merging, fps_merging)
     pairs_linking = batch_program_executor(nx_g, ps_linking, fps_linking)
+
+    if use_rem_sem:
+        pairs_counter = batch_program_executor(nx_g, ps_counter, fps_linking)
+        pairs_sem = [(i, j) for i, j in nx_g.edges() if nx_g.edges[i, j]['lbl'] == 5]
+        pairs_sem = [(i, j) for i, j in pairs_sem if (i, j) not in pairs_counter]
+        pairs_linking = itertools.chain(pairs_linking, pairs_sem)
+
     ucount = 0
     for w1, w2 in pairs_merging:
         uf.union(w1, w2)
