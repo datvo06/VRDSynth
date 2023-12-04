@@ -78,6 +78,8 @@ def convert_data_sample_to_input(data_sample, tokenizer):
         else:
             label = [f"I-{ent_label.upper()}"] * len(bbox)
             label[0] = f"B-{ent_label.upper()}"
+
+        tokenized_inputs.update({"bbox": bbox, "labels": label})
         if label[0] != "O":
             entities.append(
                 {
