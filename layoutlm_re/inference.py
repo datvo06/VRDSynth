@@ -20,7 +20,7 @@ def load_model(dataset, lang):
     return tokenizer_pre, tokenizer, relation_extraction_model
 
 
-def get_line_bbox(tokenized_inputs, tokenizer, line_words, line_bboxs, size=224):
+def get_line_bbox(tokenized_inputs, tokenizer, line_words, line_bboxs, size=(224, 224)):
     line_words = line_words[:]
     line_bboxs = line_bboxs[:]
     line_wbs = list(zip(line_words, line_bboxs))
@@ -71,7 +71,7 @@ def convert_data_sample_to_input(data_sample, tokenizer):
             return_offsets_mapping=True,
             return_attention_mask=False,
         )
-        bbox = get_line_bbox(tokenized_inputs, tokenizer, line_words, line_bboxs, 224)
+        bbox = get_line_bbox(tokenized_inputs, tokenizer, line_words, line_bboxs, size)
         ent_label = list([data_sample["labels"][w] for w in ent])[0]
         id2label[i] = ent_label
         if ent_label  == "other":

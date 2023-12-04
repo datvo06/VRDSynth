@@ -45,7 +45,7 @@ def merge_bbox(bbox_list):
     return [min(x0), min(y0), max(x1), max(y1)]
 
 
-def get_line_bbox(tokenized_inputs, tokenizer, line, size=224):
+def get_line_bbox(tokenized_inputs, tokenizer, line, size=(224, 224)):
     text_length = 0
     ocr_length = 0
     bbox = []
@@ -199,7 +199,7 @@ class XFUN(datasets.GeneratorBasedBuilder):
                         return_offsets_mapping=True,
                         return_attention_mask=False,
                     )
-                    bbox = get_line_bbox(tokenized_inputs, self.tokenizer, line, 224)
+                    bbox = get_line_bbox(tokenized_inputs, self.tokenizer, line, size)
                     if line["label"] == "other":
                         label = ["O"] * len(bbox)
                     else:
