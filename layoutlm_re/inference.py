@@ -25,7 +25,8 @@ label2num = {"HEADER":0, "QUESTION":1, "ANSWER":2}
 def get_line_bbox(tokenized_inputs, tokenizer, line_words, line_bboxs, size=(224, 224)):
     line_words = line_words[:]
     line_bboxs = line_bboxs[:]
-    line_wbs = list(zip(line_words, line_bboxs)) text_length = 0
+    line_wbs = list(zip(line_words, line_bboxs))
+    text_length = 0
     ocr_length = 0
     bbox = []
     for token_id, offset in zip(tokenized_inputs["input_ids"], tokenized_inputs["offset_mapping"]):
