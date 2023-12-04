@@ -123,9 +123,9 @@ def convert_data_sample_to_input(data_sample, tokenizer):
             }
         )
         chunks.append(item)
-    entity_dict = {'start': [entity[0] for entity in data_sample.entities],
-        'end': [entity[-1] for entity in data_sample.entities],
-        'label': [id2label[i] for i in range(len(entities))]}
+    entity_dict = {'start': [entity[0] for i, entity in enumerate(data_sample.entities) if i not in empty_ents],
+        'end': [entity[-1] for i, entity in enumerate(data_sample.entities) if i not in empty_ents],
+        'label': [id2label[i] for i in range(len(entities)) if i not in empty_ents]}
     return chunks, chunk_entities, entity_dict
 
 
