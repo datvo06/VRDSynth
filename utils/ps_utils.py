@@ -463,7 +463,9 @@ class UnionProgram(Program):
 
     def replace_find_programs_with_values(self, values):
         if self not in values:
-            values[self] = UnionProgram([p.replace_find_programs_with_values(values) for p in self.programs])
+            up = UnionProgram([p.replace_find_programs_with_values(values) for p in self.programs])
+            up = FixedSetProgram(up.evaluate(None))
+            values[self] = up
         return values[self]
 
     def __str__(self):
@@ -523,7 +525,7 @@ class ExcludeProgram(Program):
             if isinstance(self.ref_program, FindProgram):
                 ref_program = FixedSetProgram(eval_mapping[self.ref_program])
             excl_programs = [FixedSetProgram(eval_mapping[p]) if isinstance(p, FindProgram) else p.replace_find_programs_with_values(eval_mapping) for p in self.excl_programs]
-            eval_mapping[self] = ExcludeProgram(ref_program, excl_programs)
+            eval_mapping[self] = FixedSetProgram(ExcludeProgram(ref_program, excl_programs).evaluate(None))
         return eval_mapping[self]
 
     def reduce(self):
