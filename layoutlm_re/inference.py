@@ -155,7 +155,7 @@ def infer(model, tokenizer_pre, tokenizer, collator, data_sample):
                     )
             for relation in outputs.pred_relations[0]:
                 hid, tid = relation['head_id'], relation['tail_id']
-                print(hid, tid, len(chunk_entity), min(chunk_entity), max(chunk_entity))
+                print(hid, tid, len(chunk_entity), min(chunk_entity) if chunk_entity else -1, max(chunk_entity) if chunk_entity else -1)
                 if hid < len(chunk_entity) and tid < len(chunk_entity):
                     entities_map.append((entities_to_index_map[chunk_entity[hid]], entities_to_index_map[chunk_entity[tid]]))
     return entities_map
