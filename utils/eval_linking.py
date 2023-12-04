@@ -112,7 +112,8 @@ if __name__ == '__main__':
                 for w in sorted(nx_g.nodes()):
                     nx_g.nodes[w]['emb'] = all_embs[i][w]
     ps_merging = list(set(itertools.chain.from_iterable(pkl.load(open(ps_fp, 'rb')) for ps_fp in glob.glob(f"{args.cache_dir_entity_grouping}/stage3_*_pps_grouping.pkl"))))
-    ps_linking = list(set(itertools.chain.from_iterable(pkl.load(open(ps_fp, 'rb')) for ps_fp in glob.glob(f"{args.cache_dir_entity_linking}/stage3_*_pps_linking.pkl"))))
+    ps_linking = list(set(itertools.chain.from_iterable(pkl.load(open(ps_fp, 'rb')) for ps_fp in glob.glob(f"{args.cache_dir_entity_linking}/stage3_*_pps_linking.pkl") + glob.glob(f"{args.cache_dir_entity_linking}/stage3_*_perfect_ps_linking.pkl")
+                                                        )))
     fps_merging, fps_linking = set(), set() 
     print(len(ps_merging), len(ps_linking))
     for p in ps_merging:
