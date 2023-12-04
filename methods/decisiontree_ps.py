@@ -620,7 +620,7 @@ def setup_grammar(args):
     if args.rel_type not in {'default', 'cluster'}:
         LiteralReplacement['RelationPropertyConstant'] =  [RelationPropertyConstant('mag')]
     if args.use_layoutlm_output:
-        LiteralReplacement['RelationLabelConstant'].append(4)
+        LiteralReplacement['RelationLabelConstant'].append(RelationLabelConstant(4))
     return args
 
 
