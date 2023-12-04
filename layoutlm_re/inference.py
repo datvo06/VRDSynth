@@ -9,6 +9,7 @@ from utils.funsd_utils import load_dataset
 import argparse
 import time
 import numpy as np
+from utils.misc import pexists
 
 feature_extractor = LayoutLMv2FeatureExtractor(apply_ocr=False)
 
@@ -48,6 +49,8 @@ def get_line_bbox(tokenized_inputs, tokenizer, line_words, line_bboxs, size=224)
     return bbox
 
 def convert_data_sample_to_input(data_sample, tokenizer):
+    if not pexists(data_sample.img_fp):
+        data_sample.img_fp = data_sample.img_fp.replace('.jpg', '.png')
     image, size = load_image(data_sample.img_fp, size=224)
     original_image, _ = load_image(data_sample.img_fp)
     tokenized_doc = {"input_ids": [], "bbox": [], "labels": []}
