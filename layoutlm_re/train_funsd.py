@@ -70,7 +70,7 @@ class DataCollatorForKeyValueExtraction:
         )
 
         batch["image"] = image
-        batch["entities"] = entities[0]
+        batch["entities"] = entities
         batch["relations"] = relations
             
         return batch

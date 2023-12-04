@@ -118,7 +118,11 @@ def convert_data_sample_to_input(data_sample, tokenizer):
                 "id": f"{chunk_id}",
                 "image": image,
                 "original_image": original_image,
-                "entities": entities_in_this_span,
+                "entities": {
+                    'start': [e['start'] for e in entities_in_this_span],
+                    'end': [e['end'] for e in entities_in_this_span],
+                    'label': [e['label'] for e in entities_in_this_span],
+                 },
                 "relations": [],
             }
         )
