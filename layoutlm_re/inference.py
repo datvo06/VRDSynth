@@ -3,14 +3,16 @@ from transformers import LayoutLMv2ForRelationExtraction
 from transformers import LayoutLMv2ForRelationExtraction, AutoTokenizer, LayoutLMv2FeatureExtractor 
 from layoutlm_re.train_funsd import DataCollatorForKeyValueExtraction
 from layoutlm_re.xfun import load_image, simplify_bbox, normalize_bbox, merge_bbox
+from utils.funsd_utils import viz_data, viz_data_no_rel, viz_data_entity_mapping
 from utils.data_sample import DataSample
 import torch
 from utils.funsd_utils import load_dataset
 import argparse
 import time
 import numpy as np
+import cv2
 from utils.misc import pexists
-from utils.
+import os
 import tqdm
 
 feature_extractor = LayoutLMv2FeatureExtractor(apply_ocr=False)
@@ -156,11 +158,18 @@ def infer(model, tokenizer_pre, tokenizer, collator, data_sample):
     return entities_map
 
 
+def get_cache_dir(args):
+    cache_dir = f"cache_layoutxlm_entity_linking_{args.dataset}_{args.lang}"
+    os.makedirs(cache_dir, exist_ok=True)
+    return cache_dir
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("--dataset", type=str, default="fusnd")
     parser.add_argument("--lang", type=str, default="en")
     args = parser.parse_args()
+    args.cache_dir = get_cache_dir(args)
     tokenizer_pre, tokenizer, model = load_model(args.dataset, args.lang)
     data_collator = DataCollatorForKeyValueExtraction(
         feature_extractor,
@@ -172,10 +181,15 @@ if __name__ == '__main__':
     dataset = load_dataset(args.dataset, lang=args.lang, mode='test')
     times = []
     bar = tqdm.tqdm(dataset)
-    for data_sample in bar:
+    os.makedirs(f"{args.cache_dir}/inference", exist_ok=True)
+    for i, data_sample in enumerate(bar):
         start = time.time()
         entities_map = infer(model, tokenizer_pre, tokenizer, data_collator, data_sample)
         times.append(time.time() - start)
+        data_sample.entities_map = entities_map
+        img = viz_data_entity_mapping(data_sample)
+        cv2.imwrite(f"{args.cache_dir}/inference/{i}.jpg", img)
+    print(f"Average time: {sum(times) / len(times)}")
 
     avg_time = sum(times) / len(times)
     std = np.std(times)

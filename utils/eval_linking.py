@@ -134,8 +134,8 @@ if __name__ == '__main__':
         tf += new_tf
         ft += new_ft
         ff += new_ff
-        # img = viz_data_entity_mapping(new_data)
-        # cv2.imwrite(f"{args.cache_dir_entity_linking}/inference_test/inference_{i}.png", img)
+        img = viz_data_entity_mapping(new_data)
+        cv2.imwrite(f"{args.cache_dir_entity_linking}/inference_test/inference_{i}.png", img)
     # Write the result to log
     mean, std = np.mean(times), np.std(times)
     with open(f"{args.cache_dir_entity_linking}/inference_test/result.txt", 'w') as f:
