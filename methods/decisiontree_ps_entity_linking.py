@@ -410,7 +410,7 @@ if __name__ == '__main__':
     dataset = setup_dataset(args)
     specs, entity_dataset = setup_specs(args, dataset, 'linking')
     end_time = time.time()
-    print(f"Time taken to load daaataset and construct specs: {end_time - start_time}")
+    print(f"Time taken to load dataset and construct specs: {end_time - start_time}")
     logger.log("construct spec time: ", float(end_time - start_time))       
 
     start_time = time.time()
