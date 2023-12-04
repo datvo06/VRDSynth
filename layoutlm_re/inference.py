@@ -135,8 +135,8 @@ def infer(model, tokenizer_pre, tokenizer, data_sample):
     with torch.no_grad():
         for chunk, chunk_entity in zip(chunks, chunk_entities):
             outputs = model(
-                    **chunk,
-                    relations=[{'start_index': [], 'end_index': [], 'head': [], 'tail': []}])
+                    **chunk
+                    )
             for relation in outputs.pred_relations[0]:
                 hid, tid = relation['head'], relation['tail']
                 entities_map.append((chunk_entity[hid], chunk_entity[tid]))
