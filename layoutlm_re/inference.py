@@ -7,6 +7,7 @@ from utils.funsd_utils import viz_data, viz_data_no_rel, viz_data_entity_mapping
 from utils.data_sample import DataSample
 import torch
 from utils.funsd_utils import load_dataset
+from utils.ps_utils import construct_entity_level_data
 import argparse
 import time
 import numpy as np
@@ -186,6 +187,7 @@ if __name__ == '__main__':
         start = time.time()
         entities_map = infer(model, tokenizer_pre, tokenizer, data_collator, data_sample)
         times.append(time.time() - start)
+        data_sample = construct_entity_level_data(data_sample)
         data_sample.entities_map = entities_map
         img = viz_data_entity_mapping(data_sample)
         cv2.imwrite(f"{args.cache_dir}/inference/{i}.jpg", img)
