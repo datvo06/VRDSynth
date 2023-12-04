@@ -74,6 +74,7 @@ def convert_data_sample_to_input(data_sample, tokenizer):
         bbox = get_line_bbox(tokenized_inputs, tokenizer, line_words, line_bboxs, size)
         ent_label = list([data_sample["labels"][w] for w in ent])[0]
         id2label[i] = ent_label
+        print(len(bbox))
         if ent_label  == "other":
             label = ["O"] * len(bbox)
         else:
