@@ -136,7 +136,6 @@ def infer(model, tokenizer_pre, tokenizer, data_sample):
         for chunk, chunk_entity in zip(chunks, chunk_entities):
             outputs = model(
                     **chunk,
-                    entities=[entity_dict],
                     relations=[{'start_index': [], 'end_index': [], 'head': [], 'tail': []}])
             for relation in outputs.pred_relations[0]:
                 hid, tid = relation['head'], relation['tail']
