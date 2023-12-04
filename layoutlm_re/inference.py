@@ -129,11 +129,12 @@ def convert_data_sample_to_input(data_sample, tokenizer):
     return chunks, chunk_entities, entity_dict
 
 
-def infer(model, tokenizer_pre, tokenizer, data_sample):
+def infer(model, tokenizer_pre, tokenizer, collator, data_sample):
     chunks, chunk_entities, entity_dict = convert_data_sample_to_input(data_sample, tokenizer_pre)
     entities_map = []
     with torch.no_grad():
         for chunk, chunk_entity in zip(chunks, chunk_entities):
+            chunk = collator([chunk])
             outputs = model(
                     **chunk
                     )
@@ -149,7 +150,6 @@ if __name__ == '__main__':
     parser.add_argument("--lang", type=str, default="en")
     args = parser.parse_args()
     tokenizer_pre, tokenizer, model = load_model(args.dataset, args.lang)
-    '''
     data_collator = DataCollatorForKeyValueExtraction(
         feature_extractor,
         tokenizer,
@@ -157,12 +157,11 @@ if __name__ == '__main__':
         padding="max_length",
         max_length=512,
     )
-    '''
     dataset = load_dataset(args.dataset, lang=args.lang, mode='test')
     times = []
     for data_sample in dataset:
         start = time.time()
-        entities_map = infer(model, tokenizer_pre, tokenizer, data_sample)
+        entities_map = infer(model, tokenizer_pre, tokenizer, data_collator, data_sample)
         times.append(time.time() - start)
 
     avg_time = sum(times) / len(times)
