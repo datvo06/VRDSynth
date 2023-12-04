@@ -19,12 +19,13 @@ def load_model(dataset, lang):
     relation_extraction_model = LayoutLMv2ForRelationExtraction.from_pretrained(f"layoutlm_re/layoutxlm-finetuned-{dataset}-{lang}-re/checkpoint-5000")
     return tokenizer_pre, tokenizer, relation_extraction_model
 
+label2num = {"HEADER":0, "QUESTION":1, "ANSWER":2}
+
 
 def get_line_bbox(tokenized_inputs, tokenizer, line_words, line_bboxs, size=(224, 224)):
     line_words = line_words[:]
     line_bboxs = line_bboxs[:]
-    line_wbs = list(zip(line_words, line_bboxs))
-    text_length = 0
+    line_wbs = list(zip(line_words, line_bboxs)) text_length = 0
     ocr_length = 0
     bbox = []
     for token_id, offset in zip(tokenized_inputs["input_ids"], tokenized_inputs["offset_mapping"]):
@@ -121,7 +122,7 @@ def convert_data_sample_to_input(data_sample, tokenizer):
                 "entities": {
                     'start': [e['start'] for e in entities_in_this_span],
                     'end': [e['end'] for e in entities_in_this_span],
-                    'label': [e['label'] for e in entities_in_this_span],
+                    'label': [label2num[e['label']] for e in entities_in_this_span],
                  },
                 "relations": [],
             }
