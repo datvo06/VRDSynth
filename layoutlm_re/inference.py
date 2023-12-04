@@ -152,7 +152,6 @@ def infer(model, tokenizer_pre, tokenizer, collator, data_sample):
                 hid, tid = relation['head_id'], relation['tail_id']
                 if hid in chunk_entity and tid in chunk_entity:
                     entities_map.append((hid, tid))
-                entities_map.append((chunk_entity[hid], chunk_entity[tid]))
     return entities_map
 
 
