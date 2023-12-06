@@ -13,6 +13,7 @@ from collections import defaultdict
 from training_layoutlmv3.utils import LayoutLMv3DataHandler, load_data, k_fold_split, low_performing_categories, prepare_examples
 from training_layoutlmv3.eval import compute_metrics
 import pickle as pkl
+import os
 
 
 # we'll use the Auto API here - it will load LayoutLMv3Processor behind the scenes,
@@ -37,7 +38,7 @@ if __name__ == '__main__':
                         default="outputs/finetuned",
                         help='output model path')
     parser.add_argument('--steps', metavar='steps', type=int, required=False,
-                        default=300,
+                        default=6000,
                         help='Number training steps')
     args = parser.parse_args()
 
@@ -49,7 +50,7 @@ if __name__ == '__main__':
 
 
     train_data_dir = f"{args.data}/"
-    data = [load_data(fp, f"{fp[:-5]}.jpg") for fp in glob.glob(f"{train_data_dir}/*.json")]
+    data = [load_data(fp, f"{fp[:-5]}.jpg") for fp in glob.glob(f"{train_data_dir}/*.json") if int(os.path.split(fp)[-1].split('_')[0]) < 580]
     # data = [load_data(f"{train_data_dir}/{i}.json", f"{train_data_dir}/images/{i}.jpg") for i in range(600) if i not in bad_list]
 
     table = pyarrow.Table.from_pylist(data)
