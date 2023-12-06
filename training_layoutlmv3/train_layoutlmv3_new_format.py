@@ -69,6 +69,18 @@ if __name__ == '__main__':
                                       load_best_model_at_end=True,
                                       metric_for_best_model="f1")
 
+    train_dataset = train_dataset.map(
+                prepare_examples,
+                batched=True,
+                remove_columns=train_table.column_names,
+                features=LayoutLMv3DataHandler().features,
+    )
+    val_dataset = val_dataset.map(
+            prepare_examples,
+            batched=True,
+            remove_columns=train_table.column_names,
+            features=LayoutLMv3DataHandler().features,
+    )
     all_results = []
     # Initialize our Trainer
     model = LayoutLMv3ForTokenClassification.from_pretrained(pretrained, config=LayoutLMv3DataHandler().config)
