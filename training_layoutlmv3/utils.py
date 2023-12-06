@@ -15,6 +15,14 @@ import cv2
 
 PRETRAINED_SOURCE = "nielsr/layoutlmv3-finetuned-funsd"
 
+def normalize_bbox(bbox, size):
+    return [
+        int(1000 * bbox[0] / size[0]),
+        int(1000 * bbox[1] / size[1]),
+        int(1000 * bbox[2] / size[0]),
+        int(1000 * bbox[3] / size[1]),
+    ]
+
 
 class LayoutLMv3DataHandler:
     '''Singleton to store layoutLMv3 metadata'''
@@ -130,6 +138,7 @@ def load_data_new_format(json_path, image_path) -> List[Dict[str, List]]:
     # Put into chunks
     chunk_size = 512
     chunks = []
+    img = cv2.imread(image_path)
     item = {"image_path": image_path,
                 "words": [],
                 "boxes": [],
@@ -146,7 +155,7 @@ def load_data_new_format(json_path, image_path) -> List[Dict[str, List]]:
         ent_label = "I-" + ent.label.upper() if ent.label.upper() != "O" else "O"
         for word in ent.words:
             item["words"].append(word.text)
-            item["boxes"].append(word.box)
+            item["boxes"].append(normalize_bbox(word.box, (img.shape[1], img.shape[0]))),
             item["label"].append(LayoutLMv3DataHandler().label2id[ent_label])
     return chunks
     
