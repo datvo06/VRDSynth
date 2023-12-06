@@ -52,10 +52,8 @@ scipy==1.11.3
 six==1.16.0
 stack-data==0.6.3
 threadpoolctl==3.2.0
-tokenizers==0.14.1
 tqdm==4.66.1
 traitlets==5.11.2
-transformers==4.34.1
 typing_extensions==4.8.0
 tzdata==2023.3
 urllib3==2.0.6
