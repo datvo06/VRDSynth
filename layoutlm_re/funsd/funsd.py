@@ -199,9 +199,14 @@ class Funsd(datasets.GeneratorBasedBuilder):
                     kvrelations.append(
                         {"head": entity_id_to_index_map[rel[1]], "tail": entity_id_to_index_map[rel[0]]}
                     )
-                else:
-                    continue
-
+                elif pair == ["header", "question"]:
+                    kvrelations.append(
+                        {"head": entity_id_to_index_map[rel[0]], "tail": entity_id_to_index_map[rel[1]]}
+                    )
+                elif pair == ["question", "header"]:
+                    kvrelations.append(
+                        {"head": entity_id_to_index_map[rel[1]], "tail": entity_id_to_index_map[rel[0]]}
+                    )
             def get_relation_span(rel):
                 bound = []
                 for entity_index in [rel["head"], rel["tail"]]:
