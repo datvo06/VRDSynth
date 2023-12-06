@@ -31,8 +31,8 @@ if __name__ == '__main__':
         for entity in entities:
             if entity.label != "O":
                 for word in entity.words:
-                    word.label = f"I-{entity.label}"
-                min(entity.words, key=lambda w: (int(2 * w.y1 / entity.avg_height), w.x0)).label = f"B-{entity.label}"
+                    word.label = f"I-{entity.label.upper()}"
+                min(entity.words, key=lambda w: (int(2 * w.y1 / entity.avg_height), w.x0)).label = f"B-{entity.label.upper()}"
             words.extend(entity.words)
         img_path = list(image_dir.glob(file_name + ".*"))
         if img_path:
