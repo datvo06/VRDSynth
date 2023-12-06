@@ -3,3 +3,4 @@ git clone -b add_layoutlm_relation_extraction https://github.com/nielsrogge/tran
 python -m pip install -q ./transformers
 rm -r unilm
 git clone -b layoutlmft_patch https://github.com/nielsrogge/unilm.git
+python -m pip install 'git+https://github.com/facebookresearch/detectron2.git'
