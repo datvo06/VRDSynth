@@ -10,6 +10,7 @@ import numpy as np
 import random
 from PIL import Image, ImageDraw, ImageFont
 from matplotlib import pyplot as plt
+from layout_extraction.funsd_utils import Form
 import cv2
 
 PRETRAINED_SOURCE = "nielsr/layoutlmv3-finetuned-funsd"
@@ -111,6 +112,7 @@ class LayoutLMv3DataHandler:
 
 def load_data(json_path, image_path) -> Dict[str, List]:
     json_data = json.load(open(json_path, encoding="utf-8"))
+    
     words = [t["text"] for t in json_data]
     boxes = [[t["x0"], t["y0"], t["x1"], t["y1"]] for t in json_data]
     label = [t["label"] if t["label"] else "O" for t in json_data]
@@ -122,6 +124,32 @@ def load_data(json_path, image_path) -> Dict[str, List]:
         "label": label
     }
 
+
+def load_data_new_format(json_path, image_path) -> List[Dict[str, List]]:
+    form = Form(json.load(open(json_path, encoding="utf-8")))
+    # Put into chunks
+    chunk_size = 512
+    chunks = []
+    item = {"image_path": image_path,
+                "words": [],
+                "boxes": [],
+                "label": []   
+        }
+    for ent in form.entities:
+        if len(ent.words) + len(item["words"]) > chunk_size:
+            chunks.append(item)
+            item = {"image_path": image_path,
+                    "words": [],
+                    "boxes": [],
+                    "label": []   
+            }
+        ent_label = "I-" + ent.label.upper() if ent.label.upper() != "O" else "O"
+        for word in ent.words:
+            item["words"].append(word.text)
+            item["boxes"].append(word.box)
+            item["label"].append(LayoutLMv3DataHandler().label2id[ent_label])
+    return chunks
+    
 
 def prepare_examples(examples):
     # print(examples)
