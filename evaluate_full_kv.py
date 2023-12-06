@@ -56,28 +56,20 @@ if __name__ == '__main__':
     for i in range(2):
         # get the form
         page = load_data_funsd(f"{data_path}/{i}.json", f"{img_path}/{i}.jpg")
-        nx_g = build_nx_g_legacy(page)
-        img = viz_data(page, nx_g)
-        img_no_rel = viz_data_no_rel(page)
-        img_ent_map = viz_data_entity_mapping(page)
-
-        cv2.imwrite(f"{output}/viz_test/{i}.png", img)
-        cv2.imwrite(f"{output}/viz_no_rel_test/{i}.png", img_no_rel)
-        cv2.imwrite(f"{output}/viz_entity_mapping_test/{i}.png", img_ent_map)
         dataset.append(page)
-    specs, entity_dataset = construct_entity_linking_specs(dataset)
+    specs, entity_dataset = construct_entity_linking_specs_funsd(dataset)
 
     data_sample_set_relation_cache = []
     for i, entity_data in enumerate(entity_dataset):
         nx_g = build_nx_g_legacy(entity_data)
         data_sample_set_relation_cache.append(nx_g)
-        # img = viz_data(entity_data, nx_g)
-        # img_no_rel = viz_data_no_rel(entity_data)
-        # img_ent_map = viz_data_entity_mapping(entity_data)
+        img = viz_data(entity_data, nx_g)
+        img_no_rel = viz_data_no_rel(entity_data)
+        img_ent_map = viz_data_entity_mapping(entity_data)
 
-        # cv2.imwrite(f"{output}/viz_test/{i}.png", img)
-        # cv2.imwrite(f"{output}/viz_no_rel_test/{i}.png", img_no_rel)
-        # cv2.imwrite(f"{output}/viz_entity_mapping_test/{i}.png", img_ent_map)
+        cv2.imwrite(f"{output}/viz_test/{i}.png", img)
+        cv2.imwrite(f"{output}/viz_no_rel_test/{i}.png", img_no_rel)
+        cv2.imwrite(f"{output}/viz_entity_mapping_test/{i}.png", img_ent_map)
 
     tt, tf, ft, ff = 0, 0, 0, 0
     for i, (data, nx_g) in tqdm.tqdm(enumerate(zip(entity_dataset, data_sample_set_relation_cache))):

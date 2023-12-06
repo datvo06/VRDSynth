@@ -17,6 +17,10 @@ import pickle as pkl
 
 # we'll use the Auto API here - it will load LayoutLMv3Processor behind the scenes,
 # based on the checkpoint we provide from the hub
+bad_list = set([20, 30, 54, 55, 65,
+                104, 157, 170, 234, 239,
+                240, 293, 303, 320, 332,
+                340, 351, 365, 366, 395])
 
 
 
@@ -45,7 +49,7 @@ if __name__ == '__main__':
 
 
     train_data_dir = f"{args.data}/"
-    data = [load_data(fp, f"{fp[:-5]}.jpg") for fp in glob.glob(f"{train_data_dir}/*.json")]
+    data = [load_data(fp, f"{fp[:-5]}.jpg") for fp in glob.glob(f"{train_data_dir}/{i}.json") for i in range(600) if i not in bad_list]
 
     table = pyarrow.Table.from_pylist(data)
     full_dataset = Dataset(table)
