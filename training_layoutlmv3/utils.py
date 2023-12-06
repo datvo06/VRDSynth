@@ -126,7 +126,7 @@ def load_data(json_path, image_path) -> Dict[str, List]:
 
 
 def load_data_new_format(json_path, image_path) -> List[Dict[str, List]]:
-    form = Form(json.load(open(json_path, encoding="utf-8"))['form'])
+    form = Form(json.load(open(json_path, 'r', encoding="utf-8")))
     # Put into chunks
     chunk_size = 512
     chunks = []
