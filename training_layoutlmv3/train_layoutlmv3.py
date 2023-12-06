@@ -49,7 +49,7 @@ if __name__ == '__main__':
 
 
     train_data_dir = f"{args.data}/"
-    data = [load_data(fp, f"{fp[:-5]}.jpg") for fp in glob.glob(f"{train_data_dir}/{i}.json") for i in range(600) if i not in bad_list]
+    data = [load_data(f"{train_data_dir}/{i}.json", f"{train_data_dir}/images/{i}.jpg") for i in range(600) if i not in bad_list]
 
     table = pyarrow.Table.from_pylist(data)
     full_dataset = Dataset(table)
