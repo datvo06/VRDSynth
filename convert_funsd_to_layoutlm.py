@@ -25,7 +25,7 @@ if __name__ == '__main__':
     for file in annotation_dir.glob("*.json"):
         file_name = os.path.basename(file)[:-5]
         form_json = json.load(open(file, encoding="utf-8"))
-        funsd_form = Form(form_json["form"])
+        funsd_form = Form(form_json)
         entities = funsd_form.entities
         words = []
         for entity in entities:
