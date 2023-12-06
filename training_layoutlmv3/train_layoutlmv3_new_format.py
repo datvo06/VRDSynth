@@ -50,10 +50,13 @@ if __name__ == '__main__':
 
 
     train_data_dir = f"{args.data}/"
-    dataset = list(itertools.chain.from_iterable(load_data_new_format(f"{train_data_dir}/{i}.json", f"{train_data_dir}/images/{i}.jpg") for i in range(680) if i not in bad_list))
-    table = pyarrow.Table.from_pylist(dataset)
-    full_dataset = Dataset(table)
-    
+    dataset = list(itertools.chain.from_iterable(load_data_new_format(f"{train_data_dir}/{i}.json", f"{train_data_dir}/images/{i}.jpg") for i in range(580) if i not in bad_list))
+    train_dataset = dataset[:int(len(dataset)*0.8)]
+    val_dataset = dataset[int(len(dataset)*0.8):]
+    train_table = pyarrow.Table.from_pylist(train_dataset)
+    val_table = pyarrow.Table.from_pylist(val_dataset)
+    train_dataset = Dataset(train_table)
+    val_dataset = Dataset(val_table)
 
     training_args = TrainingArguments(output_dir=args.output,
                                       max_steps=args.steps,
@@ -67,39 +70,20 @@ if __name__ == '__main__':
                                       metric_for_best_model="f1")
 
     all_results = []
-    for i, (train_data, val_data, test_data) in enumerate(k_fold_split(full_dataset, 5)):
-        train_data = train_data.map(
-                prepare_examples,
-                batched=True,
-                remove_columns=table.column_names,
-                features=LayoutLMv3DataHandler().features,
-        )
-        val_data = val_data.map(
-                prepare_examples,
-                batched=True,
-                remove_columns=table.column_names,
-                features=LayoutLMv3DataHandler().features,
-        )
-        test_data = test_data.map(
-                prepare_examples,
-                batched=True,
-                remove_columns=table.column_names,
-                features=LayoutLMv3DataHandler().features,
-        )
-        # Initialize our Trainer
-        model = LayoutLMv3ForTokenClassification.from_pretrained(pretrained, config=LayoutLMv3DataHandler().config)
-        trainer = Trainer(
-            model=model,
-            args=training_args,
-            train_dataset=train_data,
-            eval_dataset=val_data,
-            tokenizer=processor,
-            data_collator=default_data_collator,
-            compute_metrics=compute_metrics,
-        )
-        trainer.train()
-        all_results.append(trainer.evaluate())
-        print("Result for fold ", i, ": ", all_results[-1])
-        pkl.dump(all_results, open(f"{args.output}/results_{i}.pkl", "wb"))
-        trainer.save_model(f"{args.output}/fold_{i}")
+    # Initialize our Trainer
+    model = LayoutLMv3ForTokenClassification.from_pretrained(pretrained, config=LayoutLMv3DataHandler().config)
+    trainer = Trainer(
+        model=model,
+        args=training_args,
+        train_dataset=train_dataset,
+        eval_dataset=val_dataset,
+        tokenizer=processor,
+        data_collator=default_data_collator,
+        compute_metrics=compute_metrics,
+    )
+    trainer.train()
+    all_results.append(trainer.evaluate())
+    print("Result: ", all_results[-1])
+    pkl.dump(all_results, open(f"{args.output}/results.pkl", "wb"))
+    trainer.save_model(f"{args.output}/fold")
     pkl.dump(all_results, open(f"{args.output}/all_results.pkl", "wb"))
