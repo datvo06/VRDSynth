@@ -51,8 +51,8 @@ if __name__ == '__main__':
 
     train_data_dir = f"{args.data}/"
     dataset = list(itertools.chain.from_iterable(load_data_new_format(f"{train_data_dir}/{i}.json", f"{train_data_dir}/images/{i}.jpg") for i in range(580) if i not in bad_list))
-    train_dataset = dataset[:int(len(dataset)*0.8)]
-    val_dataset = dataset[int(len(dataset)*0.8):]
+    train_dataset = dataset[int(len(dataset)*0.2):]
+    val_dataset = dataset[:int(len(dataset)*0.2)]
     train_table = pyarrow.Table.from_pylist(train_dataset)
     val_table = pyarrow.Table.from_pylist(val_dataset)
     train_dataset = Dataset(train_table)
