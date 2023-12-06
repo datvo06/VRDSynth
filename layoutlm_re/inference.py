@@ -1,7 +1,7 @@
 from transformers import AutoTokenizer, AutoModelForTokenClassification
 from transformers import LayoutLMv2ForRelationExtraction, AutoTokenizer, LayoutLMv2FeatureExtractor 
 from layoutlm_re.train import DataCollatorForKeyValueExtraction
-from layoutlm_re.transformers.examples.research_projects.lxmert.utils import chunk
+from transformers.examples.research_projects.lxmert.utils import chunk
 from layoutlm_re.xfund.xfund import load_image, simplify_bbox, normalize_bbox, merge_bbox
 from utils.funsd_utils import viz_data, viz_data_no_rel, viz_data_entity_mapping
 from utils.data_sample import DataSample
