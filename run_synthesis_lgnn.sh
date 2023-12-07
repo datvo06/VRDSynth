@@ -1,0 +1,1 @@
+dataset=$1;rel_type=legacy;thres=1.0;hops=3;for lang in $2;do python -m methods.decisiontree_ps_entity_linking --upper_float_thres 1.0 --rel_type=legacy_with_nn --hops 3 --dataset ${dataset} --lang ${lang} --mode train --strategy=precision_counter;done
