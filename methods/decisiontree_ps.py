@@ -604,14 +604,16 @@ def setup_relation(args):
         args.relation_set = relation_set
     else:
         if args.rel_type == 'legacy':
-            args.build_nx_g = build_nx_g_legacy
+            build_nx_g_func = build_nx_g_legacy
         elif args.rel_type == 'legacy_with_nn':
-            args.build_nx_g = build_nx_g_legacy_with_nn
+            build_nx_g_func = build_nx_g_legacy_with_nn
         args.relation_set = dummy_calculate_relation_set(None, None, None)
         args.relation_set = [args.relation_set[2], args.relation_set[3], args.relation_set[0], args.relation_set[1]] 
         if args.use_layoutlm_output:
             args.relation_set.append((-1, -1))
             args.build_nx_g = lambda data_sample: build_nx_g_legacy_sem(data_sample, args.dataset, args.lang, args.build_nx_g)
+        else:
+            args.build_nx_g = lambda data_sample: build_nx_g_legacy_sem(data_sample, args.dataset, args.lang, build_nx_g_func)
     return args
 
 
