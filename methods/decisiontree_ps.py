@@ -613,7 +613,7 @@ def setup_relation(args):
             args.relation_set.append((-1, -1))
             args.build_nx_g = lambda data_sample: build_nx_g_legacy_sem(data_sample, args.dataset, args.lang, args.build_nx_g)
         else:
-            args.build_nx_g = lambda data_sample: build_nx_g_legacy_sem(data_sample, args.dataset, args.lang, build_nx_g_func)
+            args.build_nx_g = build_nx_g_func
     return args
 
 
