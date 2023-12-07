@@ -192,6 +192,7 @@ def precision_counter_version_space_based_entity_linking(pos_paths, dataset, spe
     max_its = 10
     pps, io2pps, pcps, cov_tt, cov_tt_perfect = [], {}, [], set(), set()
     cov_tt_counter = set()
+    seen_p = set()
     start_time = time.time()
     for it in range(max_its):
         if pexists(f"{cache_dir}/stage3_{it}_{TASK}.pkl"):
@@ -214,6 +215,12 @@ def precision_counter_version_space_based_entity_linking(pos_paths, dataset, spe
                 cache, cnt, acc = {}, 0, 0 
                 for vs_idx in vs_idxs:
                     cnt += 1
+                    new_program = add_constraint_to_find_program(vss[vs_idx].programs[0], c)
+                    if new_program in seen_p:
+                        continue
+                    if not vss[vs_idx].tt - cov_tt_perfect:
+                        continue
+                    seen_p.add(new_program)
                     big_bar.set_postfix({"cnt" : cnt, 'cov_tt': len(cov_tt), 'cov_tt_perfect': len(cov_tt_perfect), 'cov_tt_counter': len(cov_tt_counter)})
                     vs = vss[vs_idx]
                     vs_matches = get_intersect_constraint_vs(c, vs, data_sample_set_relation_cache, cache)
@@ -223,7 +230,6 @@ def precision_counter_version_space_based_entity_linking(pos_paths, dataset, spe
                     new_tt, new_tf = (ios & vss[vs_idx].tt), (ios & vss[vs_idx].tf)
                     new_ft = vss[vs_idx].ft 
                     io_key = tuple((tuple(new_tt), tuple(new_tf), tuple(new_ft)))
-                    new_program = add_constraint_to_find_program(vss[vs_idx].programs[0], c)
                     if not new_tt and new_tf - cov_tt_counter:
                         print(f"Found new counter program")
                         pcps.append(new_program)
