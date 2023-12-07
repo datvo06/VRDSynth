@@ -470,7 +470,7 @@ class UnionProgram(Program):
         return values[self]
 
     def __str__(self):
-        if not self.cache_str:
+        if 'cache_str' not in self.__dict__ or not self.cache_str:
             self.cache_str = '{' + ' | '.join([str(p) for p in self.programs]) + '}'
         return self.cache_str
 
