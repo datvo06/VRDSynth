@@ -611,7 +611,7 @@ def setup_relation(args):
         args.relation_set = [args.relation_set[2], args.relation_set[3], args.relation_set[0], args.relation_set[1]] 
         if args.use_layoutlm_output:
             args.relation_set.append((-1, -1))
-            args.build_nx_g = lambda data_sample, **kwargs: build_nx_g_legacy_sem(data_sample, args.dataset, args.lang, args.build_nx_g, **kwargs)
+            args.build_nx_g = lambda data_sample: build_nx_g_legacy_sem(data_sample, args.dataset, args.lang, args.build_nx_g)
     return args
 
 
