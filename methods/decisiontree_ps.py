@@ -5,7 +5,7 @@ from typing import List, Tuple, Dict, Set, Optional, Any
 from transformers.models import layoutlmv3
 from utils.funsd_utils import DataSample, load_dataset, build_nx_g
 from utils.relation_building_utils import calculate_relation_set, dummy_calculate_relation_set, calculate_relation
-from utils.legacy_graph_utils import build_nx_g_legacy
+from utils.legacy_graph_utils import build_nx_g_legacy, build_nx_g_legacy_with_nn
 import argparse
 import numpy as np
 import itertools
@@ -572,7 +572,7 @@ def get_args():
     parser.add_argument('--upper_float_thres', type=float, default=0.5, help='upper float thres')
 
     # hyperparam
-    parser.add_argument('--rel_type', type=str, choices=['cluster', 'default', 'legacy'], default='default')
+    parser.add_argument('--rel_type', type=str, choices=['cluster', 'default', 'legacy', 'legacy_with_nn'], default='default')
     parser.add_argument('--strategy', type=str, choices=['precision', 'decisiontree', 'precision_counter', 'precision_ordered'], default='precision')
     parser.add_argument('--grammar', type=str, choices=['default', 'extended'])
     # use sem store true
@@ -582,11 +582,11 @@ def get_args():
     args = parser.parse_known_args()[0]
     return args
 
-def build_nx_g_legacy_sem(data_sample, dataset, lang):
+def build_nx_g_legacy_sem(data_sample, dataset, lang, build_nx_g_legacy_func):
     tokenizer, model, collator = load_tokenizer_model_collator(dataset, lang)
     entities_map = infer(model, tokenizer_pre, tokenizer, collator, data_sample)
     entities_map = [(i, j, 5) for i, j in entities_map]
-    return build_nx_g_legacy(data_sample, sem_edges=entities_map)
+    return build_nx_g_legacy_func(data_sample, sem_edges=entities_map)
 
 
 def setup_relation(args):
@@ -603,12 +603,15 @@ def setup_relation(args):
         args.build_nx_g = lambda data_sample: build_nx_g(data_sample, args.relation_set, y_threshold=10)
         args.relation_set = relation_set
     else:
-        args.build_nx_g = lambda data_sample: build_nx_g_legacy(data_sample)
+        if args.rel_type == 'legacy':
+            args.build_nx_g = lambda data_sample: build_nx_g_legacy(data_sample)
+        elif args.rel_type == 'legacy_with_nn':
+            args.build_nx_g = lambda data_sample: build_nx_g_legacy_with_nn(data_sample)
         args.relation_set = dummy_calculate_relation_set(None, None, None)
         args.relation_set = [args.relation_set[2], args.relation_set[3], args.relation_set[0], args.relation_set[1]] 
         if args.use_layoutlm_output:
             args.relation_set.append((-1, -1))
-            args.build_nx_g = lambda data_sample: build_nx_g_legacy_sem(data_sample, args.dataset, args.lang)
+            args.build_nx_g = lambda data_sample: build_nx_g_legacy_sem(data_sample, args.dataset, args.lang, args.build_nx_g)
     return args
 
 
