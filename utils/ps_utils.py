@@ -1002,6 +1002,8 @@ class BooleanEqualConstraint(Constraint):
         elif isinstance(self.lhs, FalseValue) and isinstance(self.rhs, TrueValue):
             return True, FalseValue()
         else:
+            if str(self.lhs) > str(self.rhs):
+                return True, BooleanEqualConstraint(self.rhs, self.lhs)
             return False, self
 
     def get_args(self) -> list:
@@ -1047,6 +1049,8 @@ class StringEqualConstraint(Constraint):
                 return True, TrueValue()
             else:
                 return True, FalseValue()
+        if str(self.lhs) > str(self.rhs):
+            return True, StringEqualConstraint(self.rhs, self.lhs)
         return False, self
 
     def get_args(self) -> list:
@@ -1225,6 +1229,10 @@ class FloatEqualConstraint(Constraint):
                                                             (self.lhs == other.rhs and self.rhs == other.lhs))
 
     def reduce(self):
+        if not isinstance(self.lhs, Hole):
+            _, self.lhs = self.lhs.reduce()
+        if not isinstance(self.rhs, Hole):
+            _, self.rhs = self.rhs.reduce()
         if isinstance(self.lhs, FloatConstant) and isinstance(self.rhs, FloatConstant):
             if self.lhs.evaluate() == self.rhs.evaluate():
                 return True, TrueValue()
@@ -1232,6 +1240,8 @@ class FloatEqualConstraint(Constraint):
                 return True, FalseValue()
         if self.lhs == self.rhs:
             return True, TrueValue()
+        if str(self.lhs) > str(self.rhs):
+            return True, FloatEqualConstraint(self.rhs, self.lhs)
         return False, self
 
     def __hash__(self):
@@ -1423,12 +1433,18 @@ class OrConstraint(Constraint):
         return self.lhs.evaluate(*values) or self.rhs.evaluate(*values)
 
     def reduce(self):
+        if not isinstance(self.lhs, Hole):
+            lhs_reduced, self.lhs = self.lhs.reduce()
+        if not isinstance(self.rhs, Hole):
+            rhs_reduced, self.rhs = self.rhs.reduce()
         if isinstance(self.lhs, TrueValue):
             return True, TrueValue()
         if isinstance(self.rhs, TrueValue):
             return True, TrueValue()
         if isinstance(self.lhs, FalseValue) and isinstance(self.rhs, FalseValue):
             return True, FalseValue()
+        if str(self.lhs) > str(self.rhs):
+            return True, OrConstraint(self.rhs, self.lhs)
         return False, self
 
     def __str__(self):
@@ -1455,6 +1471,8 @@ class NotConstraint(Constraint):
         return not self.constraint.evaluate(*values)
 
     def reduce(self):
+        if not isinstance(self.constraint, Hole):
+            _, self.constraint = self.constraint.reduce()
         if isinstance(self.constraint, TrueValue):
             return True, FalseValue()
         if isinstance(self.constraint, FalseValue):
