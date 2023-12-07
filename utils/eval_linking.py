@@ -24,7 +24,7 @@ def get_args():
                         help='cache directory')
     parser.add_argument('--dataset', type=str, default='funsd', help='dataset name')
     parser.add_argument('--lang', type=str, default='en', help='language')
-    parser.add_argument('--rel_type', type=str, choices=['cluster', 'default', 'legacy'], default='legacy')
+    parser.add_argument('--rel_type', type=str, choices=['cluster', 'default', 'legacy', 'legacy_with_nn'], default='legacy')
     parser.add_argument('--use_layoutlm_output', type=bool, default=False, help='use semantic features')
     parser.add_argument('--take_non_countered_layoutlm_output', type=bool, default=False, help='use semantic features')
     parser.add_argument('--use_sem', type=bool, default=False, help='use semantic features')
