@@ -14,6 +14,7 @@ import cv2
 from utils.misc import pexists
 import os
 import tqdm
+import glob
 
 feature_extractor = LayoutLMv2FeatureExtractor(apply_ocr=False)
 
@@ -23,11 +24,13 @@ tokenizer_pre = AutoTokenizer.from_pretrained("xlm-roberta-base")
 collator_dict = {}
 
 
+def get_ckpt_path(dataset, lang):
+    return (glob.glob(f"layoutlm_re/layoutxlm-finetuned-{dataset}-{lang}-re/checkpoint-*") + glob.glob(f"layoutxlm-finetuned-{dataset}-{lang}-re/checkpoint/*"))[0]
 
 def load_tokenizer_model_collator(dataset, lang):
     if (dataset, lang) not in tokenizer_dict:
         tokenizer = AutoTokenizer.from_pretrained("microsoft/layoutxlm-base")
-        relation_extraction_model = LayoutLMv2ForRelationExtraction.from_pretrained(f"layoutlm_re/layoutxlm-finetuned-{dataset}-{lang}-re/checkpoint-5000")
+        relation_extraction_model = LayoutLMv2ForRelationExtraction.from_pretrained(get_ckpt_path(dataset, lang))
         tokenizer_dict[(dataset, lang)] = tokenizer
         model_dict[(dataset, lang)] = relation_extraction_model
         collator_dict[(dataset, lang)] = DataCollatorForKeyValueExtraction(
