@@ -25,7 +25,7 @@ collator_dict = {}
 
 
 def get_ckpt_path(dataset, lang):
-    return (glob.glob(f"layoutlm_re/layoutxlm-finetuned-{dataset}-{lang}-re/checkpoint-*") + glob.glob(f"layoutxlm-finetuned-{dataset}-{lang}-re/checkpoint/*"))[0]
+    return (glob.glob(f"layoutlm_re/layoutxlm-finetuned-{dataset}-{lang}-re/checkpoint-*") + glob.glob(f"layoutxlm-finetuned-{dataset}-{lang}-re/checkpoint-*"))[0]
 
 def load_tokenizer_model_collator(dataset, lang):
     if (dataset, lang) not in tokenizer_dict:
