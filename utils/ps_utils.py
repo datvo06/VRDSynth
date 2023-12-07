@@ -654,7 +654,10 @@ class SemDist(FloatValue):
         if self.w1 == self.w2:
             return True, FloatConstant(0)
         else:
+            if self.w1.name > self.w2.name:
+                return True, SemDist(self.w2, self.w1)
             return False, self
+
 
 
 class FalseValue(BoolValue, Literal):
@@ -1139,6 +1142,8 @@ class LabelEqualConstraint(Constraint):
                 return True, TrueValue()
             else:
                 return True, FalseValue()
+        if isinstance(self.lhs, WordLabelProperty) and isinstance(self.rhs, WordLabelProperty) and self.lhs.word_variable.name > self.rhs.word_variable.name:
+            return True, LabelEqualConstraint(self.rhs, self.lhs)
         return False, self
 
 
@@ -1171,6 +1176,8 @@ class RelationLabelEqualConstraint(Constraint):
                 return True, TrueValue()
             else:
                 return True, FalseValue()
+        if isinstance(self.lhs, RelationLabelProperty) and isinstance(self.rhs, RelationLabelProperty) and self.lhs.relation_variable.name > self.rhs.relation_variable.name:
+            return True, RelationLabelEqualConstraint(self.rhs, self.lhs)
         return False, self
 
     def __str__(self):
@@ -1226,61 +1233,6 @@ class FloatEqualConstraint(Constraint):
         if self.lhs == self.rhs:
             return True, TrueValue()
         return False, self
-
-    def __hash__(self):
-        return hash(str(self))
-
-class FloatGreaterConstraint(Constraint):
-    def __init__(self, lhs, rhs):
-        assert isinstance(lhs, FloatValue) or (isinstance(lhs, Hole) and issubclass(lhs.cls, FloatValue))
-        assert isinstance(rhs, FloatValue) or (isinstance(rhs, Hole) and issubclass(rhs.cls, FloatValue))
-        self.lhs = lhs
-        self.rhs = rhs
-
-    @staticmethod
-    def get_arg_type():
-        return [FloatValue, FloatValue]
-
-    def get_args(self) -> list:
-        return [self.lhs, self.rhs]
-
-    @staticmethod
-    def type_name():
-        return 'FloatGreaterConstraint'
-
-    def evaluate(self, *values):
-        assert isinstance(self.lhs, FloatValue)
-        assert isinstance(self.rhs, FloatValue)
-        lhs_value = self.lhs.evaluate(*values) if not isinstance(self.lhs, FloatConstant) else self.lhs.evaluate()
-        rhs_value = self.rhs.evaluate(*values) if not isinstance(self.rhs, FloatConstant) else self.rhs.evaluate()
-        return lhs_value > rhs_value
-
-
-    def reduce(self):
-        if isinstance(self.lhs, FloatConstant) and isinstance(self.rhs, FloatConstant):
-            if self.lhs.evaluate() > self.rhs.evaluate():
-                return True, TrueValue()
-            else:
-                return True, FalseValue()
-        elif self.lhs == self.rhs:
-            return True, FalseValue()
-        elif isinstance(self.lhs, WordBoxProperty) and isinstance(self.rhs, WordBoxProperty) and self.lhs.word_var == self.rhs.word_var:
-            if self.lhs.prop == BoxConstantValue("x0") and self.rhs.prop == BoxConstantValue("x1"):
-                return True, FalseValue()
-            elif self.lhs.prop == BoxConstantValue("y0") and self.rhs.prop == BoxConstantValue("y1"):
-                return True, FalseValue()
-            elif self.lhs.prop == BoxConstantValue("x1") and self.rhs.prop == BoxConstantValue("x0"):
-                return True, TrueValue()
-            elif self.lhs.prop == BoxConstantValue("y1") and self.rhs.prop == BoxConstantValue("y0"):
-                return True, TrueValue()
-        return False, self
-
-    def __str__(self):
-        return f'{self.lhs} > {self.rhs}'
-
-    def __eq__(self, other):
-        return (isinstance(other, FloatGreaterConstraint) and self.lhs == other.lhs and self.rhs == other.rhs) or \
-                (isinstance(other, FloatLessConstraint) and self.lhs == other.rhs and self.rhs == other.lhs)
 
     def __hash__(self):
         return hash(str(self))
@@ -1341,6 +1293,64 @@ class FloatLessConstraint(Constraint):
         return hash(str(self))
 
 
+class FloatGreaterConstraint(Constraint):
+    def __init__(self, lhs, rhs):
+        assert isinstance(lhs, FloatValue) or (isinstance(lhs, Hole) and issubclass(lhs.cls, FloatValue))
+        assert isinstance(rhs, FloatValue) or (isinstance(rhs, Hole) and issubclass(rhs.cls, FloatValue))
+        self.lhs = lhs
+        self.rhs = rhs
+
+    @staticmethod
+    def get_arg_type():
+        return [FloatValue, FloatValue]
+
+    def get_args(self) -> list:
+        return [self.lhs, self.rhs]
+
+    @staticmethod
+    def type_name():
+        return 'FloatGreaterConstraint'
+
+    def evaluate(self, *values):
+        assert isinstance(self.lhs, FloatValue)
+        assert isinstance(self.rhs, FloatValue)
+        lhs_value = self.lhs.evaluate(*values) if not isinstance(self.lhs, FloatConstant) else self.lhs.evaluate()
+        rhs_value = self.rhs.evaluate(*values) if not isinstance(self.rhs, FloatConstant) else self.rhs.evaluate()
+        return lhs_value > rhs_value
+
+
+    def reduce(self):
+        if isinstance(self.lhs, FloatConstant) and isinstance(self.rhs, FloatConstant):
+            if self.lhs.evaluate() > self.rhs.evaluate():
+                return True, TrueValue()
+            else:
+                return True, FalseValue()
+        elif self.lhs == self.rhs:
+            return True, FalseValue()
+        elif isinstance(self.lhs, WordBoxProperty) and isinstance(self.rhs, WordBoxProperty) and self.lhs.word_var == self.rhs.word_var:
+            if self.lhs.prop == BoxConstantValue("x0") and self.rhs.prop == BoxConstantValue("x1"):
+                return True, FalseValue()
+            elif self.lhs.prop == BoxConstantValue("y0") and self.rhs.prop == BoxConstantValue("y1"):
+                return True, FalseValue()
+            elif self.lhs.prop == BoxConstantValue("x1") and self.rhs.prop == BoxConstantValue("x0"):
+                return True, TrueValue()
+            elif self.lhs.prop == BoxConstantValue("y1") and self.rhs.prop == BoxConstantValue("y0"):
+                return True, TrueValue()
+        elif str(self.lhs) > str(self.rhs):
+            return True, FloatLessConstraint(self.rhs, self.lhs)
+        return False, self
+
+    def __str__(self):
+        return f'{self.lhs} > {self.rhs}'
+
+    def __eq__(self, other):
+        return (isinstance(other, FloatGreaterConstraint) and self.lhs == other.lhs and self.rhs == other.rhs) or \
+                (isinstance(other, FloatLessConstraint) and self.lhs == other.rhs and self.rhs == other.lhs)
+
+    def __hash__(self):
+        return hash(str(self))
+
+
 class AndConstraint(Constraint):
     def __init__(self, lhs, rhs):
         assert isinstance(lhs, BoolValue) or (isinstance(lhs, Hole) and issubclass(lhs.cls, Constraint)), lhs
@@ -1365,6 +1375,10 @@ class AndConstraint(Constraint):
         return self.lhs.evaluate(*values) and self.rhs.evaluate(*values)
 
     def reduce(self):
+        if not isinstance(self.lhs, Hole):
+            lhs_reduced, self.lhs = self.lhs.reduce()
+        if not isinstance(self.rhs, Hole):
+            rhs_reduced, self.rhs = self.rhs.reduce()
         if isinstance(self.lhs, FalseValue):
             return True, FalseValue()
         if isinstance(self.rhs, FalseValue):
@@ -1377,6 +1391,8 @@ class AndConstraint(Constraint):
             return True, self.lhs
         if self.lhs == self.rhs:
             return True, TrueValue()
+        if str(self.lhs) > str(self.rhs):
+            return True, AndConstraint(self.rhs, self.lhs)
         return False, self
         
     def __str__(self):

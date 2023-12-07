@@ -218,8 +218,6 @@ def precision_counter_version_space_based_entity_linking(pos_paths, dataset, spe
                     new_program = add_constraint_to_find_program(vss[vs_idx].programs[0], c)
                     if new_program in seen_p:
                         continue
-                    if not vss[vs_idx].tt - cov_tt_perfect:
-                        continue
                     seen_p.add(new_program)
                     big_bar.set_postfix({"cnt" : cnt, 'cov_tt': len(cov_tt), 'cov_tt_perfect': len(cov_tt_perfect), 'cov_tt_counter': len(cov_tt_counter)})
                     vs = vss[vs_idx]
