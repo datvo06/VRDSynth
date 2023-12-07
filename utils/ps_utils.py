@@ -440,6 +440,7 @@ class UnionProgram(Program):
         assert isinstance(programs, list)
         self.programs = programs
         self.cache_hash = None
+        self.cache_str = None
 
     @staticmethod
     def get_arg_type():
@@ -469,7 +470,9 @@ class UnionProgram(Program):
         return values[self]
 
     def __str__(self):
-        return '{' + ' | '.join([str(p) for p in self.programs]) + '}'
+        if not self.cache_str:
+            self.cache_str = '{' + ' | '.join([str(p) for p in self.programs]) + '}'
+        return self.cache_str
 
     def __eq__(self, other):
         # compare list of programs
@@ -1367,6 +1370,7 @@ class AndConstraint(Constraint):
         assert isinstance(rhs, BoolValue) or (isinstance(rhs, Hole) and issubclass(rhs.cls, Constraint)), rhs
         self.lhs = lhs
         self.rhs = rhs
+        self.cache_hash = None
 
     @staticmethod
     def get_arg_type():
@@ -1407,6 +1411,11 @@ class AndConstraint(Constraint):
         
     def __str__(self):
         return f'({self.lhs} and {self.rhs})'
+
+    def __hash__(self):
+        if not self.cache_hash:
+            self.cache_hash = hash(str(self))
+        return self.cache_hash
 
 
 class OrConstraint(Constraint):
