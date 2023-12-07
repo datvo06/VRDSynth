@@ -354,7 +354,7 @@ class FindProgram(Program):
         return self.cache_hash
 
     def __eq__(self, other):
-        return str(self) == str(other)
+        return hash(self) == hash(other)
 
 
 class StringValue(Expression):
@@ -473,7 +473,7 @@ class UnionProgram(Program):
 
     def __eq__(self, other):
         # compare list of programs
-        return set(self.programs) == set(other.programs)
+        return hash(self) == hash(other)
 
     def __hash__(self):
         if not hasattr(self, 'cache_hash'):
@@ -548,7 +548,7 @@ class ExcludeProgram(Program):
 
     def __eq__(self, other):
         # compare list of programs
-        return isinstance(other, ExcludeProgram) and self.ref_program == other.ref_program and set(self.excl_programs) == set(other.excl_programs)
+        return hash(self) == hash(other)
 
     def __hash__(self):
         if not hasattr(self, 'cache_hash'):
