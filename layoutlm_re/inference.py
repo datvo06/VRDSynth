@@ -15,6 +15,7 @@ from utils.misc import pexists
 import os
 import tqdm
 import glob
+import itertools
 
 feature_extractor = LayoutLMv2FeatureExtractor(apply_ocr=False)
 
@@ -27,12 +28,21 @@ collator_dict = {}
 def get_ckpt_path(dataset, lang):
     return (glob.glob(f"layoutlm_re/layoutxlm-finetuned-{dataset}-{lang}-re/checkpoint-*") + glob.glob(f"layoutxlm-finetuned-{dataset}-{lang}-re/checkpoint-*"))[0]
 
-def load_tokenizer_model_collator(dataset, lang):
+
+def load_tokenizer(dataset, lang):
     if (dataset, lang) not in tokenizer_dict:
         tokenizer = AutoTokenizer.from_pretrained("microsoft/layoutxlm-base")
-        relation_extraction_model = LayoutLMv2ForRelationExtraction.from_pretrained(get_ckpt_path(dataset, lang))
         tokenizer_dict[(dataset, lang)] = tokenizer
+    return tokenizer_dict[(dataset, lang)]
+
+def load_model(dataset, lang):
+    if (dataset, lang) not in model_dict:
+        relation_extraction_model = LayoutLMv2ForRelationExtraction.from_pretrained(get_ckpt_path(dataset, lang))
         model_dict[(dataset, lang)] = relation_extraction_model
+    return model_dict[(dataset, lang)]
+
+def load_collator(dataset, lang):
+    if (dataset, lang) not in collator_dict:
         collator_dict[(dataset, lang)] = DataCollatorForKeyValueExtraction(
             feature_extractor,
             tokenizer,
@@ -40,7 +50,14 @@ def load_tokenizer_model_collator(dataset, lang):
             padding="max_length",
             max_length=512,
         )
-    return tokenizer_dict[(dataset, lang)], model_dict[(dataset, lang)], collator_dict[(dataset, lang)]
+    return collator_dict[(dataset, lang)]
+
+
+def load_tokenizer_model_collator(dataset, lang):
+    tokenizer = load_tokenizer(dataset, lang)
+    model = load_model(dataset, lang)
+    collator = load_collator(dataset, lang)
+    return tokenizer, model, collator
 
 
 label2num = {"HEADER":0, "QUESTION":1, "ANSWER":2}
@@ -159,6 +176,17 @@ def convert_data_sample_to_input(data_sample, tokenizer):
         'label': [id2label[i] for i in range(len(entities)) if i not in empty_ents]}
     chunk_entities = chunk_entities[:len(chunks)]
     return chunks, chunk_entities, entity_dict, entities_to_index_map
+
+
+def prune_link_not_in_chunk(chunk_entities, relations):
+    relation_full = relations
+    relation_spans = [[] for _ in range(len(chunk_entities))]
+    for chunk_id, chunk_entities in enumerate(chunk_entities):
+        relation_spans[chunk_id] = [(i, j) for (i, j) in relation_full if i in chunk_entities[chunk_id] and j in chunk_entities[chunk_id]]
+    all_accepted_rels = itertools.chain(*relation_spans)
+    excluded_relations = set(data_sample.entities_map) - set(all_accepted_rels)
+    return all_accepted_rels, excluded_relations
+
 
 
 def infer(model, tokenizer_pre, tokenizer, collator, data_sample):
