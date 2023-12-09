@@ -4,7 +4,7 @@ from utils.funsd_utils import viz_data, viz_data_no_rel, viz_data_entity_mapping
 from utils.ps_utils import construct_entity_linking_specs, construct_entity_merging_specs
 from utils.funsd_utils import load_dataset, viz_data_entity_mapping
 from utils.ps_utils import FindProgram, WordVariable
-from layoutlm_re.inference import convert_data_sample_to_input, prune_link_not_in_chunk, load_tokenizer
+from layoutlm_re.inference import convert_data_sample_to_input, prune_link_not_in_chunk, tokenizer_pre
 import argparse
 import pickle as pkl
 import os
@@ -56,8 +56,8 @@ def compare_specs(pred_mapping, gt_linking):
     return tt, tf, ft, ff
 
 
-def compare_specs_chunk_based_metrics(pred_mapping, data_sample_words, tokenizer):
-    _, chunk_entities, _, _ = convert_data_sample_to_input(data_sample_words, tokenizer)
+def compare_specs_chunk_based_metrics(pred_mapping, data_sample_words):
+    _, chunk_entities, _, _ = convert_data_sample_to_input(data_sample_words, tokenizer_pre)
     pred_links = []
     for k, v in pred_mapping:
         pred_links.append((k, v) if k < v else (v, k))
@@ -107,10 +107,6 @@ if __name__ == '__main__':
         specs, entity_dataset = construct_entity_linking_specs(dataset)
         with open(f"{args.cache_dir_entity_linking}/specs_linking_test.pkl", 'wb') as f:
             pkl.dump((specs, entity_dataset), f)
-    tokenizer = None
-    if args.eval_strategy == 'chunk':
-        tokenizer = load_tokenizer(args.dataset, args.lang)
-
     test_data_sample_set_fp = f"{args.cache_dir_entity_linking}/data_sample_set_relation_cache_test.pkl" if not args.use_layoutlm_output else f"{args.cache_dir_entity_linking}/data_sample_set_relation_cache_test_use_layoutxlm.pkl"
     if os.path.exists(test_data_sample_set_fp):
         with open(test_data_sample_set_fp, 'rb') as f:
@@ -165,7 +161,7 @@ if __name__ == '__main__':
         new_data, ent_map = link_entity(data, nx_g, ps_merging, ps_linking, fps_merging, fps_linking, ps_counter, args.use_layoutlm_output)
         times.append(time.time() - st)
         if args.eval_strategy == 'chunk':
-            new_tt, new_tf, new_ft, new_ff = compare_specs_chunk_based_metrics(ent_map, dataset[i], tokenizer)
+            new_tt, new_tf, new_ft, new_ff = compare_specs_chunk_based_metrics(ent_map, dataset[i])
         else:
             new_tt, new_tf, new_ft, new_ff = compare_specs(ent_map, specs[i][1])
         tt += new_tt
