@@ -13,6 +13,7 @@ if __name__ == '__main__':
         dataset = load_dataset("./layoutlm_re/xfund", f"xfun.{sys.argv[1]}")
     train_dataset = dataset['train']
     test_dataset = dataset['validation']
+    print(dataset.keys())
 
     training_args = TrainingArguments(
             output_dir=f"layoutxlm-finetuned-xfund-{sys.argv[1]}-re",
