@@ -183,8 +183,8 @@ def prune_link_not_in_chunk(data_sample, chunk_entities, relations):
     relation_spans = [[] for _ in range(len(chunk_entities))]
     for chunk_id, chunk_ents in enumerate(chunk_entities):
         relation_spans[chunk_id] = [(i, j) for i, j in relation_full if i in chunk_ents and j in chunk_ents and
-                                    data_sample['label'][data_sample.entities[i][0]] not in ['other', 'header'] and 
-                                    data_sample['label'][data_sample.entities[j][0]] not in ['other', 'header']]
+                                    data_sample['labels'][data_sample.entities[i][0]] not in ['other', 'header'] and 
+                                    data_sample['labels'][data_sample.entities[j][0]] not in ['other', 'header']]
     all_accepted_rels = list(itertools.chain(*relation_spans))
     excluded_relations = set(relations) - set(all_accepted_rels)
     return all_accepted_rels, excluded_relations
