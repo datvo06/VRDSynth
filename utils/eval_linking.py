@@ -62,11 +62,9 @@ def compare_specs_chunk_based_metrics(pred_mapping, data_sample_words):
     for k, v in pred_mapping:
         pred_links.append((k, v) if k < v else (v, k))
     pred_links = set(pred_links)
-    pred_links, pred_link_excluded = prune_link_not_in_chunk(pred_links, chunk_entities)
+    pred_links, pred_link_excluded = prune_link_not_in_chunk(chunk_entities, pred_links)
     pred_links = set(pred_links)
-    pred_links, pred_mapping_excluded = prune_link_not_in_chunk(pred_mapping, chunk_entities)
-    pred_links = set(pred_links)
-    gt_linking, gt_link_excluded = prune_link_not_in_chunk(data_sample_words.entities_mapping, chunk_entities)
+    gt_linking, gt_link_excluded = prune_link_not_in_chunk(chunk_entities, data_sample_words.entities_mapping)
     gt_linking = set([(k, v) if k < v else (v, k) for k, v in gt_linking])
     tt, tf, ft, ff = 0, 0, 0, 0
     tt = len(pred_links.intersection(gt_linking))
