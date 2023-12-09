@@ -27,7 +27,7 @@ if __name__ == '__main__':
             learning_rate=1e-5,
             )
 
-    tokenizer, model, collator = load_tokenizer_model_collator(sys.argv[1], sys.argv[2])
+    tokenizer, model, collator = load_tokenizer_model_collator('funsd' if sys.argv[1] == 'en' else 'xfund', sys.argv[1])
     trainer = XfunReTrainer(
         model=model,
         args=training_args,
