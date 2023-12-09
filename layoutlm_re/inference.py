@@ -42,6 +42,7 @@ def load_model(dataset, lang):
     return model_dict[(dataset, lang)]
 
 def load_collator(dataset, lang):
+    tokenizer = load_tokenizer(dataset, lang)
     if (dataset, lang) not in collator_dict:
         collator_dict[(dataset, lang)] = DataCollatorForKeyValueExtraction(
             feature_extractor,
