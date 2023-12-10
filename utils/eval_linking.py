@@ -172,9 +172,12 @@ if __name__ == '__main__':
     mean, std = np.mean(times), np.std(times)
     with open(f"{args.cache_dir_entity_linking}/inference_test/result.txt", 'w') as f:
         f.write(f"tt: {tt}, tf: {tf}, ft: {ft}, ff: {ff}\n")
-        f.write(f"precision: {tt / (tt + tf)}\n")
+        p = tt / (tt + tf)
+        r = tt / (tt + ft)
+        f1 = 2 * p * r / (p + r)
+        f.write(f"precision: {p}\n")
         f.write(f"recall: {tt / (tt + ft)}\n")
-        f.write(f"f1: {2 * tt / (2 * tt + tf + ft)}\n")
+        f.write(f"f1: {f1}\n")
         f.write(f"mean: {mean}, std: {std} (secs)\n")
 
 
