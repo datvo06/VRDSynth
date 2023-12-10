@@ -183,7 +183,8 @@ if __name__ == '__main__':
         if args.eval_strategy == 'chunk':
             new_tt, new_tf, new_ft, new_ff = compare_specs_chunk_based_metrics(ent_map, dataset[i])
         elif args.eval_strategy == 'chunk_avg':
-
+            # TODO: fill this
+            pass
         else:
             new_tt, new_tf, new_ft, new_ff = compare_specs(ent_map, specs[i][1])
         if args.eval_strategy != 'chunk_avg':
