@@ -209,6 +209,7 @@ if __name__ == '__main__':
             r = tt / (tt + ft)
             f1 = 2 * p * r / (p + r)
         else:
+            print(len(precs), len(recs), len(f1s))
             p, r, f1 = np.mean(precs), np.mean(recs), np.mean(f1s)
         f.write(f"precision: {p}\n")
         f.write(f"recall: {r}\n")
