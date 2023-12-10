@@ -87,6 +87,7 @@ def unnormalize_box(bbox, width, height):
 
 def compute_metrics(p):
     pred_relations, gt_relations = p
+    print(len(pred_relations), len(gt_relations))
     score = re_score(pred_relations, gt_relations, mode="boundaries")
     return score
 
