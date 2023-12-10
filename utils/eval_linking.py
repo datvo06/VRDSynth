@@ -30,6 +30,7 @@ def get_args():
     parser.add_argument('--use_sem', type=bool, default=False, help='use semantic features')
     parser.add_argument('--model', type=str, choices=['layoutlmv3'], default='layoutlmv3')
     parser.add_argument('--eval_strategy', type=str, choices=['full', 'chunk', 'chunk_avg'], default='full')
+    parser.add_argument('--linking_type', type=str, choices=['full', 'kv'], default='full')
     args = parser.parse_args()
     args.dataset = 'funsd' if args.lang == 'en' else 'xfund'
     return args
@@ -122,7 +123,7 @@ if __name__ == '__main__':
         specs, entity_dataset = construct_entity_linking_specs(dataset)
         with open(f"{args.cache_dir_entity_linking}/specs_linking_test.pkl", 'wb') as f:
             pkl.dump((specs, entity_dataset), f)
-    test_data_sample_set_fp = f"{args.cache_dir_entity_linking}/data_sample_set_relation_cache_test_{args.use_layoutlm_output}_{args.eval_strategy}.pkl"
+    test_data_sample_set_fp = f"{args.cache_dir_entity_linking}/data_sample_set_relation_cache_test_{args.use_layoutlm_output}.pkl"
     if os.path.exists(test_data_sample_set_fp):
         with open(test_data_sample_set_fp, 'rb') as f:
             data_sample_set_relation_cache = pkl.load(f)

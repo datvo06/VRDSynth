@@ -182,10 +182,12 @@ def convert_data_sample_to_input(data_sample, tokenizer):
 def get_relations_per_chunk(data_sample, chunk_entities, relations):
     relation_full = set(tuple(t) for t in relations)
     relation_spans = [[] for _ in range(len(chunk_entities))]
+    print("Before", len(relation_full))
     for chunk_id, chunk_ents in enumerate(chunk_entities):
         relation_spans[chunk_id] = [(i, j) for i, j in relation_full if i in chunk_ents and j in chunk_ents 
-                                    # and data_sample['labels'][data_sample.entities[i][0]] not in ['other', 'header'] and data_sample['labels'][data_sample.entities[j][0]] not in ['other', 'header']
+                                    and data_sample['labels'][data_sample.entities[i][0]] not in ['other', 'header'] and data_sample['labels'][data_sample.entities[j][0]] not in ['other', 'header']
                                     ]
+    print("After", sum([len(r) for r in relation_spans]))
     return relation_spans
 
 def prune_link_not_in_chunk(data_sample, chunk_entities, relations):
@@ -205,12 +207,9 @@ def infer(model, tokenizer_pre, tokenizer, collator, data_sample):
                 continue
             chunk = collator([chunk])
             chunk['relations'] = [{'start_index': [], 'end_index': [], 'head': [], 'tail': []}]
-            outputs = model(
-                    **chunk
-                    )
+            outputs = model(**chunk)
             for relation in outputs.pred_relations[0]:
                 hid, tid = relation['head_id'], relation['tail_id']
-                print(hid, tid, len(chunk_entity), min(chunk_entity) if chunk_entity else -1, max(chunk_entity) if chunk_entity else -1)
                 entities_map.append((entities_to_index_map[chunk_entity[hid]], entities_to_index_map[chunk_entity[tid]]))
     return entities_map
 
