@@ -37,11 +37,11 @@ def get_args():
 def compare_specs(pred_mapping, gt_linking):
     # 1. Convert from uf to link between entities
     pred_links = []
-    for k, v in pred_mapping:
-        pred_links.append((k, v) if k < v else (v, k))
+    # for k, v in pred_mapping:
+    #    pred_links.append((k, v) if k < v else (v, k))
     pred_links = set(pred_links)
     # 2. Convert from specs to link between entities
-    gt_linking = set([(k, v) if k < v else (v, k) for k, v in gt_linking])
+    # gt_linking = set([(k, v) if k < v else (v, k) for k, v in gt_linking])
     gt_linking = set(gt_linking)
 
     # 3. Compare
