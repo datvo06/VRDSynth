@@ -201,7 +201,7 @@ def infer(model, tokenizer_pre, tokenizer, collator, data_sample):
     entities_map = []
     with torch.no_grad():
         for chunk, chunk_entity in zip(chunks, chunk_entities):
-            if not chunk_entity:
+            if len(chunk_entity) < 2:
                 continue
             chunk = collator([chunk])
             chunk['relations'] = [{'start_index': [], 'end_index': [], 'head': [], 'tail': []}]
