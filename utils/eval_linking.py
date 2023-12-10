@@ -4,7 +4,7 @@ from utils.funsd_utils import viz_data, viz_data_no_rel, viz_data_entity_mapping
 from utils.ps_utils import construct_entity_linking_specs, construct_entity_merging_specs
 from utils.funsd_utils import load_dataset, viz_data_entity_mapping
 from utils.ps_utils import FindProgram, WordVariable
-from layoutlm_re.inference import convert_data_sample_to_input, prune_link_not_in_chunk, tokenizer_pre
+from layoutlm_re.inference import convert_data_sample_to_input, prune_link_not_in_chunk, tokenizer_pre, get_relations_per_chunk
 import argparse
 import pickle as pkl
 import os
@@ -23,7 +23,6 @@ def get_args():
                         type=str,
                         default='funsd_cache_entity_linking',
                         help='cache directory')
-    parser.add_argument('--dataset', type=str, default='funsd', help='dataset name')
     parser.add_argument('--lang', type=str, default='en', help='language')
     parser.add_argument('--rel_type', type=str, choices=['cluster', 'default', 'legacy', 'legacy_with_nn'], default='legacy')
     parser.add_argument('--use_layoutlm_output', type=bool, default=False, help='use semantic features')
@@ -32,6 +31,7 @@ def get_args():
     parser.add_argument('--model', type=str, choices=['layoutlmv3'], default='layoutlmv3')
     parser.add_argument('--eval_strategy', type=str, choices=['full', 'chunk', 'chunk_avg'], default='full')
     args = parser.parse_args()
+    args.dataset = 'funsd' if args.lang == 'en' else 'xfund'
     return args
 
 def compare_specs(pred_mapping, gt_linking):
@@ -83,10 +83,23 @@ def compare_specs_chunk_avg_based_metrics(pred_mapping, data_sample_words):
     for k, v in pred_mapping:
         pred_links.append((k, v) if k < v else (v, k))
     pred_links = set(pred_links)
+    pred_link_chunks = get_relations_per_chunk(data_sample_words, chunk_entities, pred_links)
+    gt_linking_chunks = get_relations_per_chunk(data_sample_words, chunk_entities, data_sample_words.entities_map)
+    gt_linking_chunks = set([(k, v) if k < v else (v, k) for k, v in gt_linking_chunks])
+    precs, recs, f1s = [], [], []
+    for chunk_ents, chunk_links_pred, chunk_links_gt in zip(chunk_entities, pred_link_chunks, gt_linking_chunks):
+        tt, tf, ft, ff = compare_specs(chunk_links_pred, chunk_links_gt)
+        prec = tt / (tt + tf) if tt + tf > 0 else 0
+        rec = tt / (tt + ft) if tt + ft > 0 else 0
+        f1 = 2 * prec * rec / (prec + rec) if prec + rec > 0 else 0
+        precs.append(prec)
+        recs.append(rec)
+        f1s.append(f1)
+    return precs, recs, f1s
+
     pred_links, pred_link_excluded = prune_link_not_in_chunk(data_sample_words, chunk_entities, pred_links)
     pred_links = set(pred_links)
     gt_linking, gt_link_excluded = prune_link_not_in_chunk(data_sample_words, chunk_entities, data_sample_words.entities_map)
-    gt_linking = set([(k, v) if k < v else (v, k) for k, v in gt_linking])
     tt, tf, ft, ff = 0, 0, 0, 0
     tt = len(pred_links.intersection(gt_linking))
     tf = len(pred_links.difference(gt_linking))
@@ -183,8 +196,10 @@ if __name__ == '__main__':
         if args.eval_strategy == 'chunk':
             new_tt, new_tf, new_ft, new_ff = compare_specs_chunk_based_metrics(ent_map, dataset[i])
         elif args.eval_strategy == 'chunk_avg':
-            # TODO: fill this
-            pass
+            ext_precs, ext_recs, ext_f1s = compare_specs_chunk_avg_based_metrics(ent_map, dataset[i])
+            precs.extend(ext_precs)
+            recs.extend(ext_recs)
+            f1s.extend(ext_f1s)
         else:
             new_tt, new_tf, new_ft, new_ff = compare_specs(ent_map, specs[i][1])
         if args.eval_strategy != 'chunk_avg':
@@ -192,10 +207,6 @@ if __name__ == '__main__':
             tf += new_tf
             ft += new_ft
             ff += new_ff
-        else:
-            precs.append(new_tt / (new_tt + new_tf))
-            recs.append(new_tt / (new_tt + new_ft))
-            f1s.append(2 * precs[-1] * recs[-1] / (precs[-1] + recs[-1]))
         img = viz_data_entity_mapping(new_data)
         cv2.imwrite(f"{args.cache_dir_entity_linking}/inference_test/inference_{i}.png", img)
     # Write the result to log
