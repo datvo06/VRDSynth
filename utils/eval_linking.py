@@ -205,7 +205,7 @@ if __name__ == '__main__':
         else:
             p, r, f1 = np.mean(precs), np.mean(recs), np.mean(f1s)
         f.write(f"precision: {p}\n")
-        f.write(f"recall: {tt / (tt + ft)}\n")
+        f.write(f"recall: {r}\n")
         f.write(f"f1: {f1}\n")
         f.write(f"mean: {mean}, std: {std} (secs)\n")
 
