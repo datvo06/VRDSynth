@@ -30,7 +30,7 @@ def get_args():
     parser.add_argument('--take_non_countered_layoutlm_output', type=bool, default=False, help='use semantic features')
     parser.add_argument('--use_sem', type=bool, default=False, help='use semantic features')
     parser.add_argument('--model', type=str, choices=['layoutlmv3'], default='layoutlmv3')
-    parser.add_argument('--eval_strategy', type=str, choices=['full', 'chunk'], default='full')
+    parser.add_argument('--eval_strategy', type=str, choices=['full', 'chunk', 'chunk_avg'], default='full')
     args = parser.parse_args()
     return args
 
@@ -77,6 +77,25 @@ def compare_specs_chunk_based_metrics(pred_mapping, data_sample_words):
     return tt, tf, ft, ff
 
 
+def compare_specs_chunk_avg_based_metrics(pred_mapping, data_sample_words):
+    _, chunk_entities, _, _ = convert_data_sample_to_input(data_sample_words, tokenizer_pre)
+    pred_links = []
+    for k, v in pred_mapping:
+        pred_links.append((k, v) if k < v else (v, k))
+    pred_links = set(pred_links)
+    pred_links, pred_link_excluded = prune_link_not_in_chunk(data_sample_words, chunk_entities, pred_links)
+    pred_links = set(pred_links)
+    gt_linking, gt_link_excluded = prune_link_not_in_chunk(data_sample_words, chunk_entities, data_sample_words.entities_map)
+    gt_linking = set([(k, v) if k < v else (v, k) for k, v in gt_linking])
+    tt, tf, ft, ff = 0, 0, 0, 0
+    tt = len(pred_links.intersection(gt_linking))
+    tf = len(pred_links.difference(gt_linking))
+    ft = len(gt_linking.difference(pred_links))
+    all_keys = set(k for k, _ in pred_links).union(set(k for _, k in pred_links))
+    all_values = set(v for _, v in pred_links).union(set(v for _, v in pred_links))
+    tot_links = len(all_keys) * len(all_values)
+    ff = tot_links - tt - tf - ft
+    return tt, tf, ft, ff
 
 
 if __name__ == '__main__':
@@ -152,29 +171,42 @@ if __name__ == '__main__':
     fps_merging = list(fps_merging)
     fps_linking = list(fps_linking)
     # Also build the spec for testset 
-    tt, tf, ft, ff = 0, 0, 0, 0
     times = []
+    if args.eval_strategy != 'chunk_avg':
+        tt, tf, ft, ff = 0, 0, 0, 0
+    else:
+        precs, recs, f1s = [], [], []
     for i, (data, nx_g) in tqdm.tqdm(enumerate(zip(entity_dataset, data_sample_set_relation_cache))):
         st = time.time()
         new_data, ent_map = link_entity(data, nx_g, ps_merging, ps_linking, fps_merging, fps_linking, ps_counter, args.use_layoutlm_output)
         times.append(time.time() - st)
         if args.eval_strategy == 'chunk':
             new_tt, new_tf, new_ft, new_ff = compare_specs_chunk_based_metrics(ent_map, dataset[i])
+        elif args.eval_strategy == 'chunk_avg':
+
         else:
             new_tt, new_tf, new_ft, new_ff = compare_specs(ent_map, specs[i][1])
-        tt += new_tt
-        tf += new_tf
-        ft += new_ft
-        ff += new_ff
+        if args.eval_strategy != 'chunk_avg':
+            tt += new_tt
+            tf += new_tf
+            ft += new_ft
+            ff += new_ff
+        else:
+            precs.append(new_tt / (new_tt + new_tf))
+            recs.append(new_tt / (new_tt + new_ft))
+            f1s.append(2 * precs[-1] * recs[-1] / (precs[-1] + recs[-1]))
         img = viz_data_entity_mapping(new_data)
         cv2.imwrite(f"{args.cache_dir_entity_linking}/inference_test/inference_{i}.png", img)
     # Write the result to log
     mean, std = np.mean(times), np.std(times)
     with open(f"{args.cache_dir_entity_linking}/inference_test/result.txt", 'w') as f:
-        f.write(f"tt: {tt}, tf: {tf}, ft: {ft}, ff: {ff}\n")
-        p = tt / (tt + tf)
-        r = tt / (tt + ft)
-        f1 = 2 * p * r / (p + r)
+        if args.eval_strategy != 'chunk_avg':
+            f.write(f"tt: {tt}, tf: {tf}, ft: {ft}, ff: {ff}\n")
+            p = tt / (tt + tf)
+            r = tt / (tt + ft)
+            f1 = 2 * p * r / (p + r)
+        else:
+            p, r, f1 = np.mean(precs), np.mean(recs), np.mean(f1s)
         f.write(f"precision: {p}\n")
         f.write(f"recall: {tt / (tt + ft)}\n")
         f.write(f"f1: {f1}\n")
