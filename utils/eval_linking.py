@@ -122,7 +122,7 @@ if __name__ == '__main__':
         specs, entity_dataset = construct_entity_linking_specs(dataset)
         with open(f"{args.cache_dir_entity_linking}/specs_linking_test.pkl", 'wb') as f:
             pkl.dump((specs, entity_dataset), f)
-    test_data_sample_set_fp = f"{args.cache_dir_entity_linking}/data_sample_set_relation_cache_test.pkl" if not args.use_layoutlm_output else f"{args.cache_dir_entity_linking}/data_sample_set_relation_cache_test_use_layoutxlm.pkl"
+    test_data_sample_set_fp = f"{args.cache_dir_entity_linking}/data_sample_set_relation_cache_test_{args.use_layoutlm_output}_{args.eval_strategy}.pkl"
     if os.path.exists(test_data_sample_set_fp):
         with open(test_data_sample_set_fp, 'rb') as f:
             data_sample_set_relation_cache = pkl.load(f)
