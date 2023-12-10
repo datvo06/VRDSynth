@@ -187,7 +187,8 @@ def get_relations_per_chunk(data_sample, chunk_entities, relations):
                 (i, j) for i, j in relation_full if i in chunk_ents and j in chunk_ents 
                 and data_sample['labels'][data_sample.entities[i][0]] not in ['other', 'header'] and data_sample['labels'][data_sample.entities[j][0]] not in ['other', 'header']
         ]
-    assert sum([len(r) for r in relation_spans]) == len(sum(list(set(r) for r in relation_spans))), "Overlapping elements"
+    full_rspans = set(itertools.chain.from_iterable(relation_spans))
+    assert sum([len(r) for r in relation_spans]) == len(full_rspans), "Overlapping elements"
     return relation_spans
 
 def prune_link_not_in_chunk(data_sample, chunk_entities, relations):
