@@ -214,7 +214,8 @@ if __name__ == '__main__':
     print(f"mean: {mean}, std: {std} (secs)")
     
     # Print to screen
-    print(f"tt: {tt}, tf: {tf}, ft: {ft}, ff: {ff}")
-    print(f"precision: {tt / (tt + tf)}")
-    print(f"recall: {tt / (tt + ft)}")
-    print(f"f1: {2 * tt / (2 * tt + tf + ft)}")
+    if args.eval_strategy != 'chunk_avg':
+        print(f"tt: {tt}, tf: {tf}, ft: {ft}, ff: {ff}")
+    print(f"precision: {p}")
+    print(f"recall: {r}")
+    print(f"f1: {f1}")
