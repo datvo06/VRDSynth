@@ -85,7 +85,6 @@ def compare_specs_chunk_avg_based_metrics(pred_mapping, data_sample_words):
     pred_links = set(pred_links)
     pred_link_chunks = get_relations_per_chunk(data_sample_words, chunk_entities, pred_links)
     gt_linking_chunks = get_relations_per_chunk(data_sample_words, chunk_entities, data_sample_words.entities_map)
-    gt_linking_chunks = set([(k, v) if k < v else (v, k) for k, v in gt_linking_chunks])
     precs, recs, f1s = [], [], []
     for chunk_ents, chunk_links_pred, chunk_links_gt in zip(chunk_entities, pred_link_chunks, gt_linking_chunks):
         tt, tf, ft, ff = compare_specs(chunk_links_pred, chunk_links_gt)
@@ -96,20 +95,6 @@ def compare_specs_chunk_avg_based_metrics(pred_mapping, data_sample_words):
         recs.append(rec)
         f1s.append(f1)
     return precs, recs, f1s
-
-    pred_links, pred_link_excluded = prune_link_not_in_chunk(data_sample_words, chunk_entities, pred_links)
-    pred_links = set(pred_links)
-    gt_linking, gt_link_excluded = prune_link_not_in_chunk(data_sample_words, chunk_entities, data_sample_words.entities_map)
-    tt, tf, ft, ff = 0, 0, 0, 0
-    tt = len(pred_links.intersection(gt_linking))
-    tf = len(pred_links.difference(gt_linking))
-    ft = len(gt_linking.difference(pred_links))
-    all_keys = set(k for k, _ in pred_links).union(set(k for _, k in pred_links))
-    all_values = set(v for _, v in pred_links).union(set(v for _, v in pred_links))
-    tot_links = len(all_keys) * len(all_values)
-    ff = tot_links - tt - tf - ft
-    return tt, tf, ft, ff
-
 
 if __name__ == '__main__':
     args = get_args()
