@@ -193,6 +193,7 @@ def get_relations_per_chunk(data_sample, chunk_entities, relations, entities_to_
 
 def prune_link_not_in_chunk(data_sample, chunk_entities, relations, entities_to_index_map):
     relation_spans = get_relations_per_chunk(data_sample, chunk_entities, relations, entities_to_index_map)
+    print(list(len(r) for r in relation_spans))
     all_accepted_rels = list(itertools.chain(*relation_spans))
     excluded_relations = set(relations) - set(all_accepted_rels)
     return all_accepted_rels, excluded_relations
