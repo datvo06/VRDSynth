@@ -103,13 +103,13 @@ def convert_data_sample_to_input(data_sample):
     empty_ents = set()
     id2label = {}
     for i, ent in enumerate(data_sample.entities):
-        if not ent or len(data_sample.entities_text[i]) == 0:
+        if not ent or len(data_sample.entities_texts[i]) == 0:
             empty_ents.add(i)
             continue
         line_words = [data_sample["words"][w] for w in ent]
         line_bboxs = [data_sample["boxes"][w] for w in ent]
         tokenized_inputs = tokenizer_pre(
-            data_sample.entities_text[i],
+            data_sample.entities_texts[i],
             add_special_tokens=False,
             return_offsets_mapping=True,
             return_attention_mask=False,

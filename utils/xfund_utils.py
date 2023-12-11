@@ -19,7 +19,7 @@ class DataSampleXFUND:
         self._labels = labels
         self._entities = entities
         self._entities_map = entities_map
-        self._entities_text = entities_texts
+        self._entities_texts = entities_texts
         self._img_fp = img_fp
         self._boxes = boxes
         self._dict = {
@@ -28,7 +28,7 @@ class DataSampleXFUND:
             'boxes': self._boxes,
             'entities': self._entities,
             'entities_map': self._entities_map,
-            'entiiies_text': self._entities_text,
+            'entiiies_text': self._entities_texts,
             'img_fp': img_fp
         }
 
@@ -75,13 +75,13 @@ class DataSampleXFUND:
         self._img_fp = img_fp
 
     @property
-    def entities_text(self) -> Optional[List[str]]:
-        return self._entities_text
+    def entities_texts(self) -> Optional[List[str]]:
+        return self._entities_texts
 
-    @entities_text.setter
-    def entities_text(self, entities_text: Optional[List[str]]):
-        self._entities_text = entities_text
-        self._dict['entities_text'] = entities_text
+    @entities_texts.setter
+    def entities_texts(self, entities_texts: Optional[List[str]]):
+        self._entities_texts = entities_texts
+        self._dict['entities_texts'] = entities_texts
 
     @property
     def boxes(self) -> List[Bbox]:
@@ -108,7 +108,7 @@ class XFUNDDataSampleAdapter(DataSample):
         self._entities = [xfunddatasample.entities[self.i2eid[i]] for i in sorted(self.i2eid.keys())]
         self._entities_map = [(self.eid2i[e1], self.eid2i[e2]) for e1, e2 in xfunddatasample.entities_map]
         self._img_fp = xfunddatasample.img_fp
-        self._entities_text = xfunddatasample.entities_text
+        self._entities_texts = xfunddatasample.entities_texts
         self._dict = {
             'words': self._words,
             'labels': self._labels,
@@ -116,7 +116,7 @@ class XFUNDDataSampleAdapter(DataSample):
             'entities': self._entities,
             'entities_map': self._entities_map,
             'img_fp': self._img_fp,
-            'entities_text': self._entities_text
+            'entities_texts': self._entities_texts
         }
 
 
