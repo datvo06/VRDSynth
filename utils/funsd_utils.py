@@ -23,7 +23,7 @@ def load_funsd_data_from_dict(data_dict):
         block_words_and_bbox = block['words']
         block_labels = [block['label']] * len(block_words_and_bbox)
         entities[block['id']] = list(range(len(words), len(words) + len(block_words_and_bbox)))
-        entities_text.append(block['label'])
+        entities_text.append(block['text'])
         for pair in block['linking']:
             entities_mapping.add(tuple(pair))
         for w_bbox in block_words_and_bbox:
