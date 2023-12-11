@@ -109,7 +109,7 @@ def convert_data_sample_to_input(data_sample, tokenizer):
         line_words = [data_sample["words"][w] for w in ent]
         line_bboxs = [data_sample["boxes"][w] for w in ent]
         tokenized_inputs = tokenizer(
-            ' '.join(list([data_sample["words"][w] for w in ent])),
+            data_sample.entities_text[i],
             add_special_tokens=False,
             return_offsets_mapping=True,
             return_attention_mask=False,
@@ -187,7 +187,6 @@ def get_relations_per_chunk(data_sample, chunk_entities, relations, filter_mode=
                 (i, j) for i, j in relation_full if i in chunk_ents and j in chunk_ents 
                 and (data_sample['labels'][data_sample.entities[i][0]], data_sample['labels'][data_sample.entities[j][0]]) in {('question', 'answer'), ('answer', 'question'), ('header', 'question'), ('question', 'header')}
         ]
-        print(list((data_sample['labels'][data_sample.entities[i][0]], data_sample['labels'][data_sample.entities[j][0]]) for i, j in relation_spans[chunk_id]))
     full_rspans = set(itertools.chain.from_iterable(relation_spans))
     assert sum([len(r) for r in relation_spans]) == len(full_rspans), "Overlapping elements"
     return relation_spans

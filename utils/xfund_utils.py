@@ -1,4 +1,4 @@
-from typing import List, Tuple, Set, Union, Dict
+from typing import List, Tuple, Set, Union, Dict, Optional
 from collections import defaultdict
 import json
 from utils.data_sample import Bbox, DataSample
@@ -13,11 +13,13 @@ class DataSampleXFUND:
                  entities: Dict[int, List[int]],
                  entities_map: List[Tuple[int, int]],
                  boxes: List[Bbox],
-                 img_fp: str=""):
+                 img_fp: str="",
+                 entities_texts: Optional[List[str]] = None):
         self._words = words
         self._labels = labels
         self._entities = entities
         self._entities_map = entities_map
+        self._entities_text = entities_texts
         self._img_fp = img_fp
         self._boxes = boxes
         self._dict = {
@@ -26,6 +28,7 @@ class DataSampleXFUND:
             'boxes': self._boxes,
             'entities': self._entities,
             'entities_map': self._entities_map,
+            'entiiies_text': self._entities_text,
             'img_fp': img_fp
         }
 
@@ -66,9 +69,19 @@ class DataSampleXFUND:
     def img_fp(self) -> str:
         return self._img_fp
 
+
     @img_fp.setter
     def img_fp(self, img_fp: str):
         self._img_fp = img_fp
+
+    @property
+    def entities_text(self) -> Optional[List[str]]:
+        return self._entities_text
+
+    @entities_text.setter
+    def entities_text(self, entities_text: Optional[List[str]]):
+        self._entities_text = entities_text
+        self._dict['entities_text'] = entities_text
 
     @property
     def boxes(self) -> List[Bbox]:
@@ -95,13 +108,15 @@ class XFUNDDataSampleAdapter(DataSample):
         self._entities = [xfunddatasample.entities[self.i2eid[i]] for i in sorted(self.i2eid.keys())]
         self._entities_map = [(self.eid2i[e1], self.eid2i[e2]) for e1, e2 in xfunddatasample.entities_map]
         self._img_fp = xfunddatasample.img_fp
+        self._entities_text = xfunddatasample.entities_text
         self._dict = {
             'words': self._words,
             'labels': self._labels,
             'boxes': self._boxes,
             'entities': self._entities,
             'entities_map': self._entities_map,
-            'img_fp': self._img_fp
+            'img_fp': self._img_fp,
+            'entities_text': self._entities_text
         }
 
 
@@ -111,10 +126,12 @@ def load_xfunsd_data_sample(data_dict):
     labels = []
     entities_mapping = set()
     entities = defaultdict(list)
+    entities_texts = []
     for block in data_dict['document']:
         block_words_and_bbox = block['words']
         block_labels = [block['label']] * len(block_words_and_bbox)
         entities[block['id']] = list(range(len(words), len(words) + len(block_words_and_bbox)))
+        entities_texts.append(block['text'])
         for pair in block['linking']:
             entities_mapping.add(tuple(pair))
         for w_bbox in block_words_and_bbox:
@@ -124,7 +141,7 @@ def load_xfunsd_data_sample(data_dict):
     entities_mapping = list(entities_mapping)
     lang = data_dict['img']['fname'].split('_')[0]
     data_dir = DATASET_PATH[f'xfund/{lang}']
-    return XFUNDDataSampleAdapter(DataSampleXFUND(words, labels, entities, entities_mapping, bboxs, data_dir + '/' + data_dict['img']['fname']))
+    return XFUNDDataSampleAdapter(DataSampleXFUND(words, labels, entities, entities_mapping, bboxs, data_dir + '/' + data_dict['img']['fname'], entities_texts))
 
 
 

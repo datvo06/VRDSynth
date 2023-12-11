@@ -1,5 +1,5 @@
 from collections import namedtuple
-from typing import List, Union, Dict, Tuple
+from typing import List, Union, Dict, Tuple, Optional
 import json
 
 Bbox = namedtuple('Bbox', ['x0', 'y0', 'x1', 'y1'])
@@ -13,10 +13,12 @@ class DataSample:
                      List[List[int]], Dict[int, List[int]]],
                  entities_map: List[Tuple[int, int]],
                  boxes: List[Bbox],
-                 img_fp: str=""):
+                 img_fp: str="",
+                 entities_texts: Optional[List[str]] = None):
         self._words = words
         self._labels = labels
         self._entities = entities
+        self._entities_text = entities_texts
         self._entities_map = entities_map
         self._img_fp = img_fp
         self._boxes = boxes
@@ -26,6 +28,7 @@ class DataSample:
             'boxes': self._boxes,
             'entities': self._entities,
             'entities_map': self._entities_map,
+            'entities_text': self._entities_text,
             'img_fp': img_fp
         }
 
@@ -79,6 +82,15 @@ class DataSample:
     @boxes.setter
     def boxes(self, boxes: List[Bbox]):
         self._boxes = boxes
+
+    @property
+    def entities_text(self) -> Optional[List[str]]:
+        return self._entities_text
+
+    @entities_text.setter
+    def entities_text(self, entities_text: Optional[List[str]]):
+        self._entities_text = entities_text
+        self._dict['entities_text'] = entities_text
 
     def __getitem__(self, key):
         return self._dict[key]
