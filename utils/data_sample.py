@@ -18,7 +18,7 @@ class DataSample:
         self._words = words
         self._labels = labels
         self._entities = entities
-        self._entities_text = entities_texts
+        self._entities_texts = entities_texts
         self._entities_map = entities_map
         self._img_fp = img_fp
         self._boxes = boxes
@@ -28,7 +28,7 @@ class DataSample:
             'boxes': self._boxes,
             'entities': self._entities,
             'entities_map': self._entities_map,
-            'entities_text': self._entities_text,
+            'entities_texts': self._entities_texts,
             'img_fp': img_fp
         }
 
@@ -84,20 +84,16 @@ class DataSample:
         self._boxes = boxes
 
     @property
-    def entities_text(self) -> Optional[List[str]]:
-        return self._entities_text
+    def entities_texts(self) -> Optional[List[str]]:
+        return self._entities_texts
 
-    @entities_text.setter
-    def entities_text(self, entities_text: Optional[List[str]]):
-        self._entities_text = entities_text
-        self._dict['entities_text'] = entities_text
+    @entities_texts.setter
+    def entities_texts(self, entities_texts: Optional[List[str]]):
+        self._entities_texts = entities_texts
+        self._dict['entities_texts'] = entities_texts
 
     def __getitem__(self, key):
         return self._dict[key]
 
     def to_json(self):
         return json.dumps(self._dict)
-
-
-
-
