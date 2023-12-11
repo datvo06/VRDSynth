@@ -118,7 +118,7 @@ def convert_data_sample_to_input(data_sample, tokenizer):
         if not bbox:
             empty_ents.add(i)
             continue
-        ent_label = list([data_sample["labels"][w] for w in ent])[0]
+        ent_label = data_sample["labels"][ent[0]]
         id2label[i] = ent_label
         if ent_label  == "other":
             label = ["O"] * len(bbox)
@@ -136,8 +136,8 @@ def convert_data_sample_to_input(data_sample, tokenizer):
                 }
             )
             entities_to_index_map[len(entities) - 1] = i
-        for key in tokenized_doc:
-            tokenized_doc[key] = tokenized_doc[key] + tokenized_inputs[key]
+            for key in tokenized_doc:
+                tokenized_doc[key] = tokenized_doc[key] + tokenized_inputs[key]
     chunk_size = 512
     chunks = []
     chunk_entities = [[] for _ in list(range(0, len(tokenized_doc["input_ids"]), chunk_size))]
