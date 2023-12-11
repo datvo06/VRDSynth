@@ -185,7 +185,7 @@ def get_relations_per_chunk(data_sample, chunk_entities, relations, entities_to_
         chunk_ents = [entities_to_index_map[e] for e in chunk_ents]
         relation_spans[chunk_id] = [
                 (i, j) for i, j in relation_full if i in chunk_ents and j in chunk_ents 
-                and (data_sample['labels'][data_sample.entities[i][0]], data_sample['labels'][data_sample.entities[j][0]]) in {('question', 'answer'), ('answer', 'question'), ('header', 'question'), ('question', 'header')}
+                and (data_sample['labels'][data_sample.entities[i][0]], data_sample['labels'][data_sample.entities[j][0]]) in {('question', 'answer'), ('answer', 'question')}#, ('header', 'question'), ('question', 'header')}
         ]
     full_rspans = set(itertools.chain.from_iterable(relation_spans))
     assert sum([len(r) for r in relation_spans]) == len(full_rspans), "Overlapping elements"
