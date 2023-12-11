@@ -52,7 +52,7 @@ def construct_entity_level_data(data) -> DataSample:
         )
         boxes.append(bbox)
 
-    return DataSample(words, labels, entities, entities_map, boxes, data.img_fp)
+    return DataSample(words, labels, entities, entities_map, boxes, data.img_fp, data.entities_texts)
 
 
 def construct_entity_linking_specs(dataset: List[DataSample]):
