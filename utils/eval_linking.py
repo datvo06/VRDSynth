@@ -85,15 +85,18 @@ def compare_specs_chunk_based_metrics(pred_mapping, data_sample_words):
 
 def compare_specs_chunk_avg_based_metrics(pred_mapping, data_sample_words):
     _, chunk_entities, _, _ = convert_data_sample_to_input(data_sample_words)
-    print(list(len(chunk_entities[i]) for i in range(len(chunk_entities))))
     pred_links = []
     for k, v in pred_mapping:
         pred_links.append((k, v) if k < v else (v, k))
     pred_links = set(pred_links)
     pred_link_chunks = get_relations_per_chunk(data_sample_words, chunk_entities, pred_links)
-    print(list(len(pred) for pred in pred_link_chunks))
+
     gt_linking_chunks = get_relations_per_chunk(data_sample_words, chunk_entities, data_sample_words.entities_map)
-    print(list(len(pred) for pred in gt_linking_chunks))
+    print(list(len(chunk_entities[i]) for i in range(len(chunk_entities))),
+          list(len(pred) for pred in pred_link_chunks),
+          list(len(pred) for pred in gt_linking_chunks),
+          len(pred_links),
+          len(data_sample_words.entities_map))
     precs, recs, f1s = [], [], []
     for chunk_ents, chunk_links_pred, chunk_links_gt in zip(chunk_entities, pred_link_chunks, gt_linking_chunks):
         tt, tf, ft, ff = compare_specs(chunk_links_pred, chunk_links_gt)
