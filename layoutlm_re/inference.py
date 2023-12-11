@@ -107,6 +107,7 @@ def convert_data_sample_to_input(data_sample):
             empty_ents.add(i)
             continue
         line_words = [data_sample["words"][w] for w in ent]
+        assert all([w in data_sample.entities_texts[i] for w in line_words])
         line_bboxs = [data_sample["boxes"][w] for w in ent]
         tokenized_inputs = tokenizer_pre(
             data_sample.entities_texts[i],
