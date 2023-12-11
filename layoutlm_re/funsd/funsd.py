@@ -184,7 +184,7 @@ class Funsd(datasets.GeneratorBasedBuilder):
                         }
                     )
                 for i in tokenized_doc:
-                        tokenized_doc[i] = tokenized_doc[i] + tokenized_inputs[i]
+                    tokenized_doc[i] = tokenized_doc[i] + tokenized_inputs[i]
 
             relations = list(set(relations))
             relations = [rel for rel in relations if rel[0] not in empty_entity and rel[1] not in empty_entity]

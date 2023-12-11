@@ -179,13 +179,13 @@ def convert_data_sample_to_input(data_sample, tokenizer):
     return chunks, chunk_entities, entity_dict, entities_to_index_map
 
 
-def get_relations_per_chunk(data_sample, chunk_entities, relations):
+def get_relations_per_chunk(data_sample, chunk_entities, relations, filter_mode='kv_hk'):
     relation_full = set(tuple(t) for t in relations)
     relation_spans = [[] for _ in range(len(chunk_entities))]
     for chunk_id, chunk_ents in enumerate(chunk_entities):
         relation_spans[chunk_id] = [
                 (i, j) for i, j in relation_full if i in chunk_ents and j in chunk_ents 
-                and (data_sample['labels'][data_sample.entities[i][0]], data_sample['labels'][data_sample.entities[j][0]]) in {('question', 'answer'), ('answer', 'question')}
+                and (data_sample['labels'][data_sample.entities[i][0]], data_sample['labels'][data_sample.entities[j][0]]) in {('question', 'answer'), ('answer', 'question'), ('header', 'question'), ('question', 'header')}
         ]
         print(list((data_sample['labels'][data_sample.entities[i][0]], data_sample['labels'][data_sample.entities[j][0]]) for i, j in relation_spans[chunk_id]))
     full_rspans = set(itertools.chain.from_iterable(relation_spans))

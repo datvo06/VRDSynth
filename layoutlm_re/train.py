@@ -89,6 +89,8 @@ def compute_metrics(p):
     pred_relations, gt_relations = p
     print(len(pred_relations), len(gt_relations))
     print(sum(len(pred) for pred in pred_relations), sum(len(gt) for gt in gt_relations))
+    print(list(len(pred) for pred in pred_relations))
+    print(list(len(gt) for gt in gt_relations))
     score = re_score(pred_relations, gt_relations, mode="boundaries")
     return score
 
