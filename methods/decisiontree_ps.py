@@ -584,7 +584,7 @@ def get_args():
 
 def build_nx_g_legacy_sem(data_sample, dataset, lang, build_nx_g_legacy_func):
     tokenizer, model, collator = load_tokenizer_model_collator(dataset, lang)
-    entities_map = infer(model, tokenizer, collator, data_sample)
+    entities_map = infer(model, collator, data_sample)
     entities_map = [(i, j, 5) for i, j in entities_map]
     return build_nx_g_legacy_func(data_sample, sem_edges=entities_map)
 

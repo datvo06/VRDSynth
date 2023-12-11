@@ -198,7 +198,7 @@ def prune_link_not_in_chunk(data_sample, chunk_entities, relations, entities_to_
     return all_accepted_rels, excluded_relations
 
 
-def infer(model, tokenizer, collator, data_sample):
+def infer(model, collator, data_sample):
     chunks, chunk_entities, entity_dict, entities_to_index_map = convert_data_sample_to_input(data_sample)
     entities_map = []
     with torch.no_grad():
@@ -234,7 +234,7 @@ if __name__ == '__main__':
     os.makedirs(f"{args.cache_dir}/inference", exist_ok=True)
     for i, data_sample in enumerate(bar):
         start = time.time()
-        entities_map = infer(model, tokenizer, collator, data_sample)
+        entities_map = infer(model, collator, data_sample)
         times.append(time.time() - start)
         data_sample = construct_entity_level_data(data_sample)
         data_sample.entities_map = entities_map
