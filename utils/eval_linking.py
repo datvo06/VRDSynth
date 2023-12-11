@@ -58,7 +58,7 @@ def compare_specs(pred_mapping, gt_linking):
 
 
 def compare_specs_chunk_based_metrics(pred_mapping, data_sample_words):
-    _, chunk_entities, _, _ = convert_data_sample_to_input(data_sample_words, tokenizer_pre)
+    _, chunk_entities, _, _ = convert_data_sample_to_input(data_sample_words)
     pred_links = []
     for k, v in pred_mapping:
         pred_links.append((k, v) if k < v else (v, k))
