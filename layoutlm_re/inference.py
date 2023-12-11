@@ -115,9 +115,6 @@ def convert_data_sample_to_input(data_sample, tokenizer):
             return_attention_mask=False,
         )
         bbox = get_line_bbox(tokenized_inputs, tokenizer, line_words, line_bboxs, size)
-        if not bbox:
-            empty_ents.add(i)
-            continue
         ent_label = data_sample["labels"][ent[0]]
         id2label[i] = ent_label
         if ent_label  == "other":
@@ -136,8 +133,8 @@ def convert_data_sample_to_input(data_sample, tokenizer):
                 }
             )
             entities_to_index_map[len(entities) - 1] = i
-            for key in tokenized_doc:
-                tokenized_doc[key] = tokenized_doc[key] + tokenized_inputs[key]
+        for key in tokenized_doc:
+            tokenized_doc[key] = tokenized_doc[key] + tokenized_inputs[key]
     chunk_size = 512
     chunks = []
     chunk_entities = [[] for _ in list(range(0, len(tokenized_doc["input_ids"]), chunk_size))]
@@ -185,7 +182,7 @@ def get_relations_per_chunk(data_sample, chunk_entities, relations, filter_mode=
     for chunk_id, chunk_ents in enumerate(chunk_entities):
         relation_spans[chunk_id] = [
                 (i, j) for i, j in relation_full if i in chunk_ents and j in chunk_ents 
-                and (data_sample['labels'][data_sample.entities[i][0]], data_sample['labels'][data_sample.entities[j][0]]) in {('question', 'answer'), ('answer', 'question'), ('header', 'question'), ('question', 'header')}
+                # and (data_sample['labels'][data_sample.entities[i][0]], data_sample['labels'][data_sample.entities[j][0]]) in {('question', 'answer'), ('answer', 'question'), ('header', 'question'), ('question', 'header')}
         ]
     full_rspans = set(itertools.chain.from_iterable(relation_spans))
     assert sum([len(r) for r in relation_spans]) == len(full_rspans), "Overlapping elements"
