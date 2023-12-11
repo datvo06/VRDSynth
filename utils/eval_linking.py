@@ -58,18 +58,18 @@ def compare_specs(pred_mapping, gt_linking):
 
 
 def compare_specs_chunk_based_metrics(pred_mapping, data_sample_words):
-    _, chunk_entities, _, _ = convert_data_sample_to_input(data_sample_words)
+    _, chunk_entities, _, entities_to_index_map = convert_data_sample_to_input(data_sample_words)
     pred_links = []
     for k, v in pred_mapping:
         pred_links.append((k, v) if k < v else (v, k))
     pred_links = set(pred_links)
     print("Before pruning: ", len(pred_links))
-    pred_links, pred_link_excluded = prune_link_not_in_chunk(data_sample_words, chunk_entities, pred_links)
+    pred_links, pred_link_excluded = prune_link_not_in_chunk(data_sample_words, chunk_entities, pred_links, entities_to_index_map)
     pred_links = set(pred_links)
     print("After pruning: ", len(pred_links))
 
     print("Before pruning: ", len(data_sample_words.entities_map))
-    gt_linking, gt_link_excluded = prune_link_not_in_chunk(data_sample_words, chunk_entities, data_sample_words.entities_map)
+    gt_linking, gt_link_excluded = prune_link_not_in_chunk(data_sample_words, chunk_entities, data_sample_words.entities_map, entities_to_index_map)
     gt_linking = set([(k, v) if k < v else (v, k) for k, v in gt_linking])
     print("After pruning: ", len(gt_linking))
     tt, tf, ft, ff = 0, 0, 0, 0
@@ -84,14 +84,14 @@ def compare_specs_chunk_based_metrics(pred_mapping, data_sample_words):
 
 
 def compare_specs_chunk_avg_based_metrics(pred_mapping, data_sample_words):
-    _, chunk_entities, _, _ = convert_data_sample_to_input(data_sample_words)
+    _, chunk_entities, _, entities_to_index_map = convert_data_sample_to_input(data_sample_words)
     pred_links = []
     for k, v in pred_mapping:
         pred_links.append((k, v) if k < v else (v, k))
     pred_links = set(pred_links)
-    pred_link_chunks = get_relations_per_chunk(data_sample_words, chunk_entities, pred_links)
+    pred_link_chunks = get_relations_per_chunk(data_sample_words, chunk_entities, pred_links, entities_to_index_map=entities_to_index_map)
 
-    gt_linking_chunks = get_relations_per_chunk(data_sample_words, chunk_entities, data_sample_words.entities_map)
+    gt_linking_chunks = get_relations_per_chunk(data_sample_words, chunk_entities, data_sample_words.entities_map, entities_to_index_map)
     print(list(len(chunk_entities[i]) for i in range(len(chunk_entities))),
           list(len(pred) for pred in pred_link_chunks),
           list(len(pred) for pred in gt_linking_chunks),
