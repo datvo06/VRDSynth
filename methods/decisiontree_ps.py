@@ -561,10 +561,6 @@ def get_args():
     parser = argparse.ArgumentParser(description='Decision tree-based program synthesis')
     parser.add_argument('--hops', type=int, default=2, help='number of hops to consider')
     parser.add_argument('--sampling_rate', type=float, default=0.2, help='sampling rate for negative relations')
-
-    # dataset
-    parser.add_argument('--dataset', type=str, default='funsd', help='dataset')
-
     # mode and lang
     parser.add_argument('--mode', type=str, default='train', help='train or test')
     parser.add_argument('--lang', type=str, default='en', help='en or de')
@@ -580,6 +576,7 @@ def get_args():
     parser.add_argument('--use_layoutlm_output', action='store_true', help='use semantic information')
     parser.add_argument('--model', type=str, choices=['layoutxlm'], default='layoutxlm')
     args = parser.parse_known_args()[0]
+    args.dataset = 'funsd' if args.lang == 'en' else 'xfund'
     return args
 
 def build_nx_g_legacy_sem(data_sample_infer, data_sample_entity, dataset, lang, build_nx_g_legacy_func):
