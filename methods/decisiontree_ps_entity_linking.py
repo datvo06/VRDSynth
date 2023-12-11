@@ -426,7 +426,10 @@ if __name__ == '__main__':
         bar = tqdm.tqdm(total=len(dataset))
         bar.set_description("Constructing data sample set relation cache")
         for i, data in enumerate(entity_dataset):
-            nx_g = args.build_nx_g(data)
+            if args.use_layoutlm_output and 'legacy' in args.rel_type:
+                nx_g = args.build_nx_g(dataset[i], data)
+            else:
+                nx_g = args.build_nx_g(data)
             data_sample_set_relation_cache.append(nx_g)
             img = viz_data(data, nx_g)
             img_no_rel = viz_data_no_rel(data)

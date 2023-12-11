@@ -137,7 +137,11 @@ if __name__ == '__main__':
     else:
         data_sample_set_relation_cache = []
         for i, entity_data in enumerate(entity_dataset):
-            nx_g = args.build_nx_g(entity_data)
+            if args.use_layoutlm_output and 'legacy' in args.rel_type:
+                nx_g = args.build_nx_g(dataset[i], entity_data)
+            else:
+                nx_g = args.build_nx_g(entity_data)
+
             data_sample_set_relation_cache.append(nx_g)
             img = viz_data(entity_data, nx_g)
             img_no_rel = viz_data_no_rel(entity_data)

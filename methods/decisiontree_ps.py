@@ -582,11 +582,11 @@ def get_args():
     args = parser.parse_known_args()[0]
     return args
 
-def build_nx_g_legacy_sem(data_sample, dataset, lang, build_nx_g_legacy_func):
+def build_nx_g_legacy_sem(data_sample_infer, data_sample_entity, dataset, lang, build_nx_g_legacy_func):
     tokenizer, model, collator = load_tokenizer_model_collator(dataset, lang)
-    entities_map = infer(model, collator, data_sample)
+    entities_map = infer(model, collator, data_sample_infer)
     entities_map = [(i, j, 5) for i, j in entities_map]
-    return build_nx_g_legacy_func(data_sample, sem_edges=entities_map)
+    return build_nx_g_legacy_func(data_sample_entity, sem_edges=entities_map)
 
 
 def setup_relation(args):
@@ -611,7 +611,7 @@ def setup_relation(args):
         args.relation_set = [args.relation_set[2], args.relation_set[3], args.relation_set[0], args.relation_set[1]] 
         if args.use_layoutlm_output:
             args.relation_set.append((-1, -1))
-            args.build_nx_g = lambda data_sample: build_nx_g_legacy_sem(data_sample, args.dataset, args.lang, build_nx_g_func)
+            args.build_nx_g = lambda data_sample_infer, data_sample_entity: build_nx_g_legacy_sem(data_sample_infer, data_sample_entity, args.dataset, args.lang, build_nx_g_func)
         else:
             args.build_nx_g = build_nx_g_func
     return args
