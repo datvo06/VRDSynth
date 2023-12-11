@@ -182,6 +182,7 @@ def get_relations_per_chunk(data_sample, chunk_entities, relations, filter_mode=
     relation_full = set(tuple(t) for t in relations)
     relation_spans = [[] for _ in range(len(chunk_entities))]
     for chunk_id, chunk_ents in enumerate(chunk_entities):
+        print(chunk_ents)
         relation_spans[chunk_id] = [
                 (i, j) for i, j in relation_full if i in chunk_ents and j in chunk_ents 
                 and (data_sample['labels'][data_sample.entities[i][0]], data_sample['labels'][data_sample.entities[j][0]]) in {('question', 'answer'), ('answer', 'question'), ('header', 'question'), ('question', 'header')}
