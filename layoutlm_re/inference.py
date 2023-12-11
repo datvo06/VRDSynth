@@ -125,6 +125,7 @@ def convert_data_sample_to_input(data_sample):
 
         tokenized_inputs.update({"bbox": bbox, "labels": label})
         if label[0] != "O":
+            entities_to_index_map[len(entities)]  = i
             entities.append(
                 {
                     "start": len(tokenized_doc["input_ids"]),
@@ -132,7 +133,6 @@ def convert_data_sample_to_input(data_sample):
                     "label": ent_label.upper(),
                 }
             )
-            entities_to_index_map[len(entities) - 1] = i
         for key in tokenized_doc:
             tokenized_doc[key] = tokenized_doc[key] + tokenized_inputs[key]
     chunk_size = 512
@@ -150,6 +150,7 @@ def convert_data_sample_to_input(data_sample):
                 index <= entity["start"] < index + chunk_size
                 and index <= entity["end"] < index + chunk_size
             ):
+                entity = entity.copy()
                 entity["start"] = entity["start"] - index
                 entity["end"] = entity["end"] - index
                 global_to_local_map[entity_id] = len(entities_in_this_span)
@@ -161,12 +162,12 @@ def convert_data_sample_to_input(data_sample):
                 "id": f"{chunk_id}",
                 "image": image,
                 "original_image": original_image,
-                "entities": entities_in_this_span,
-                # {
-                #    'start': [e['start'] for e in entities_in_this_span],
-                #    'end': [e['end'] for e in entities_in_this_span],
-                #    'label': [label2num[e['label']] for e in entities_in_this_span],
-                # },
+                "entities": 
+                {
+                   'start': [e['start'] for e in entities_in_this_span],
+                   'end': [e['end'] for e in entities_in_this_span],
+                   'label': [label2num[e['label']] for e in entities_in_this_span],
+                },
                 "relations": [],
             }
         )
