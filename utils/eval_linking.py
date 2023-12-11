@@ -90,7 +90,9 @@ def compare_specs_chunk_avg_based_metrics(pred_mapping, data_sample_words):
         pred_links.append((k, v) if k < v else (v, k))
     pred_links = set(pred_links)
     pred_link_chunks = get_relations_per_chunk(data_sample_words, chunk_entities, pred_links)
+    print(list(len(pred) for pred in pred_link_chunks))
     gt_linking_chunks = get_relations_per_chunk(data_sample_words, chunk_entities, data_sample_words.entities_map)
+    print(list(len(pred) for pred in gt_linking_chunks))
     precs, recs, f1s = [], [], []
     for chunk_ents, chunk_links_pred, chunk_links_gt in zip(chunk_entities, pred_link_chunks, gt_linking_chunks):
         tt, tf, ft, ff = compare_specs(chunk_links_pred, chunk_links_gt)
