@@ -84,7 +84,8 @@ def compare_specs_chunk_based_metrics(pred_mapping, data_sample_words):
 
 
 def compare_specs_chunk_avg_based_metrics(pred_mapping, data_sample_words):
-    _, chunk_entities, _, _ = convert_data_sample_to_input(data_sample_words, tokenizer_pre)
+    _, chunk_entities, _, _ = convert_data_sample_to_input(data_sample_words)
+    print(sum(len(chunk_entities[i]) for i in range(len(chunk_entities))))
     pred_links = []
     for k, v in pred_mapping:
         pred_links.append((k, v) if k < v else (v, k))

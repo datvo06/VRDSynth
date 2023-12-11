@@ -93,7 +93,7 @@ def get_line_bbox(tokenized_inputs, tokenizer, line_words, line_bboxs, size=(224
     ]
     return bbox
 
-def convert_data_sample_to_input(data_sample, tokenizer):
+def convert_data_sample_to_input(data_sample):
     if not pexists(data_sample.img_fp): data_sample.img_fp = data_sample.img_fp.replace('.jpg', '.png')
     image, size = load_image(data_sample.img_fp, size=224)
     original_image, _ = load_image(data_sample.img_fp)
@@ -108,13 +108,13 @@ def convert_data_sample_to_input(data_sample, tokenizer):
             continue
         line_words = [data_sample["words"][w] for w in ent]
         line_bboxs = [data_sample["boxes"][w] for w in ent]
-        tokenized_inputs = tokenizer(
+        tokenized_inputs = tokenizer_pre(
             data_sample.entities_text[i],
             add_special_tokens=False,
             return_offsets_mapping=True,
             return_attention_mask=False,
         )
-        bbox = get_line_bbox(tokenized_inputs, tokenizer, line_words, line_bboxs, size)
+        bbox = get_line_bbox(tokenized_inputs, tokenizer_pre, line_words, line_bboxs, size)
         ent_label = data_sample["labels"][ent[0]]
         id2label[i] = ent_label
         if ent_label  == "other":
@@ -137,9 +137,10 @@ def convert_data_sample_to_input(data_sample, tokenizer):
             tokenized_doc[key] = tokenized_doc[key] + tokenized_inputs[key]
     chunk_size = 512
     chunks = []
-    chunk_entities = [[] for _ in list(range(0, len(tokenized_doc["input_ids"]), chunk_size))]
+    chunk_entities = []
     for chunk_id, index in enumerate(range(0, len(tokenized_doc["input_ids"]), chunk_size)):
         item = {}
+        chunk_entities.append([])
         for k in tokenized_doc:
             item[k] = tokenized_doc[k][index : index + chunk_size]
         entities_in_this_span = []
@@ -153,18 +154,19 @@ def convert_data_sample_to_input(data_sample, tokenizer):
                 entity["end"] = entity["end"] - index
                 global_to_local_map[entity_id] = len(entities_in_this_span)
                 entities_in_this_span.append(entity)
-                chunk_entities[chunk_id].append(entity_id)
+                chunk_entities[-1].append(entity_id)
         relations_in_this_span = []
         item.update(
             {
                 "id": f"{chunk_id}",
                 "image": image,
                 "original_image": original_image,
-                "entities": {
-                    'start': [e['start'] for e in entities_in_this_span],
-                    'end': [e['end'] for e in entities_in_this_span],
-                    'label': [label2num[e['label']] for e in entities_in_this_span],
-                 },
+                "entities": entities_in_this_span,
+                # {
+                #    'start': [e['start'] for e in entities_in_this_span],
+                #    'end': [e['end'] for e in entities_in_this_span],
+                #    'label': [label2num[e['label']] for e in entities_in_this_span],
+                # },
                 "relations": [],
             }
         )
@@ -172,7 +174,6 @@ def convert_data_sample_to_input(data_sample, tokenizer):
     entity_dict = {'start': [entity[0] for i, entity in enumerate(data_sample.entities) if i not in empty_ents],
         'end': [entity[-1] for i, entity in enumerate(data_sample.entities) if i not in empty_ents],
         'label': [id2label[i] for i in range(len(entities)) if i not in empty_ents]}
-    chunk_entities = chunk_entities[:len(chunks)]
     return chunks, chunk_entities, entity_dict, entities_to_index_map
 
 
@@ -196,8 +197,8 @@ def prune_link_not_in_chunk(data_sample, chunk_entities, relations):
 
 
 
-def infer(model, tokenizer_pre, tokenizer, collator, data_sample):
-    chunks, chunk_entities, entity_dict, entities_to_index_map = convert_data_sample_to_input(data_sample, tokenizer_pre)
+def infer(model, tokenizer, collator, data_sample):
+    chunks, chunk_entities, entity_dict, entities_to_index_map = convert_data_sample_to_input(data_sample)
     entities_map = []
     with torch.no_grad():
         for chunk, chunk_entity in zip(chunks, chunk_entities):
@@ -232,7 +233,7 @@ if __name__ == '__main__':
     os.makedirs(f"{args.cache_dir}/inference", exist_ok=True)
     for i, data_sample in enumerate(bar):
         start = time.time()
-        entities_map = infer(model, tokenizer_pre, tokenizer, collator, data_sample)
+        entities_map = infer(model, tokenizer, collator, data_sample)
         times.append(time.time() - start)
         data_sample = construct_entity_level_data(data_sample)
         data_sample.entities_map = entities_map
