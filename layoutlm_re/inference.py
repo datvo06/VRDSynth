@@ -182,18 +182,23 @@ def convert_data_sample_to_input(data_sample):
 def get_relations_per_chunk(data_sample, chunk_entities, relations, entities_to_index_map, filter_mode='kv_hk'):
     relation_full = set(tuple(t) for t in relations)
     relation_spans = [[] for _ in range(len(chunk_entities))]
+    valid_lbl_lists = set()
+    if filter_mode == 'kv_hk':
+        valid_lbl_lists = {('question', 'answer'), ('answer', 'question'), ('header', 'question'), ('question', 'header')}
+    elif filter_mode == 'kv':
+        valid_lbl_lists = {('question', 'answer'), ('answer', 'question')}
     for chunk_id, chunk_ents in enumerate(chunk_entities):
         chunk_ents = [entities_to_index_map[e] for e in chunk_ents]
         relation_spans[chunk_id] = [
                 (i, j) for i, j in relation_full if i in chunk_ents and j in chunk_ents 
-                and (data_sample['labels'][data_sample.entities[i][0]], data_sample['labels'][data_sample.entities[j][0]]) in {('question', 'answer'), ('answer', 'question'), ('header', 'question'), ('question', 'header')}
+                and (data_sample['labels'][data_sample.entities[i][0]], data_sample['labels'][data_sample.entities[j][0]]) in valid_lbl_lists
         ]
     full_rspans = set(itertools.chain.from_iterable(relation_spans))
     assert sum([len(r) for r in relation_spans]) == len(full_rspans), "Overlapping elements"
     return relation_spans
 
-def prune_link_not_in_chunk(data_sample, chunk_entities, relations, entities_to_index_map):
-    relation_spans = get_relations_per_chunk(data_sample, chunk_entities, relations, entities_to_index_map)
+def prune_link_not_in_chunk(data_sample, chunk_entities, relations, entities_to_index_map, linking_type):
+    relation_spans = get_relations_per_chunk(data_sample, chunk_entities, relations, entities_to_index_map, linking_type)
     print(list(len(r) for r in relation_spans))
     all_accepted_rels = list(itertools.chain(*relation_spans))
     excluded_relations = set(relations) - set(all_accepted_rels)

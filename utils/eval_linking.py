@@ -30,7 +30,7 @@ def get_args():
     parser.add_argument('--use_sem', type=bool, default=False, help='use semantic features')
     parser.add_argument('--model', type=str, choices=['layoutlmv3'], default='layoutlmv3')
     parser.add_argument('--eval_strategy', type=str, choices=['full', 'chunk', 'chunk_avg'], default='full')
-    parser.add_argument('--linking_type', type=str, choices=['full', 'kv'], default='full')
+    parser.add_argument('--linking_type', type=str, choices=['kv_hk', 'kv'], default='kv_hk')
     args = parser.parse_args()
     args.dataset = 'funsd' if args.lang == 'en' else 'xfund'
     return args
@@ -57,16 +57,16 @@ def compare_specs(pred_mapping, gt_linking):
     return tt, tf, ft, ff
 
 
-def compare_specs_chunk_based_metrics(pred_mapping, data_sample_words):
+def compare_specs_chunk_based_metrics(pred_mapping, data_sample_words, linking_type):
     _, chunk_entities, _, entities_to_index_map = convert_data_sample_to_input(data_sample_words)
     pred_links = []
     for k, v in pred_mapping:
         pred_links.append((k, v) if k < v else (v, k))
     pred_links = set(pred_links)
-    pred_links, pred_link_excluded = prune_link_not_in_chunk(data_sample_words, chunk_entities, pred_links, entities_to_index_map)
+    pred_links, pred_link_excluded = prune_link_not_in_chunk(data_sample_words, chunk_entities, pred_links, entities_to_index_map, linking_type)
     pred_links = set(pred_links)
 
-    gt_linking, gt_link_excluded = prune_link_not_in_chunk(data_sample_words, chunk_entities, data_sample_words.entities_map, entities_to_index_map)
+    gt_linking, gt_link_excluded = prune_link_not_in_chunk(data_sample_words, chunk_entities, data_sample_words.entities_map, entities_to_index_map, linking_type)
     gt_linking = set([(k, v) if k < v else (v, k) for k, v in gt_linking])
     tt, tf, ft, ff = 0, 0, 0, 0
     tt = len(pred_links.intersection(gt_linking))
@@ -191,7 +191,7 @@ if __name__ == '__main__':
         new_data, ent_map = link_entity(data, nx_g, ps_merging, ps_linking, fps_merging, fps_linking, ps_counter, args.use_layoutlm_output)
         times.append(time.time() - st)
         if args.eval_strategy == 'chunk':
-            new_tt, new_tf, new_ft, new_ff = compare_specs_chunk_based_metrics(ent_map, dataset[i])
+            new_tt, new_tf, new_ft, new_ff = compare_specs_chunk_based_metrics(ent_map, dataset[i], args.linking_type)
         elif args.eval_strategy == 'chunk_avg':
             ext_precs, ext_recs, ext_f1s = compare_specs_chunk_avg_based_metrics(ent_map, dataset[i])
             precs.extend(ext_precs)
