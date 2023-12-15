@@ -1,16 +1,35 @@
+This is the replication package for **VRDSynth - Synthesizing Programs for Multilingual Visually Rich Information Extraction**
 # Running
+To run VRDSynth, we need to do the following steps: (1) setting up layoutXLM environment and training LayoutXLM, (2) setup VRDSynth requirements, (3) running synthesizing algorithms (4) evaluate.
+
+## Setup and train LayoutXLM
 ```sh
-# VRDSynth, Default Relation, 1.0 Float Threashold, Does not Use Semantic
-approach=vrdsynth;rel_type=default;thres=1.0;hops=2;strategy=precision;python -m methods.decisiontree_ps --upper_float_thres ${thres} --hops $hops --rel_type=${rel_type} --cache_dir funsd_cache_word_merging_${approach}_${strategy}_${rel_type}_${thres}_${hops}_false
-
-# VRDSynth for word merging, Default relation, 1.0 Float Threashold, Does not Use Semantic
-approach=vrdsynth;rel_type=default;thres=1.0;hops=2;strategy=precision;python -m methods.decisiontree_ps_entity_grouping --upper_float_thres ${thres} --hops $hops --rel_type=${rel_type} --cache_dir funsd_cache_entity_grouping_${approach}_${strategy}_${rel_type}_${thres}_${hops}_false
-
-approach=vrdsynth;\
-strategy=precision;
-dataset=xfund;\
-rel_type=legacy;\
-thres=1.0;hops=3;\
-for lang in de es fr it ja pt zh;\
-do python -m methods.decisiontree_ps_entity_linking --upper_float_thres ${thres} --rel_type=${rel_type} --hops $hops --dataset ${dataset} --lang ${lang} --mode train;\
-done
+sh setup_layoutxlm_re.sh
+```
+This would setup the transformer repository that contains the LayoutXLMForRelationExtraction model along with corresponding scripts for original evaluation of LayoutXLM. Followed by this, please run the following script:
+```sh
+for lang in en de es fr it ja pt zh; do python -m layoutxlm_re.train; done
+```
+This will fine-tune all LayoutXLM for every single language.
+## Setting up VRDSynth Requirements
+To setup VRDSynth's dependencies, run the following scripts:
+```sh
+python -m pip install -r requirements.txt
+```
+## Synthesizing programs
+We need to run both two scripts, `scripts/miscs/run_synthesis.sh` and `scripts/misc/run_synthesis_precision.sh` (Since RQ2 and RQ3 compare both variations).
+```sh
+sh scripts/miscs/run_synthesis.sh en de es fr it ja pt zh
+sh scripts/miscs/run_synthesis_precision.sh en de es fr it ja pt zh
+```
+Running synthesis would take approximately 2 hours.
+## Evaluation
+For RQ1, run:
+```sh
+sh rq1.sh
+```
+For RQ2, run:
+```sh
+sh rq2.sh
+```
+These scripts would output corresponding performance evaluation along with inference time for each language, method and settings.
