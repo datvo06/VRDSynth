@@ -1,6 +1,6 @@
 from utils.funsd_utils import DataSample, Bbox
 from utils.algorithms import UnionFind
-from typing import List, Tuple
+from typing import List, Tuple, Dict
 from collections import namedtuple, defaultdict
 import itertools
 import networkx as nx
@@ -29,7 +29,11 @@ def construct_entity_level_data(data) -> DataSample:
     entities = []
     entities_map = data['entities_map']
     boxes = []
-    for i, entity in enumerate(data.entities):
+    if isinstance(data.entities, list):
+        itor = enumerate(data.entities)
+    else:
+        itor = data.entities.items()
+    for i, entity in itor:
         entity_words = []
         entity_labels = []
         entity_boxes = []
@@ -48,7 +52,7 @@ def construct_entity_level_data(data) -> DataSample:
         )
         boxes.append(bbox)
 
-    return DataSample(words, labels, entities, entities_map, boxes, data.img_fp)
+    return DataSample(words, labels, entities, entities_map, boxes, data.img_fp, data.entities_texts)
 
 
 def construct_entity_linking_specs(dataset: List[DataSample]):
@@ -58,9 +62,13 @@ def construct_entity_linking_specs(dataset: List[DataSample]):
     for i, datasample in enumerate(dataset):
         entity_datasample = construct_entity_level_data(datasample)
         entity_dataset.append(entity_datasample)
-        parent_entities = defaultdict(set)
+        entities_parents = defaultdict(set)
         for e1, e2 in entity_datasample.entities_map:
-            parent_entities[e1].add(e2)
+            entities_parents[e2].add(e1)
+        parent_entities = defaultdict(set)
+        for e2 in parent_entities:
+            parents_set = tuple(entities_parents[e2])
+            parent_entities[parents_set].add(e2)
         specs.append((i, datasample.entities_map, list(parent_entities.values())))
     return specs, entity_dataset
 
@@ -160,88 +168,15 @@ class Program(Expression):
     def type_name():
         return 'Program'
 
-    def evaluate(self, nx_g_data) -> List[int]:
+    def evaluate(self, nx_g_data) -> List[Tuple[int, int]]:
         raise NotImplementedError
 
+    def collect_find_programs(self):
+        raise NotImplementedError
 
+    def replace_find_programs_with_values(self, values):
+        raise NotImplementedError
 
-class EmptyProgram(Program):
-    def __init__(self):
-        super().__init__()
-
-    @staticmethod
-    def type_name():
-        return 'EmptyProgram'
-
-    @staticmethod
-    def get_arg_type():
-        return []
-
-    def get_args(self):
-        return []
-
-    def evaluate(self, nx_g_data) -> List[int]:
-        return []
-
-    def __str__(self):
-        return '{}'
-
-    def __eq__(self, other):
-        return isinstance(other, EmptyProgram)
-
-
-
-class UnionProgram(Program):
-    def __init__(self, programs: List[Program]):
-        assert isinstance(programs, list)
-        self.programs = programs
-
-    @staticmethod
-    def get_arg_type():
-        return [[Program]]
-
-    @staticmethod
-    def type_name():
-        return 'UnionProgram'
-
-    def get_args(self):
-        return [self.programs]
-
-    def evaluate(self, nx_g_data):
-        return list(set.union(*[set(p.evaluate(nx_g_data)) for p in self.programs]))
-
-    def __str__(self):
-        return '{' + ' | '.join([str(p) for p in self.programs]) + '}'
-
-    def __eq__(self, other):
-        # compare list of programs
-        return set(self.programs) == set(other.programs)
-
-
-class ExcludeProgram(Program):
-    def __init__(self, programs):
-        self.programs = programs
-
-    @staticmethod
-    def get_arg_type():
-        return [[Program]]
-
-    def get_args(self):
-        return [self.programs]
-
-    @staticmethod
-    def type_name():
-        return 'ExcludeProgram'
-
-    def evaluate(self, nx_g_data):
-        return list(set.difference(*[set(p.evaluate(nx_g_data)) for p in self.programs]))
-
-    def __str__(self):
-        return '{' + ' - '.join([str(p) for p in self.programs]) + '}'
-
-    def __eq__(self, other):
-        # compare list of programs
-        return set(self.programs) == set(other.programs)
 
 
 class Literal(Expression):
@@ -338,6 +273,7 @@ class RelationConstraint(Expression):
 
 class FindProgram(Program):
     def __init__(self, word_variables, relation_variables, relation_constraints, constraint, return_variables):
+        self.cache_hash = None
         self.word_variables = word_variables
         # assert that all word variables are unique
         assert len(self.word_variables) == len(set(self.word_variables))
@@ -362,11 +298,18 @@ class FindProgram(Program):
     def type_name():
         return 'FindProgram'
 
+
+    def collect_find_programs(self):
+        return [self]
+
+    def replace_find_programs_with_values(self, eval_mapping):
+        return FixedSetProgram(eval_mapping[self])
+
     def get_args(self):
         return [self.word_variables, self.relation_variables, self.relation_constraint, self.constraint, self.return_variables]
 
 
-    def evaluate(self, nx_g_data):
+    def evaluate(self, nx_g_data) -> List[Tuple[int, int]]:
         # construct a smaller graph
         nx_graph_query = nx.MultiDiGraph()
         # add nodes
@@ -379,7 +322,8 @@ class FindProgram(Program):
         gm = isomorphism.MultiDiGraphMatcher(nx_g_data, nx_graph_query)
         # iterate over all subgraphs
         out_words = []
-        for subgraph in gm.subgraph_isomorphisms_iter():
+        w0 = WordVariable('w0')
+        for subgraph in gm.subgraph_monomorphisms_iter():
             subgraph = {v: k for k, v in subgraph.items()}
             # get the corresponding binding for word_variables and relation_variables
             word_binding = {w: subgraph[w] for w in self.word_variables}
@@ -387,7 +331,8 @@ class FindProgram(Program):
             # check if the binding satisfies the constraints
             if self.constraint.evaluate(word_binding, relation_binding, nx_g_data):
                 if self.return_variables:
-                    out_words.append([word_binding[w] for w in self.return_variables])
+                    out_words.extend(
+                       [(word_binding[w0], word_binding[w]) for w in self.return_variables])
                 else:
                     out_words.append(word_binding)
         if self.return_variables:
@@ -402,10 +347,14 @@ class FindProgram(Program):
         return f'find(({", ".join([str(w) for w in self.word_variables])}), ({", ".join([str(r) for r in self.relation_variables])}), ({", ".join([str(c) for c in self.relation_constraint])}, {str(self.constraint)}, {", ".join([str(w) for w in self.return_variables])})'
 
     def __hash__(self):
-        return hash(str(self))
+        if not hasattr(self, 'cache_hash'):
+            self.cache_hash = None
+        if self.cache_hash is None:
+            self.cache_hash = hash(str(self))
+        return self.cache_hash
 
     def __eq__(self, other):
-        return str(self) == str(other)
+        return hash(self) == hash(other)
 
 
 class StringValue(Expression):
@@ -416,6 +365,200 @@ class StringValue(Expression):
     def type_name():
         return 'StringValue'
 
+
+class FixedSetProgram(Program):
+    def __init__(self, values):
+        self.values = values
+
+    @staticmethod
+    def type_name():
+        return 'FixedSetProgram'
+
+    @staticmethod
+    def get_arg_type():
+        return [[int]]
+
+    def get_args(self):
+        return [self.values]
+
+    def evaluate(self, nx_g_data) -> List[Tuple[int, int]]:
+        return self.values
+
+    def collect_find_programs(self):
+        return []
+
+    def replace_find_programs_with_values(self, values):
+        return self
+
+    def __str__(self):
+        return f'{{{", ".join([str(v) for v in self.values])}}}'
+
+    def __eq__(self, other):
+        return isinstance(other, FixedSetProgram) and self.values == other.values
+
+    def __hash__(self):
+        return hash(str(self))
+
+
+class EmptyProgram(FixedSetProgram):
+    def __init__(self):
+        super().__init__([])
+
+    @staticmethod
+    def type_name():
+        return 'EmptyProgram'
+
+    @staticmethod
+    def get_arg_type():
+        return []
+
+    def get_args(self):
+        return []
+
+    def evaluate(self, nx_g_data) -> List[Tuple[int, int]]:
+        return []
+
+    def collect_find_programs(self):
+        return []
+
+    def replace_find_programs_with_values(self, values):
+        return self
+
+    def __str__(self):
+        return '{}'
+
+    def __eq__(self, other):
+        return isinstance(other, EmptyProgram)
+
+
+    def __hash__(self):
+        return hash(str(self))
+
+
+class UnionProgram(Program):
+    def __init__(self, programs: List[Program]):
+        assert isinstance(programs, list)
+        self.programs = programs
+        self.cache_hash = None
+        self.cache_str = None
+
+    @staticmethod
+    def get_arg_type():
+        return [[Program]]
+
+    @staticmethod
+    def type_name():
+        return 'UnionProgram'
+
+    def get_args(self):
+        return [self.programs]
+
+    def evaluate(self, nx_g_data) -> List[Tuple[int, int]]:
+        return list(set.union(*[set(p.evaluate(nx_g_data)) for p in self.programs]))
+
+    def collect_find_programs(self):
+        fps = []
+        for p in self.programs:
+            fps.extend(p.collect_find_programs())
+        return fps
+
+    def replace_find_programs_with_values(self, values):
+        if self not in values:
+            up = UnionProgram([p.replace_find_programs_with_values(values) for p in self.programs])
+            up = FixedSetProgram(up.evaluate(None))
+            values[self] = up
+        return values[self]
+
+    def __str__(self):
+        if 'cache_str' not in self.__dict__ or not self.cache_str:
+            self.cache_str = '{' + ' | '.join([str(p) for p in self.programs]) + '}'
+        return self.cache_str
+
+    def __eq__(self, other):
+        # compare list of programs
+        return hash(self) == hash(other)
+
+    def __hash__(self):
+        if not hasattr(self, 'cache_hash'):
+            self.cache_hash = None
+        if self.cache_hash is None:
+            self.cache_hash = hash(str(self))
+        return self.cache_hash
+
+
+class ExcludeProgram(Program):
+    def __init__(self, ref_program, excl_programs):
+        self.ref_program = ref_program
+        self.excl_programs = excl_programs
+        self.cache_hash = None
+
+    @staticmethod
+    def get_arg_type():
+        return [Program, [Program]]
+
+    def get_args(self):
+        return [self.ref_program, self.excl_programs]
+
+    @staticmethod
+    def type_name():
+        return 'ExcludeProgram'
+
+    def evaluate(self, nx_g_data) -> List[Tuple[int, int]]:
+        return list(set(self.ref_program.evaluate(nx_g_data)) - set.union(*[set(p.evaluate(nx_g_data)) for p in self.excl_programs]))
+
+    def __str__(self):
+        return f'{{{self.ref_program} - ' + ' | '.join([str(p) for p in self.excl_programs]) + '}}'
+
+    def collect_find_programs(self):
+        fps = []
+        if isinstance(self.ref_program, FindProgram):
+            fps.append(self.ref_program)
+        else:
+            fps.extend(self.ref_program.collect_find_programs())
+        for excl_program in self.excl_programs:
+            if isinstance(excl_program, FindProgram):
+                fps.append(excl_program)
+            else:
+                fps.extend(excl_program.collect_find_programs())
+        return fps
+
+    def replace_find_programs_with_values(self, eval_mapping):
+        if self not in eval_mapping:
+            ref_program = self.ref_program
+            if isinstance(self.ref_program, FindProgram):
+                ref_program = FixedSetProgram(eval_mapping[self.ref_program])
+            excl_programs = [FixedSetProgram(eval_mapping[p]) if isinstance(p, FindProgram) else p.replace_find_programs_with_values(eval_mapping) for p in self.excl_programs]
+            eval_mapping[self] = FixedSetProgram(ExcludeProgram(ref_program, excl_programs).evaluate(None))
+        return eval_mapping[self]
+
+    def reduce(self):
+        ret_reducible = False
+        reducible, new_program = self.ref_program.reduce()
+        ret_reducible |= reducible
+        if reducible:
+            self.ref_program = new_program
+        new_excl_programs = []
+        for excl_program in self.excl_programs:
+            reducible, new_program = excl_program.reduce()
+            ret_reducible |= reducible
+            if reducible:
+                new_excl_programs.append(new_program)
+            else:
+                new_excl_programs.append(excl_program)
+        self.excl_programs = new_excl_programs
+        return ret_reducible, self
+
+
+    def __eq__(self, other):
+        # compare list of programs
+        return hash(self) == hash(other)
+
+    def __hash__(self):
+        if not hasattr(self, 'cache_hash'):
+            self.cache_hash = None
+        if self.cache_hash is None:
+            self.cache_hash = hash(str(self))
+        return self.cache_hash
 
 class FloatValue(Expression):
     def evaluate(self, word_binding, relation_binding, nx_g_data) -> float:
@@ -514,7 +657,10 @@ class SemDist(FloatValue):
         if self.w1 == self.w2:
             return True, FloatConstant(0)
         else:
+            if self.w1.name > self.w2.name:
+                return True, SemDist(self.w2, self.w1)
             return False, self
+
 
 
 class FalseValue(BoolValue, Literal):
@@ -678,7 +824,12 @@ class WordBoxProperty(FloatValue):
 
     def evaluate(self, word_binding, relation_binding, nx_g_data):
         prop = self.prop.evaluate()
-        return nx_g_data.nodes[word_binding[self.word_var]][prop]
+        if prop == 'w':
+            return nx_g_data.nodes[word_binding[self.word_var]]['x1'] - nx_g_data.nodes[word_binding[self.word_var]]['x0']
+        elif prop == 'h':
+            return nx_g_data.nodes[word_binding[self.word_var]]['y1'] - nx_g_data.nodes[word_binding[self.word_var]]['y0']
+        else:
+            return nx_g_data.nodes[word_binding[self.word_var]][prop]
 
     def __str__(self):
         return f'{self.word_var}.{self.prop}'
@@ -854,6 +1005,8 @@ class BooleanEqualConstraint(Constraint):
         elif isinstance(self.lhs, FalseValue) and isinstance(self.rhs, TrueValue):
             return True, FalseValue()
         else:
+            if str(self.lhs) > str(self.rhs):
+                return True, BooleanEqualConstraint(self.rhs, self.lhs)
             return False, self
 
     def get_args(self) -> list:
@@ -899,6 +1052,8 @@ class StringEqualConstraint(Constraint):
                 return True, TrueValue()
             else:
                 return True, FalseValue()
+        if str(self.lhs) > str(self.rhs):
+            return True, StringEqualConstraint(self.rhs, self.lhs)
         return False, self
 
     def get_args(self) -> list:
@@ -994,6 +1149,8 @@ class LabelEqualConstraint(Constraint):
                 return True, TrueValue()
             else:
                 return True, FalseValue()
+        if isinstance(self.lhs, WordLabelProperty) and isinstance(self.rhs, WordLabelProperty) and self.lhs.word_variable.name > self.rhs.word_variable.name:
+            return True, LabelEqualConstraint(self.rhs, self.lhs)
         return False, self
 
 
@@ -1026,6 +1183,8 @@ class RelationLabelEqualConstraint(Constraint):
                 return True, TrueValue()
             else:
                 return True, FalseValue()
+        if isinstance(self.lhs, RelationLabelProperty) and isinstance(self.rhs, RelationLabelProperty) and self.lhs.relation_variable.name > self.rhs.relation_variable.name:
+            return True, RelationLabelEqualConstraint(self.rhs, self.lhs)
         return False, self
 
     def __str__(self):
@@ -1073,6 +1232,10 @@ class FloatEqualConstraint(Constraint):
                                                             (self.lhs == other.rhs and self.rhs == other.lhs))
 
     def reduce(self):
+        if not isinstance(self.lhs, Hole):
+            _, self.lhs = self.lhs.reduce()
+        if not isinstance(self.rhs, Hole):
+            _, self.rhs = self.rhs.reduce()
         if isinstance(self.lhs, FloatConstant) and isinstance(self.rhs, FloatConstant):
             if self.lhs.evaluate() == self.rhs.evaluate():
                 return True, TrueValue()
@@ -1080,62 +1243,9 @@ class FloatEqualConstraint(Constraint):
                 return True, FalseValue()
         if self.lhs == self.rhs:
             return True, TrueValue()
+        if str(self.lhs) > str(self.rhs):
+            return True, FloatEqualConstraint(self.rhs, self.lhs)
         return False, self
-
-    def __hash__(self):
-        return hash(str(self))
-
-class FloatGreaterConstraint(Constraint):
-    def __init__(self, lhs, rhs):
-        assert isinstance(lhs, FloatValue) or (isinstance(lhs, Hole) and issubclass(lhs.cls, FloatValue))
-        assert isinstance(rhs, FloatValue) or (isinstance(rhs, Hole) and issubclass(rhs.cls, FloatValue))
-        self.lhs = lhs
-        self.rhs = rhs
-
-    @staticmethod
-    def get_arg_type():
-        return [FloatValue, FloatValue]
-
-    def get_args(self) -> list:
-        return [self.lhs, self.rhs]
-
-    @staticmethod
-    def type_name():
-        return 'FloatGreaterConstraint'
-
-    def evaluate(self, *values):
-        assert isinstance(self.lhs, FloatValue)
-        assert isinstance(self.rhs, FloatValue)
-        lhs_value = self.lhs.evaluate(*values) if not isinstance(self.lhs, FloatConstant) else self.lhs.evaluate()
-        rhs_value = self.rhs.evaluate(*values) if not isinstance(self.rhs, FloatConstant) else self.rhs.evaluate()
-        return lhs_value > rhs_value
-
-
-    def reduce(self):
-        if isinstance(self.lhs, FloatConstant) and isinstance(self.rhs, FloatConstant):
-            if self.lhs.evaluate() > self.rhs.evaluate():
-                return True, TrueValue()
-            else:
-                return True, FalseValue()
-        elif self.lhs == self.rhs:
-            return True, FalseValue()
-        elif isinstance(self.lhs, WordBoxProperty) and isinstance(self.rhs, WordBoxProperty) and self.lhs.word_var == self.rhs.word_var:
-            if self.lhs.prop == BoxConstantValue("x0") and self.rhs.prop == BoxConstantValue("x1"):
-                return True, FalseValue()
-            elif self.lhs.prop == BoxConstantValue("y0") and self.rhs.prop == BoxConstantValue("y1"):
-                return True, FalseValue()
-            elif self.lhs.prop == BoxConstantValue("x1") and self.rhs.prop == BoxConstantValue("x0"):
-                return True, TrueValue()
-            elif self.lhs.prop == BoxConstantValue("y1") and self.rhs.prop == BoxConstantValue("y0"):
-                return True, TrueValue()
-        return False, self
-
-    def __str__(self):
-        return f'{self.lhs} > {self.rhs}'
-
-    def __eq__(self, other):
-        return (isinstance(other, FloatGreaterConstraint) and self.lhs == other.lhs and self.rhs == other.rhs) or \
-                (isinstance(other, FloatLessConstraint) and self.lhs == other.rhs and self.rhs == other.lhs)
 
     def __hash__(self):
         return hash(str(self))
@@ -1196,12 +1306,71 @@ class FloatLessConstraint(Constraint):
         return hash(str(self))
 
 
+class FloatGreaterConstraint(Constraint):
+    def __init__(self, lhs, rhs):
+        assert isinstance(lhs, FloatValue) or (isinstance(lhs, Hole) and issubclass(lhs.cls, FloatValue))
+        assert isinstance(rhs, FloatValue) or (isinstance(rhs, Hole) and issubclass(rhs.cls, FloatValue))
+        self.lhs = lhs
+        self.rhs = rhs
+
+    @staticmethod
+    def get_arg_type():
+        return [FloatValue, FloatValue]
+
+    def get_args(self) -> list:
+        return [self.lhs, self.rhs]
+
+    @staticmethod
+    def type_name():
+        return 'FloatGreaterConstraint'
+
+    def evaluate(self, *values):
+        assert isinstance(self.lhs, FloatValue)
+        assert isinstance(self.rhs, FloatValue)
+        lhs_value = self.lhs.evaluate(*values) if not isinstance(self.lhs, FloatConstant) else self.lhs.evaluate()
+        rhs_value = self.rhs.evaluate(*values) if not isinstance(self.rhs, FloatConstant) else self.rhs.evaluate()
+        return lhs_value > rhs_value
+
+
+    def reduce(self):
+        if isinstance(self.lhs, FloatConstant) and isinstance(self.rhs, FloatConstant):
+            if self.lhs.evaluate() > self.rhs.evaluate():
+                return True, TrueValue()
+            else:
+                return True, FalseValue()
+        elif self.lhs == self.rhs:
+            return True, FalseValue()
+        elif isinstance(self.lhs, WordBoxProperty) and isinstance(self.rhs, WordBoxProperty) and self.lhs.word_var == self.rhs.word_var:
+            if self.lhs.prop == BoxConstantValue("x0") and self.rhs.prop == BoxConstantValue("x1"):
+                return True, FalseValue()
+            elif self.lhs.prop == BoxConstantValue("y0") and self.rhs.prop == BoxConstantValue("y1"):
+                return True, FalseValue()
+            elif self.lhs.prop == BoxConstantValue("x1") and self.rhs.prop == BoxConstantValue("x0"):
+                return True, TrueValue()
+            elif self.lhs.prop == BoxConstantValue("y1") and self.rhs.prop == BoxConstantValue("y0"):
+                return True, TrueValue()
+        elif str(self.lhs) > str(self.rhs):
+            return True, FloatLessConstraint(self.rhs, self.lhs)
+        return False, self
+
+    def __str__(self):
+        return f'{self.lhs} > {self.rhs}'
+
+    def __eq__(self, other):
+        return (isinstance(other, FloatGreaterConstraint) and self.lhs == other.lhs and self.rhs == other.rhs) or \
+                (isinstance(other, FloatLessConstraint) and self.lhs == other.rhs and self.rhs == other.lhs)
+
+    def __hash__(self):
+        return hash(str(self))
+
+
 class AndConstraint(Constraint):
     def __init__(self, lhs, rhs):
         assert isinstance(lhs, BoolValue) or (isinstance(lhs, Hole) and issubclass(lhs.cls, Constraint)), lhs
         assert isinstance(rhs, BoolValue) or (isinstance(rhs, Hole) and issubclass(rhs.cls, Constraint)), rhs
         self.lhs = lhs
         self.rhs = rhs
+        self.cache_hash = None
 
     @staticmethod
     def get_arg_type():
@@ -1220,6 +1389,10 @@ class AndConstraint(Constraint):
         return self.lhs.evaluate(*values) and self.rhs.evaluate(*values)
 
     def reduce(self):
+        if not isinstance(self.lhs, Hole):
+            lhs_reduced, self.lhs = self.lhs.reduce()
+        if not isinstance(self.rhs, Hole):
+            rhs_reduced, self.rhs = self.rhs.reduce()
         if isinstance(self.lhs, FalseValue):
             return True, FalseValue()
         if isinstance(self.rhs, FalseValue):
@@ -1232,10 +1405,17 @@ class AndConstraint(Constraint):
             return True, self.lhs
         if self.lhs == self.rhs:
             return True, TrueValue()
+        if str(self.lhs) > str(self.rhs):
+            return True, AndConstraint(self.rhs, self.lhs)
         return False, self
         
     def __str__(self):
         return f'({self.lhs} and {self.rhs})'
+
+    def __hash__(self):
+        if not self.cache_hash:
+            self.cache_hash = hash(str(self))
+        return self.cache_hash
 
 
 class OrConstraint(Constraint):
@@ -1262,12 +1442,18 @@ class OrConstraint(Constraint):
         return self.lhs.evaluate(*values) or self.rhs.evaluate(*values)
 
     def reduce(self):
+        if not isinstance(self.lhs, Hole):
+            lhs_reduced, self.lhs = self.lhs.reduce()
+        if not isinstance(self.rhs, Hole):
+            rhs_reduced, self.rhs = self.rhs.reduce()
         if isinstance(self.lhs, TrueValue):
             return True, TrueValue()
         if isinstance(self.rhs, TrueValue):
             return True, TrueValue()
         if isinstance(self.lhs, FalseValue) and isinstance(self.rhs, FalseValue):
             return True, FalseValue()
+        if str(self.lhs) > str(self.rhs):
+            return True, OrConstraint(self.rhs, self.lhs)
         return False, self
 
     def __str__(self):
@@ -1294,6 +1480,8 @@ class NotConstraint(Constraint):
         return not self.constraint.evaluate(*values)
 
     def reduce(self):
+        if not isinstance(self.constraint, Hole):
+            _, self.constraint = self.constraint.reduce()
         if isinstance(self.constraint, TrueValue):
             return True, FalseValue()
         if isinstance(self.constraint, FalseValue):
@@ -1327,6 +1515,12 @@ LiteralReplacement = {
         'BoxConstantValue': [BoxConstantValue('x0'), BoxConstantValue('y0'), BoxConstantValue('x1'), BoxConstantValue('y1')],
         'RelationPropertyConstant': [RelationPropertyConstant('mag'), *[RelationPropertyConstant(f'proj{i}') for i in range(4)]],
         'RelationLabelConstant': [RelationLabelConstant(i) for i in range(4)]
+}
+
+
+ExtendedLiteralReplacement = {
+        **LiteralReplacement,
+        'BoxConstantValue': [BoxConstantValue('x0'), BoxConstantValue('y0'), BoxConstantValue('x1'), BoxConstantValue('y1'), BoxConstantValue('w'), BoxConstantValue('h')],
 }
 
 

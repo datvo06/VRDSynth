@@ -265,6 +265,7 @@ class Graph():
         self.es = []
         self.build_edges()
         self._get_adj_matrix()
+        print(len(self.es))
 
     def build_edges(self):
         cell_list_top_down = sorted(self.nodes, key=lambda cell: cell.y)
@@ -478,8 +479,8 @@ def from_funsd_datasample(data):
     return [(e1.index, e2.index, lbl) for (e1, e2, lbl) in g.es]
 
 
-def build_nx_g_legacy(data, normalize=True):
-    edges = from_funsd_datasample(data)
+def build_nx_g_legacy(data, sem_edges=None):
+    edges = from_funsd_datasample(data) + ([] if not sem_edges else sem_edges)
     # build a networkx graph
     nx_g = nx.MultiDiGraph()
     for i, j, etype in edges:
@@ -495,8 +496,6 @@ def build_nx_g_legacy(data, normalize=True):
         if i not in nx_g.nodes():
             nx_g.add_node(i)
         nx_g.nodes[i].update({'x0': box[0], 'y0': box[1], 'x1': box[2], 'y1': box[3], 'label': label, 'word': word})
-    if not normalize:
-        return nx_g
     # Normalize the mag according to the smallest and largest mag
     mags = [e[2]['mag'] for e in nx_g.edges(data=True)]
     if len(mags) > 1:
@@ -516,6 +515,58 @@ def build_nx_g_legacy(data, normalize=True):
         n['y1'] = (n['y1'] - min_coord_y) / (max_coord_y - min_coord_y)
     return nx_g
 
+
+def build_nx_g_legacy_with_nn(data, sem_edges=None):
+    edges = from_funsd_datasample(data) + ([] if not sem_edges else sem_edges)
+    # build a networkx graph
+    nx_g = nx.MultiDiGraph()
+    boxes = np.array(data['boxes'])         # N 4
+    centers = np.array([(boxes[:, 0] + boxes[:, 2]) / 2.0,
+                        (boxes[:, 1] + boxes[:, 3]) / 2.0]).transpose()
+    dists = np.sqrt(np.sum((centers[:, None, :] - centers[None, :, :]) ** 2, axis=2))
+
+    for i, j, etype in edges:
+        # label is the index of max projection
+        nx_g.add_edge(i, j, mag=dists[i, j], lbl=etype)
+    # Also add nearest neighbors if they are not in the list
+    nns = np.argsort(dists, axis=1)
+    for i in range(len(boxes)):
+        for j in range(1, 3): # Taking 2 other neighbors
+            if (i, nns[i, j], 0) not in edges:
+                # Calculate lbl: right, left, top, bottom
+                vec = centers[nns[i, j]] - centers[i]
+                rad = np.arctan2(vec[1], vec[0])
+                if -np.pi/ 4 < rad <= np.pi / 4:    # right
+                    lbl = 0
+                elif np.pi / 4 < rad <= 3 * np.pi / 4:  # top
+                    lbl = 2
+                elif -3 * np.pi / 4 < rad <= -np.pi / 4: # bottom
+                    lbl = 3
+                else:
+                    lbl = 1
+                nx_g.add_edge(i, nns[i, j], mag=dists[i, nns[i, j]], lbl=lbl)
+    for i, (box, label, word) in enumerate(zip(data.boxes, data.labels, data.words)):
+        if i not in nx_g.nodes():
+            nx_g.add_node(i)
+        nx_g.nodes[i].update({'x0': box[0], 'y0': box[1], 'x1': box[2], 'y1': box[3], 'label': label, 'word': word})
+    # Normalize the mag according to the smallest and largest mag
+    mags = [e[2]['mag'] for e in nx_g.edges(data=True)]
+    if len(mags) > 1:
+        min_mag = min(mags)
+        max_mag = max(mags)
+        for e in nx_g.edges(data=True):
+            e[2]['mag'] = (e[2]['mag'] - min_mag) / (max_mag - min_mag)
+    # normalize the coord according to the largest coord
+    max_coord_x = max([e[1]['x1'] for e in nx_g.nodes(data=True)])
+    max_coord_y = max([e[1]['y1'] for e in nx_g.nodes(data=True)])
+    min_coord_x = min([e[1]['x0'] for e in nx_g.nodes(data=True)])
+    min_coord_y = min([e[1]['y0'] for e in nx_g.nodes(data=True)])
+    for _, n in nx_g.nodes(data=True):
+        n['x0'] = (n['x0'] - min_coord_x) / (max_coord_x - min_coord_x)
+        n['y0'] = (n['y0'] - min_coord_y) / (max_coord_y - min_coord_y)
+        n['x1'] = (n['x1'] - min_coord_x) / (max_coord_x - min_coord_x)
+        n['y1'] = (n['y1'] - min_coord_y) / (max_coord_y - min_coord_y)
+    return nx_g
 
 
 if __name__ == '__main__':

@@ -1,6 +1,5 @@
-
 from utils.funsd_utils import DataSample
-from utils.ps_utils import FindProgram, WordVariable, RelationVariable
+from utils.ps_utils import FindProgram, WordVariable, RelationVariable, ExcludeProgram
 from utils.algorithms import UnionFind
 from networkx import isomorphism
 import networkx as nx
@@ -11,6 +10,8 @@ import itertools
 
 
 def batch_find_program_executor(nx_g, find_programs: List[FindProgram]) -> List[List[Tuple[Dict[WordVariable, str], Dict[RelationVariable, Tuple[WordVariable, WordVariable, int]]]]]:
+    if not find_programs:
+        return []
     # strategy to speed up program executor:
     # find all program that have same set of path (excluding label)
     # iterate through all binding
@@ -80,26 +81,49 @@ def merge_words(data, nx_g, ps):
     return uf, data
 
 
-def link_entity(data, nx_g, ps_merging, ps_linking):
-    uf = UnionFind(len(data['boxes']))
-    out_bindings_merging = batch_find_program_executor(nx_g, ps_merging)
-    out_bindings_linking = batch_find_program_executor(nx_g, ps_linking)
-    ucount = 0
+def batch_program_executor(nx_g, ps, fps):
+    out_bindings = batch_find_program_executor(nx_g, fps)
+    eval_mappings = {}
     w0 = WordVariable('w0')
-    for j, p_bindings in enumerate(out_bindings_merging):
-        return_var = ps_merging[j].return_variables[0]
+    for j, p_bindings in enumerate(out_bindings):
+        return_var = fps[j].return_variables[0]
+        eval_mappings[fps[j]] = []
         for w_binding, r_binding in p_bindings:
             wlast = w_binding[return_var]
-            uf.union(w_binding[w0], wlast)
-            ucount += 1
+            eval_mappings[fps[j]].append((w_binding[w0], wlast))
+    ps = [p.replace_find_programs_with_values(eval_mappings) for p in ps]
+    pairs = itertools.chain(*[p.evaluate(nx_g) for p in ps])
+    return pairs
+
+
+def get_counter_programs(ps_linking):
+    counter_programs = set()
+    for p in ps_linking:
+        if isinstance(p, ExcludeProgram):
+            counter_programs.update(p.excl_programs)
+    return counter_programs
+
+
+def link_entity(data, nx_g, ps_merging, ps_linking, fps_merging, fps_linking, ps_counter=[], use_rem_sem=False):
+    uf = UnionFind(len(data['boxes']))
+    pairs_merging = batch_program_executor(nx_g, ps_merging, fps_merging)
+    pairs_linking = batch_program_executor(nx_g, ps_linking, fps_linking)
+
+    if use_rem_sem:
+        pairs_counter = batch_program_executor(nx_g, ps_counter, fps_linking)
+        pairs_sem = [(i, j) for i, j, k in nx_g.edges(keys=True) if nx_g.edges[i, j, k]['lbl'] == 5]
+        pairs_sem = list([(i, j) for i, j in pairs_sem if (i, j) not in pairs_counter])
+        pairs_linking = itertools.chain(pairs_linking, pairs_sem)
+
+    ucount = 0
+    for w1, w2 in pairs_merging:
+        uf.union(w1, w2)
+        ucount += 1
     print(f"Union count: {ucount}")
     w2c = defaultdict(list)
-    for j, p_bindings in enumerate(out_bindings_linking):
-        return_var = ps_linking[j].return_variables[0]
-        for w_binding, r_binding in p_bindings:
-            wlast = w_binding[return_var]
-            for w in uf.get_group(uf.find(wlast)):
-                w2c[w_binding[w0]].append(w)
+    for w1, w2 in pairs_linking:
+        for _w2 in uf.get_group(uf.find(w2)):
+            w2c[w1].append(_w2)
 
     ent_map = list(itertools.chain.from_iterable([[(w, c) for c in w2c[w]] for w in w2c]))
 

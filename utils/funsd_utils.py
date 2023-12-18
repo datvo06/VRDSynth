@@ -1,134 +1,72 @@
 import json
-import os.path
-from collections import namedtuple
-from typing import List, Tuple, Set, Union
+from collections import namedtuple, defaultdict
+from typing import List, Tuple, Set, Union, Dict
 import glob
+from utils.public_dataset_utils import DATASET_PATH, download_funsd_dataset, download_xfund_dataset
 from utils.relation_building_utils import calculate_relation_set, dummy_calculate_relation_set, calculate_relation
+from utils.xfund_utils import load_xfunsd
 import networkx as nx
 import numpy as np
 import cv2
-from PIL import Image
-
-Bbox = namedtuple('Bbox', ['x0', 'y0', 'x1', 'y1'])
-RELATION_SET = dummy_calculate_relation_set(None, None, None)
-
-class DataSample:
-
-    def __init__(self,
-                 words: List[str],
-                 labels: List[int], entities: List[List[int]],
-                 entities_map: List[Tuple[int, int]],
-                 boxes: List[Bbox],
-                 img_fp: Union[str, Image.Image]=""):
-        self._words = words
-        self._labels = labels
-        self._entities = entities
-        self._entities_map = entities_map
-        self._img_fp = img_fp
-        self._boxes = boxes
-        self._dict = {
-            'words': self._words,
-            'labels': self._labels,
-            'boxes': self._boxes,
-            'entities': self._entities,
-            'entities_map': self._entities_map,
-            'img_fp': img_fp
-        }
-
-    @property
-    def words(self) -> List[str]:
-        return self._words
-
-    @words.setter
-    def words(self, words: List[str]):
-        self._words = words
-        self._dict['words'] = words
-
-    @property
-    def labels(self) -> List[int]:
-        return self._labels
-
-    @labels.setter
-    def labels(self, labels: List[int]):
-        self._labels = labels
-        self._dict['labels'] = labels
-
-    @property
-    def entities(self) -> List[List[int]]:
-        return self._entities
-
-    @entities.setter
-    def entities(self, entities: List[List[int]]):
-        self._entities = entities
-        self._dict['entities'] = entities
-
-    @property
-    def entities_map(self) -> List[Tuple[int, int]]:
-        return self._entities_map
-
-    @entities_map.setter
-    def entities_map(self, entities_map: List[Tuple[int, int]]):
-        self._entities_map = entities_map
-        self._dict['entities_map'] = entities_map
-
-    @property
-    def img_fp(self) -> str:
-        return self._img_fp
-
-    @img_fp.setter
-    def img_fp(self, img_fp: str):
-        self._img_fp = img_fp
-        self._dict['img_fp'] = img_fp
-
-    @property
-    def boxes(self) -> List[Bbox]:
-        return self._boxes
-
-    @boxes.setter
-    def boxes(self, boxes: List[Bbox]):
-        self._boxes = boxes
-        self._dict['boxes'] = boxes
-
-    def __getitem__(self, key):
-        return self._dict[key]
-
-    def to_json(self):
-        return json.dumps(self._dict)
+import os
+from utils.data_sample import Bbox, DataSample
 
 
-def load_data(json_fp, img_fp):
+def load_funsd_data_from_dict(data_dict):
     words = []
     bboxs = []
     labels = []
-    entities = []
     entities_mapping = set()
-    with open(json_fp, 'r', encoding="utf-8") as f:
+    entities = [[] for _ in range(len(data_dict['form']))]
+    entities_text = []
+    for block in data_dict['form']:
+        block_words_and_bbox = block['words']
+        block_labels = [block['label']] * len(block_words_and_bbox)
+        entities[block['id']] = list(range(len(words), len(words) + len(block_words_and_bbox)))
+        entities_text.append(block['text'])
+        for pair in block['linking']:
+            entities_mapping.add(tuple(pair))
+        for w_bbox in block_words_and_bbox:
+            words.append(w_bbox['text'])
+            bboxs.append(Bbox(*w_bbox['box']))
+        labels.extend(block_labels)
+    entities_mapping = list(entities_mapping)
+    return DataSample(words, labels, entities, entities_mapping, bboxs, entities_texts=entities_text)
+
+
+def load_funsd_data_sample(json_fp):
+    with open(json_fp, 'r') as f:
         json_dict = json.load(f)
-        json_dict = json_dict if isinstance(json_dict, list) else json_dict['form']
-        entities = [[] for _ in range(len(json_dict))]
-        for block in json_dict:
-            block_words_and_bbox = block['words']
-            block_labels = [block['label']] * len(block_words_and_bbox)
-            entities[block['id']] = list(range(len(words), len(words) + len(block_words_and_bbox)))
-            for pair in block['linking']:
-                entities_mapping.add(tuple(pair))
-            for w_bbox in block_words_and_bbox:
-                words.append(w_bbox['text'])
-                bboxs.append(Bbox(*w_bbox['box']))
-            labels.extend(block_labels)
-    entities_mapping = list(sorted(entities_mapping))
-    for i, pair in enumerate(entities_mapping):
-        print(words[pair[0]], "to", words[pair[1]])
-    print(entities_mapping)
-    return DataSample(words, labels, entities, entities_mapping, bboxs, img_fp)
+        return load_funsd_data_from_dict(json_dict)
 
-
-def load_dataset(annotation_dir, img_dir):
+def load_funsd(annotation_dir, img_dir):
     dataset = []
     for json_fp in glob.glob(annotation_dir + '/*.json'):
         img_fp = img_dir + '/' + json_fp.split('/')[-1].split('.')[0] + '.jpg'
-        dataset.append(load_data(json_fp, img_fp))
+        data_sample = load_funsd_data_sample(json_fp)
+        data_sample.img_fp = img_fp
+        dataset.append(data_sample)
     return dataset
+
+
+def load_dataset(dataset='funsd', **dataset_opt) -> List[DataSample]:
+    if dataset == 'funsd':
+        if not os.path.exists(DATASET_PATH[dataset]):
+            download_funsd_dataset()
+        subdir = "training_data" if dataset_opt['mode'] == 'train' else "testing_data"
+        return load_funsd(
+                f"{DATASET_PATH[dataset]}/{subdir}/annotations",
+                f"{DATASET_PATH[dataset]}/{subdir}/images")
+    elif dataset == 'xfund':
+        dataset_dir = DATASET_PATH[f"{dataset}/{dataset_opt['lang']}"]
+        if not os.path.exists(dataset_dir):
+            download_xfund_dataset(dataset_opt['lang'])
+        mode = dataset_opt['mode']
+        mode = 'val' if mode == 'test' else mode
+        return load_xfunsd(dataset_dir, mode, dataset_opt['lang'])
+    else:
+        raise NotImplementedError(f"Dataset {dataset} not implemented")
+
 
 
 def build_nx_g(datasample: DataSample, relation_set: Set[Tuple[str, str, str]],
@@ -171,7 +109,10 @@ def build_nx_g(datasample: DataSample, relation_set: Set[Tuple[str, str, str]],
 
 
 def viz_data(data, nx_g):
-    img = cv2.imread(data.img_fp.replace('.jpg', '.png'))
+    if isinstance(data.img_fp, str) and not os.path.exists(data.img_fp):
+        data.img_fp = data.img_fp.replace('.jpg', '.png')
+    img = cv2.imread(data.img_fp)
+    assert img is not None, f"Image {data.img_fp} not found"
     for i in range(len(data['boxes'])):
         # 1. Crop the box
         box = data['boxes'][i]
@@ -215,69 +156,11 @@ def viz_data(data, nx_g):
     return img
 
 
-def viz_data(data, nx_g):
-    if isinstance(data.img_fp, str):
-        if not os.path.exists(data.img_fp):
-            data.img_fp = data.img_fp.replace('.jpg', '.png')
-        img = cv2.imread(data.img_fp)
-    else:
-        img = data.img_fp
-
-    # if image is grayscale, convert to BGR 
-    if len(img.shape) == 2:
-        img = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
-    for i in range(len(data['boxes'])):
-        # 1. Crop the box
-        box = data['boxes'][i]
-        cropped_img = img[box[1]:box[3], box[0]:box[2]]
-        # 2. Draw the box
-        # If answer, green
-        if data['labels'][i] == 'answer':
-            color = (0, 255, 0)
-            color_edge = (0, 128, 0)
-        elif data['labels'][i] == 'question':
-            # question: blue
-            color = (255, 0, 0)
-            color_edge = (128, 0, 0)
-        elif data['labels'][i] == 'header':
-            color = (0, 255, 255)
-            color_edge = (0, 128, 128)
-        else:
-            color = (255, 255, 255)
-            color_edge = (128, 128, 128)
-        colored_rect = np.zeros(cropped_img.shape, dtype=np.uint8)
-        colored_rect[:] = color
-        alpha = 0.5
-        res = cv2.addWeighted(cropped_img, alpha, colored_rect, 1 - alpha, 0)
-        img[box[1]:box[3], box[0]:box[2]] = res
-        # Draw box edge
-        cv2.rectangle(img, (box[0], box[1]), (box[2], box[3]), color_edge, 2)
-    # Draw the relation
-    for relation in nx_g.edges(data=True):
-        # label is the index of max projection
-        label = relation[2]['lbl']
-        # top and down: blue
-        # left and right: red
-        if label in [0, 1]:
-            color = (255, 0, 0)
-        else:
-            color = (0, 0, 255)
-        i, j = relation[:2]
-        center_i = (int((data['boxes'][i][0] + data['boxes'][i][2]) / 2), int((data['boxes'][i][1] + data['boxes'][i][3]) / 2))
-        center_j = (int((data['boxes'][j][0] + data['boxes'][j][2]) / 2), int((data['boxes'][j][1] + data['boxes'][j][3]) / 2))
-        cv2.line(img, center_i, center_j, color, 2)
-    return img
-
 
 def viz_data_no_rel(data):
-    if isinstance(data.img_fp, str):
-        if not os.path.exists(data.img_fp):
-            data.img_fp = data.img_fp.replace('.jpg', '.png')
-        img = cv2.imread(data.img_fp)
-    else:
-        img = data.img_fp
-    if len(img.shape) == 2:
-        img = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
+    if isinstance(data.img_fp, str) and not os.path.exists(data.img_fp):
+        data.img_fp = data.img_fp.replace('.jpg', '.png')
+    img = cv2.imread(data.img_fp)
     for i in range(len(data['boxes'])):
         # 1. Crop the box
         box = data['boxes'][i]
@@ -297,13 +180,10 @@ def viz_data_no_rel(data):
         else:
             color = (255, 255, 255)
             color_edge = (128, 128, 128)
-
         colored_rect = np.zeros(cropped_img.shape, dtype=np.uint8)
         colored_rect[:] = color
         alpha = 0.5
-        res = cv2.addWeighted(cropped_img, alpha, colored_rect, 1 - alpha, 0, cropped_img)
-        if res is None:
-            continue
+        res = cv2.addWeighted(cropped_img, alpha, cropped_img, 1 - alpha, 0, colored_rect)
         img[box[1]:box[3], box[0]:box[2]] = res
         # Draw box edge
         cv2.rectangle(img, (box[0], box[1]), (box[2], box[3]), color_edge, 2)
@@ -311,14 +191,9 @@ def viz_data_no_rel(data):
 
 
 def viz_data_entity_mapping(data):
-    if isinstance(data.img_fp, str):
-        if not os.path.exists(data.img_fp):
-            data.img_fp = data.img_fp.replace('.jpg', '.png')
-        img = cv2.imread(data.img_fp)
-    else:
-        img = data.img_fp
-    if len(img.shape) == 2:
-        img = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
+    if isinstance(data.img_fp, str) and not os.path.exists(data.img_fp):
+        data.img_fp = data.img_fp.replace('.jpg', '.png')
+    img = cv2.imread(data.img_fp)
     for i in range(len(data['boxes'])):
         # 1. Crop the box
         box = data['boxes'][i]
@@ -341,7 +216,7 @@ def viz_data_entity_mapping(data):
         colored_rect = np.zeros(cropped_img.shape, dtype=np.uint8)
         colored_rect[:] = color
         alpha = 0.5
-        res = cv2.addWeighted(cropped_img, alpha, colored_rect, 1 - alpha, 0)
+        res = cv2.addWeighted(cropped_img, alpha, cropped_img, 1 - alpha, 0, colored_rect)
         img[box[1]:box[3], box[0]:box[2]] = res
         # Draw box edge
         cv2.rectangle(img, (box[0], box[1]), (box[2], box[3]), color_edge, 2)
