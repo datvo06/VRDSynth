@@ -87,6 +87,7 @@ class XfunReTrainer(FunsdTrainer):
         logger.info("***** Running %s *****", description)
         logger.info("  Num examples = %d", num_examples)
         logger.info("  Batch size = %d", batch_size)
+        print(num_examples, batch_size)
 
         model.eval()
 
