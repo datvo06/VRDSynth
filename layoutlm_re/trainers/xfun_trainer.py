@@ -8,7 +8,7 @@ from torch import nn
 from torch.utils.data import DataLoader, Dataset
 
 from transformers.trainer_utils import EvalPrediction, PredictionOutput, speed_metrics
-from transformers.utils import logging
+import logging
 
 from .funsd_trainer import FunsdTrainer
 
