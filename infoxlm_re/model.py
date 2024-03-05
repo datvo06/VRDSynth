@@ -4,6 +4,7 @@ import copy
 
 from typing import Optional, Tuple, Union
 from transformers.utils import ModelOutput
+from dataclasses import dataclass
 
 class BiaffineAttention(nn.Module):
     """Implements a biaffine attention operator for binary relation classification.
