@@ -39,7 +39,8 @@ if __name__ == '__main__':
     train_dataset = dataset['train']
     test_dataset = dataset['validation']
 
-    model, tokenizer = get_model_and_tokenizer(args)
+    model, _ = get_model_and_tokenizer(args)
+    tokenizer = AutoTokenizer.from_pretrained("microsoft/layoutxlm-base")
     feature_extractor = LayoutLMv2FeatureExtractor(apply_ocr=False)
     training_args = TrainingArguments(output_dir=f"infoxlm-finetuned-xfund-{args.lang}-re",
                                       overwrite_output_dir=True,
