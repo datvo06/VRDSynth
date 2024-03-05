@@ -218,7 +218,6 @@ class InfoXLMForRelationExtraction(nn.Module):
         outputs = self.model(
             input_ids=input_ids,
         )
-        print(outputs)
 
         seq_length = input_ids.size(1)
         sequence_output = outputs[0][:, :seq_length]
