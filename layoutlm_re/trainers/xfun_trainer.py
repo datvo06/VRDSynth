@@ -179,7 +179,8 @@ class XfunReTrainer(FunsdTrainer):
 
         self.args.local_rank = -1
         eval_dataloader = self.get_eval_dataloader(eval_dataset)
-        self.args.local_rank = torch.distributed.get_rank()
+        # Not intending to do distributed training
+        # self.args.local_rank = torch.distributed.get_rank()
 
         start_time = time.time()
 
