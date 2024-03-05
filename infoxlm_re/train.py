@@ -46,7 +46,7 @@ if __name__ == '__main__':
                                       overwrite_output_dir=True,
                                       remove_unused_columns=False,
                                       # fp16=True, -> led to a loss of 0
-                                      max_steps=40000,
+                                      max_steps=60000,
                                       save_total_limit=1,
                                       per_device_train_batch_size=2,
                                       per_device_eval_batch_size=2,
