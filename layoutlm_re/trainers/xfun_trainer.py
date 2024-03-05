@@ -17,7 +17,7 @@ if version.parse(torch.__version__) >= version.parse("1.6"):
     _is_native_amp_available = True
     from torch.cuda.amp import autocast
 
-logger = logging.get_logger(__name__)
+logger = logging.getLogger(__name__)
 stream_handler = logging.StreamHandler()
 stream_handler.setLevel(logging.INFO)  # Set to whatever level you need
 formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -87,7 +87,6 @@ class XfunReTrainer(FunsdTrainer):
         logger.info("***** Running %s *****", description)
         logger.info("  Num examples = %d", num_examples)
         logger.info("  Batch size = %d", batch_size)
-        print(num_examples, batch_size)
 
         model.eval()
 
