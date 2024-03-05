@@ -198,6 +198,7 @@ class RelationExtractionOutput(ModelOutput):
 
 class InfoXLMForRelationExtraction(nn.Module):
     def __init__(self, model):
+        super().__init__()
         self.model = model
         self.relation_extraction_decoder = RegionExtractionDecoder(
             model.config)
