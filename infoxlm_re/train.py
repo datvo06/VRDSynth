@@ -4,7 +4,7 @@ from .model import InfoXLMForRelationExtraction
 import sys
 from datasets import load_dataset
 from transformers import TrainingArguments
-from unilm.layoutlmft.layoutlmft.trainers import XfunReTrainer
+from layoutlm_re.trainers import XfunReTrainer
 from layoutlm_re.train import compute_metrics, DataCollatorForKeyValueExtraction
 import argparse
 
