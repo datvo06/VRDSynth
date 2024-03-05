@@ -2,7 +2,7 @@ This is the replication package for **VRDSynth - Synthesizing Programs for Multi
 # Running
 To run VRDSynth, we need to do the following steps: (1) setting up layoutXLM environment and training LayoutXLM, (2) setup VRDSynth requirements, (3) running synthesizing algorithms (4) evaluate.
 
-## Setup and train LayoutXLM
+## Setup and train LayoutXLM, InfoXLM and 
 ```sh
 sh setup_layoutxlm_re.sh
 ```

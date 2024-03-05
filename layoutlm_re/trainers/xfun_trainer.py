@@ -18,7 +18,11 @@ if version.parse(torch.__version__) >= version.parse("1.6"):
     from torch.cuda.amp import autocast
 
 logger = logging.get_logger(__name__)
-
+stream_handler = logging.StreamHandler()
+stream_handler.setLevel(logging.INFO)  # Set to whatever level you need
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+stream_handler.setFormatter(formatter)
+logger.addHandler(stream_handler)
 
 class XfunSerTrainer(FunsdTrainer):
     pass
