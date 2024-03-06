@@ -6,14 +6,14 @@ from typing import Optional, Tuple, Union
 from transformers.utils import ModelOutput
 from dataclasses import dataclass
 
-from infoxlm_re.model import RelationExtractionOutput, RelationExtractionDecoder
+from infoxlm_re.model import RelationExtractionOutput, RegionExtractionDecoder
 
 
 class XLMRoberaForRelationExtraction(nn.Module):
     def __init__(self, model: nn.Module):
         super().__init__()
         self.model = model
-        self.decoder = RelationExtractionDecoder(model.config)
+        self.decoder = RegionExtractionDecoder(model.config)
         self.dropout = nn.Dropout(self.model.config.hidden_dropout_prob)
 
     def forward(self, input_ids,

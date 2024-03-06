@@ -15,7 +15,7 @@ This will fine-tune all LayoutXLM for every single language.
 ### Finetuning InfoXLM
 To fine-tune InfoXLM, please run the following scripts:
 ```sh
-for lang in en de es fr it ja pt zh; do python -m infoxlm_re.train --lang ${lang} --model_type infoxlm-base; done
+for lang in en de es fr it ja pt zh; do python -m infoxlm_re.train --lang ${lang} --model_type infoxlm-base > train_infoxlm_base_${lang}.log; done
 for lang in en de es fr it ja pt zh; do python -m infoxlm_re.train --lang ${lang} --model_type infoxlm-large; done
 ```
 This will fine-tune all InfoXLM-base and InfoXLM-large for every single language.
@@ -23,7 +23,7 @@ This will fine-tune all InfoXLM-base and InfoXLM-large for every single language
 ### Finetuning XLM-Roberta
 To fine-tune XLM-Roberta, please run the following scripts:
 ```sh
-for lang in en de es fr it ja pt zh; do python -m xlmroberta_re.train --lang ${lang} --model_type xlm-roberta-base; done
+for lang in en de es fr it ja pt zh; do python -m xlmroberta_re.train --lang ${lang} --model_type xlm-roberta-base > train_xlmroberta_base_${lang}.log; done
 for lang in en de es fr it ja pt zh; do python -m xlmroberta_re.train --lang ${lang} --model_type xlm-roberta-large; done
 ```
 
