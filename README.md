@@ -2,15 +2,31 @@ This is the replication package for **VRDSynth - Synthesizing Programs for Multi
 # Running
 To run VRDSynth, we need to do the following steps: (1) setting up layoutXLM environment and training LayoutXLM, (2) setup VRDSynth requirements, (3) running synthesizing algorithms (4) evaluate.
 
-## Setup and train LayoutXLM, InfoXLM and 
+## Setup and train LayoutXLM, InfoXLM and XLM-Roberta
 ```sh
 sh setup_layoutxlm_re.sh
 ```
 This would setup the transformer repository that contains the LayoutXLMForRelationExtraction model along with corresponding scripts for original evaluation of LayoutXLM. Followed by this, please run the following script:
 ```sh
-for lang in en de es fr it ja pt zh; do python -m layoutxlm_re.train; done
+for lang in en de es fr it ja pt zh; do python -m layoutxlm_re.train ${lang}; done
 ```
 This will fine-tune all LayoutXLM for every single language.
+
+### Finetuning InfoXLM
+To fine-tune InfoXLM, please run the following scripts:
+```sh
+for lang in en de es fr it ja pt zh; do python -m infoxlm_re.train --lang ${lang} --model_type infoxlm-base; done
+for lang in en de es fr it ja pt zh; do python -m infoxlm_re.train --lang ${lang} --model_type infoxlm-large; done
+```
+This will fine-tune all InfoXLM-base and InfoXLM-large for every single language.
+
+### Finetuning XLM-Roberta
+To fine-tune XLM-Roberta, please run the following scripts:
+```sh
+for lang in en de es fr it ja pt zh; do python -m xlmroberta_re.train --lang ${lang} --model_type xlm-roberta-base; done
+for lang in en de es fr it ja pt zh; do python -m xlmroberta_re.train --lang ${lang} --model_type xlm-roberta-large; done
+```
+
 ## Setting up VRDSynth Requirements
 To setup VRDSynth's dependencies, run the following scripts:
 ```sh
