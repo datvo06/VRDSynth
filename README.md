@@ -24,7 +24,7 @@ This will fine-tune all InfoXLM-base and InfoXLM-large for every single language
 To fine-tune XLM-Roberta, please run the following scripts:
 ```sh
 for lang in en de es fr it ja pt zh; do python -m xlmroberta_re.train --lang ${lang} --model_type xlm-roberta-base > train_xlmroberta_base_${lang}.log; done
-for lang in en de es fr it ja pt zh; do python -m xlmroberta_re.train --lang ${lang} --model_type xlm-roberta-large; done
+for lang in en de es fr it ja pt zh; do python -m xlmroberta_re.train --lang ${lang} --model_type xlm-roberta-large > train_xlmroberta_large_${lang}.log; done
 ```
 
 ## Setting up VRDSynth Requirements
