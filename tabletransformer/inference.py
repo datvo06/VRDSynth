@@ -902,6 +902,7 @@ def main():
         if not os.path.exists(data.img_fp):
             data.img_fp = data.img_fp.replace(".jpg", ".png")
         img = Image.open(data.img_fp)
+        img = img.convert('RGB')
         print("Image loaded.")
         tokens = [{}] * len(data.words)
         assert isinstance(data.entities, list), "Data entities has to be a list of words"
