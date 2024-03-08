@@ -910,7 +910,7 @@ def main():
         for eidx, widxs in enumerate(entities):
             for widx in widxs:
                 tokens[widx] = {
-                    'word': data.words[widx],
+                    'text': data.words[widx],
                     'bbox': data.boxes[widx],
                     'entity': eidx,
                     'block_num': eidx,
