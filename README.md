@@ -49,3 +49,9 @@ For RQ2, run:
 sh rq2.sh
 ```
 These scripts would output corresponding performance evaluation along with inference time for each language, method and settings.
+
+
+For RQ4, run:
+```
+sh rq4.sh
+```
