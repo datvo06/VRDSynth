@@ -110,10 +110,6 @@ def get_args():
     parser.add_argument('--mode',
                         help="The processing to apply to the input image and tokens",
                         choices=['detect', 'recognize', 'extract'])
-    parser.add_argument('--structure_config_path',
-                        help="Filepath to the structure model config file")
-    parser.add_argument('--detection_config_path',
-                        help="Filepath to the detection model config file")
     parser.add_argument('--detection_device', default="cuda")
     parser.add_argument('--structure_device', default="cuda")
     parser.add_argument('--crops', '-p', action='store_true',
@@ -885,6 +881,8 @@ def main():
     args.out_dir = f"table_{args.mode}_{args.dataset}_{args.lang}"
     args.detection_model_path = "pubtables1m_detection_detr_r18.pth"
     args.structure_model_path = "TATR-v1.1-All-msft.pth"
+    args.detection_config_path = "tabletransformer/detection_config.json"
+    args.structure_config_path = "tabletransformer/structure_config.json"
 
     if not args.out_dir is None and not os.path.exists(args.out_dir):
         os.makedirs(args.out_dir)
