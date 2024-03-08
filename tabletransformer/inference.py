@@ -899,6 +899,8 @@ def main():
     # Load images
     dataset = load_dataset(args.dataset, mode=args.dataset_mode)
     for i, data in enumerate(dataset):
+        if not os.path.exists(data.img_fp):
+            data.img_fp = data.img_fp.replace(".jpg", ".png")
         img = Image.open(data.img_fp)
         print("Image loaded.")
         tokens = [{}] * len(data.words)
