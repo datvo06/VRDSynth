@@ -835,6 +835,7 @@ class TableExtractionPipeline(object):
 
 def output_result(key, val, args, img, img_file):
     ext = ".jpg" if img_file.endswith(".jpg") else ".png"
+    os.makedirs(args.output_dir, exist_ok=True)
     if key == 'objects':
         if args.verbose:
             print(val)
