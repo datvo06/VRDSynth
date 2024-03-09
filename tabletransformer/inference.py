@@ -845,7 +845,7 @@ class TableExtractionPipeline(object):
     def extract(self, img: Image.Image, tokens=None, out_objects=True, out_crops=False, out_cells=False,
                 out_html=False, out_csv=False, crop_padding=10):
 
-        detect_out = self.detect(img, tokens=tokens, out_objects=False, out_crops=True,
+        detect_out = self.detect(img, tokens=tokens, out_objects=True, out_crops=True,
                                  crop_padding=crop_padding)
         cropped_tables = detect_out['crops']
 
