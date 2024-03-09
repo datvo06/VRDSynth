@@ -980,9 +980,9 @@ def main():
             detect_out, extracted_tables = pipe.extract(img, tokens, out_objects=args.objects, out_cells=args.csv,
                                             out_html=args.html, out_csv=args.csv,
                                             crop_padding=args.crop_padding)
-            print("After calling extract: ", img.size)
-            output_result('objects', detect_out['objects'], args, img, out_img_fp)
-            print("Table(s) extracted.")
+            if 'objects' in detect_out:
+                print("Writing table objects")
+                output_result('objects', detect_out['objects'], args, img, out_img_fp)
 
             for table_idx, extracted_table in enumerate(extracted_tables):
                 for key, val in extracted_table.items():
