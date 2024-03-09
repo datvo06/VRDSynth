@@ -981,8 +981,7 @@ def main():
                                             out_html=args.html, out_csv=args.csv,
                                             crop_padding=args.crop_padding)
             print("After calling extract: ", img.size)
-            for key, val in detect_out.items():
-                output_result(key, val, args, img, out_img_fp)
+            output_result('objects', detect_out['objects'], args, img, out_img_fp)
             print("Table(s) extracted.")
 
             for table_idx, extracted_table in enumerate(extracted_tables):
