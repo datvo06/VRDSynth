@@ -840,7 +840,6 @@ def output_result(key, val, args, img, img_file):
         if args.verbose:
             print(val)
         out_file = img_file.replace(ext, "_objects.json")
-        print(out_file)
         with open(os.path.join(args.out_dir, out_file), 'w') as f:
             json.dump(val, f)
         if args.visualize:
@@ -924,7 +923,7 @@ def main():
                 }
 
 
-        out_img_fp = os.path.join(args.out_dir, os.path.split(data.img_fp)[1])
+        out_img_fp = os.path.split(data.img_fp)[1]
         if args.mode == 'recognize':
             extracted_table = pipe.recognize(img, tokens, out_objects=args.objects, out_cells=args.csv,
                                 out_html=args.html, out_csv=args.csv)
