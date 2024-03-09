@@ -857,17 +857,17 @@ def output_result(key, val, args, img, img_file):
                     with open(os.path.join(args.out_dir, out_words_file), 'w') as f:
                         json.dump(cropped_table['tokens'], f)
             elif key == 'cells':
-                out_file = img_file.replace(".jpg", "_{}_objects.json".format(idx))
+                out_file = img_file.replace(ext, "_{}_objects.json".format(idx))
                 with open(os.path.join(args.out_dir, out_file), 'w') as f:
                     json.dump(elem, f)
                 if args.verbose:
                     print(elem)
                 if args.visualize:
-                    out_file = img_file.replace(".jpg", "_fig_cells.jpg")
+                    out_file = img_file.replace(ext, "_fig_cells.jpg")
                     out_path = os.path.join(args.out_dir, out_file)
                     visualize_cells(img, elem, out_path)
             else:
-                out_file = img_file.replace(".jpg", "_{}.{}".format(idx, key))
+                out_file = img_file.replace(ext, "_{}.{}".format(idx, key))
                 with open(os.path.join(args.out_dir, out_file), 'w') as f:
                     f.write(elem)
                 if args.verbose:
@@ -880,7 +880,7 @@ def main():
     print('-' * 100)
 
     args.dataset = 'funsd' if args.lang == 'en' else 'xfund'
-    args.out_dir = f"table_{args.mode}_{args.dataset}_{args.lang}"
+    args.out_dir = f"table_{args.mode}_{args.dataset}_{args.dataset_mode}_{args.lang}"
     args.detection_model_path = "pubtables1m_detection_detr_r18.pth"
     args.structure_model_path = "TATR-v1.1-All-msft.pth"
     args.detection_config_path = "tabletransformer/detection_config.json"
