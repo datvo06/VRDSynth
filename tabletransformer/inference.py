@@ -23,6 +23,7 @@ from . import postprocess
 from .detr.models import build_model
 from utils.funsd_utils import load_dataset
 from typing import List
+from utils.misc import pexists, pjoin
 
 def get_model(args, device):
     """
@@ -740,6 +741,15 @@ class TableExtractionPipeline(object):
         return self.extract(self, page_image, page_tokens)
 
     def detect(self, img, tokens=None, out_objects=True, out_crops=False, crop_padding=10):
+        '''
+        Detects tables in the input image.
+        out_format = {
+            'objects': [
+            ],
+            'crops': [
+            ]
+        }
+        '''
         out_formats = {}
         if self.det_model is None:
             print("No detection model loaded.")
@@ -830,7 +840,7 @@ class TableExtractionPipeline(object):
             extracted_table['tokens'] = tokens
             extracted_tables.append(extracted_table)
 
-        return extracted_tables
+        return detect_out, extracted_tables
 
 
 def output_result(key, val, args, img, img_file):
@@ -840,11 +850,11 @@ def output_result(key, val, args, img, img_file):
         if args.verbose:
             print(val)
         out_file = img_file.replace(ext, "_objects.json")
-        with open(os.path.join(args.out_dir, out_file), 'w') as f:
+        with open(pjoin(args.out_dir, out_file), 'w') as f:
             json.dump(val, f)
         if args.visualize:
             out_file = img_file.replace(ext, "_fig_tables.jpg")
-            out_path = os.path.join(args.out_dir, out_file)
+            out_path = pjoin(args.out_dir, out_file)
             visualize_detected_tables(img, val, out_path)
     elif not key == 'image' and not key == 'tokens':
         for idx, elem in enumerate(val):
@@ -853,42 +863,44 @@ def output_result(key, val, args, img, img_file):
             if key == 'crops':
                 for idx, cropped_table in enumerate(val):
                     out_img_file = img_file.replace(ext, "_table_{}.jpg".format(idx))
-                    cropped_table['image'].save(os.path.join(args.out_dir,
+                    cropped_table['image'].save(pjoin(args.out_dir,
                                                                 out_img_file))
                     out_words_file = out_img_file.replace(ext, "_words.json")
-                    with open(os.path.join(args.out_dir, out_words_file), 'w') as f:
+                    with open(pjoin(args.out_dir, out_words_file), 'w') as f:
                         json.dump(cropped_table['tokens'], f)
             elif key == 'cells':
                 out_file = img_file.replace(ext, "_{}_objects.json".format(idx))
-                with open(os.path.join(args.out_dir, out_file), 'w') as f:
+                with open(pjoin(args.out_dir, out_file), 'w') as f:
                     json.dump(elem, f)
                 if args.verbose:
                     print(elem)
                 if args.visualize:
                     out_file = img_file.replace(ext, "_fig_cells.jpg")
-                    out_path = os.path.join(args.out_dir, out_file)
+                    out_path = pjoin(args.out_dir, out_file)
                     visualize_cells(img, elem, out_path)
             else:
                 out_file = img_file.replace(ext, "_{}.{}".format(idx, key))
-                with open(os.path.join(args.out_dir, out_file), 'w') as f:
+                with open(pjoin(args.out_dir, out_file), 'w') as f:
                     f.write(elem)
                 if args.verbose:
                     print(elem)
                         
 
+def get_outdir_name(mode, dataset, dataset_mode, lang):
+    return f"table_{mode}_{dataset}_{dataset_mode}_{lang}"
 def main():
     args = get_args()
     print(args.__dict__)
     print('-' * 100)
 
     args.dataset = 'funsd' if args.lang == 'en' else 'xfund'
-    args.out_dir = f"table_{args.mode}_{args.dataset}_{args.dataset_mode}_{args.lang}"
+    args.out_dir = get_outdir_name(args.mode, args.dataset, args.dataset_mode, args.lang)
     args.detection_model_path = "pubtables1m_detection_detr_r18.pth"
     args.structure_model_path = "TATR-v1.1-All-msft.pth"
     args.detection_config_path = "tabletransformer/detection_config.json"
     args.structure_config_path = "tabletransformer/structure_config.json"
 
-    if not args.out_dir is None and not os.path.exists(args.out_dir):
+    if not args.out_dir is None and not pexists(args.out_dir):
         os.makedirs(args.out_dir, exist_ok=True)
     args.output_dir = args.out_dir
 
@@ -904,7 +916,7 @@ def main():
     # Load images
     dataset = load_dataset(args.dataset, mode=args.dataset_mode, lang=args.lang)
     for i, data in enumerate(dataset):
-        if not os.path.exists(data.img_fp):
+        if not pexists(data.img_fp):
             data.img_fp = data.img_fp.replace(".jpg", ".png")
         ext = ".jpg" if data.img_fp.endswith(".jpg") else ".png"
         img = Image.open(data.img_fp)
@@ -943,9 +955,11 @@ def main():
                 output_result(key, val, args, img, out_img_fp)
 
         if args.mode == 'extract':
-            extracted_tables = pipe.extract(img, tokens, out_objects=args.objects, out_cells=args.csv,
+            detect_out, extracted_tables = pipe.extract(img, tokens, out_objects=args.objects, out_cells=args.csv,
                                             out_html=args.html, out_csv=args.csv,
                                             crop_padding=args.crop_padding)
+            for key, val in detect_out.items():
+                output_result(key, val, args, img, out_img_fp)
             print("Table(s) extracted.")
 
             for table_idx, extracted_table in enumerate(extracted_tables):
