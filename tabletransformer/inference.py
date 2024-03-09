@@ -842,7 +842,7 @@ class TableExtractionPipeline(object):
 
         return out_formats
 
-    def extract(self, img, tokens=None, out_objects=True, out_crops=False, out_cells=False,
+    def extract(self, img: Image.Image, tokens=None, out_objects=True, out_crops=False, out_cells=False,
                 out_html=False, out_csv=False, crop_padding=10):
 
         print("Before: ", img.size)
