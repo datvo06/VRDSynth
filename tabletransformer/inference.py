@@ -906,6 +906,7 @@ def main():
     for i, data in enumerate(dataset):
         if not os.path.exists(data.img_fp):
             data.img_fp = data.img_fp.replace(".jpg", ".png")
+        ext = ".jpg" if data.img_fp.endswith(".jpg") else ".png"
         img = Image.open(data.img_fp)
         img = img.convert('RGB')
         print("Image loaded.")
@@ -950,7 +951,7 @@ def main():
             for table_idx, extracted_table in enumerate(extracted_tables):
                 for key, val in extracted_table.items():
                     output_result(key, val, args, extracted_table['image'],
-                                  out_img_fp.replace('.jpg', '_{}.jpg'.format(table_idx)))
+                                  out_img_fp.replace(ext, '_{}.jpg'.format(table_idx)))
 
 if __name__ == "__main__":
     main()
