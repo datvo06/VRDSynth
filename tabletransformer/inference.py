@@ -855,7 +855,7 @@ def output_result(key, val, args, img, img_file):
                     out_img_file = img_file.replace(ext, "_table_{}.jpg".format(idx))
                     cropped_table['image'].save(os.path.join(args.out_dir,
                                                                 out_img_file))
-                    out_words_file = out_img_file.replace(".jpg", "_words.json")
+                    out_words_file = out_img_file.replace(ext, "_words.json")
                     with open(os.path.join(args.out_dir, out_words_file), 'w') as f:
                         json.dump(cropped_table['tokens'], f)
             elif key == 'cells':
