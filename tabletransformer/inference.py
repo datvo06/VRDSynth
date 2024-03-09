@@ -900,7 +900,7 @@ def main():
                                    str_model_path=args.structure_model_path)
 
     # Load images
-    dataset = load_dataset(args.dataset, mode=args.dataset_mode)
+    dataset = load_dataset(args.dataset, mode=args.dataset_mode, lang=args.lang)
     for i, data in enumerate(dataset):
         if not os.path.exists(data.img_fp):
             data.img_fp = data.img_fp.replace(".jpg", ".png")

@@ -11,3 +11,4 @@ if [ ! -f TATR-v1.1-All-msft.pth ]; then
 fi
 
 ######## Table model Infererence ########
+for lang in en de es fr it ja pt zh; do python -m tabletransformer.inference --lang ${lang} --mode extract -clmpoz; done
