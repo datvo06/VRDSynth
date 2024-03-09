@@ -840,6 +840,7 @@ def output_result(key, val, args, img, img_file):
         if args.verbose:
             print(val)
         out_file = img_file.replace(ext, "_objects.json")
+        print(out_file)
         with open(os.path.join(args.out_dir, out_file), 'w') as f:
             json.dump(val, f)
         if args.visualize:
