@@ -848,6 +848,8 @@ def output_result(key, val, args, img, img_file):
             visualize_detected_tables(img, val, out_path)
     elif not key == 'image' and not key == 'tokens':
         for idx, elem in enumerate(val):
+            if elem is None:
+                continue
             if key == 'crops':
                 for idx, cropped_table in enumerate(val):
                     out_img_file = img_file.replace(ext, "_table_{}.jpg".format(idx))
