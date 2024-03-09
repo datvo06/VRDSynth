@@ -601,8 +601,28 @@ def visualize_detected_tables(img, det_tables, out_path):
             alpha = 0.3
             linewidth = 2
             hatch='//////'
+        elif det_table['label'] == 'table row':
+            facecolor = (0, 0.45, 1)
+            edgecolor = (0, 0.45, 1)
+            alpha = 0.3
+            linewidth = 2
+            hatch='//////'
+        elif det_table['label'] == 'table column':
+            facecolor = (0.45, 0, 1)
+            edgecolor = (0.45, 0, 1)
+            alpha = 0.3
+            linewidth = 2
+            hatch='//////'
+        elif det_table['label'] == 'table column header':
+            # yellow
+            facecolor = (1, 1, 0)
+            edgecolor = (1, 1, 0)
+            alpha = 0.3
+            linewidth = 2
+            hatch='//////'
         else:
             continue
+
  
         rect = patches.Rectangle(bbox[:2], bbox[2]-bbox[0], bbox[3]-bbox[1], linewidth=linewidth, 
                                     edgecolor='none',facecolor=facecolor, alpha=0.1)
