@@ -886,7 +886,8 @@ def main():
     args.structure_config_path = "tabletransformer/structure_config.json"
 
     if not args.out_dir is None and not os.path.exists(args.out_dir):
-        os.makedirs(args.out_dir)
+        os.makedirs(args.out_dir, exist_ok=True)
+    args.output_dir = args.out_dir
 
     # Create inference pipeline
     print("Creating inference pipeline")
