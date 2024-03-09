@@ -834,21 +834,22 @@ class TableExtractionPipeline(object):
 
 
 def output_result(key, val, args, img, img_file):
+    ext = ".jpg" if img_file.endswith(".jpg") else ".png"
     if key == 'objects':
         if args.verbose:
             print(val)
-        out_file = img_file.replace(".jpg", "_objects.json")
+        out_file = img_file.replace(ext, "_objects.json")
         with open(os.path.join(args.out_dir, out_file), 'w') as f:
             json.dump(val, f)
         if args.visualize:
-            out_file = img_file.replace(".jpg", "_fig_tables.jpg")
+            out_file = img_file.replace(ext, "_fig_tables.jpg")
             out_path = os.path.join(args.out_dir, out_file)
             visualize_detected_tables(img, val, out_path)
     elif not key == 'image' and not key == 'tokens':
         for idx, elem in enumerate(val):
             if key == 'crops':
                 for idx, cropped_table in enumerate(val):
-                    out_img_file = img_file.replace(".jpg", "_table_{}.jpg".format(idx))
+                    out_img_file = img_file.replace(ext, "_table_{}.jpg".format(idx))
                     cropped_table['image'].save(os.path.join(args.out_dir,
                                                                 out_img_file))
                     out_words_file = out_img_file.replace(".jpg", "_words.json")
@@ -920,8 +921,7 @@ def main():
                 }
 
 
-
-        out_img_fp = os.path.join(args.out_dir, os.path.basename(data.img_fp))
+        out_img_fp = os.path.join(args.out_dir, os.path.split(data.img_fp)[1])
         if args.mode == 'recognize':
             extracted_table = pipe.recognize(img, tokens, out_objects=args.objects, out_cells=args.csv,
                                 out_html=args.html, out_csv=args.csv)
