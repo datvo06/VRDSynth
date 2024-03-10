@@ -78,17 +78,17 @@ def reverse_transform_object(obj: dict, rev_transform, rotated=False):
         x0, y0 = rev_transform.dot([x0, y0, 1])[:2]
         x1, y1 = rev_transform.dot([x1, y1, 1])[:2]
     obj['bbox'] = [x0, y0, x1, y1]
-    if rotated:
-        if obj['label'] == 'table row':
-            obj['label'] = 'table column'
-        elif obj['label'] == 'table column':
-            obj['label'] = 'table row'
-        obj['projected row header'], obj['column header'] = obj['column header'], obj['projected row header']
+    # if rotated:
+    #     if obj['label'] == 'table row':
+    #         obj['label'] = 'table column'
+    #     elif obj['label'] == 'table column':
+    #         obj['label'] = 'table row'
+    #     obj['projected row header'], obj['column header'] = obj['column header'], obj['projected row header']
     return obj
 
 def reverse_transform_cell(cell: dict, rev_transform, rotated=False):
     obj = copy.deepcopy(cell)
-    print(cell)
+    # print(cell)
     x0, y0, x1, y1 = obj['bbox']
     # if rotated:
     # top-left -> top right (x0, y0) -> (x1, y0)
