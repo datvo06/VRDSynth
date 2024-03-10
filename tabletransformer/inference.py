@@ -289,12 +289,6 @@ def outputs_to_objects(outputs, img_size, class_idx2name):
 def construct_rev_transform(bbox, padding, label):
     x0, y0, x1, y1 = bbox
     dst_points = np.float32([[x0, y0], [x0, y1], [x1, y0], [x1, y1]])
-    bbox_padded = [bbox[0]-padding, bbox[1]-padding, bbox[2]+padding, bbox[3]+padding]
-    x0, y0, x1, y1 = bbox_padded
-    x0 += padding
-    y0 += padding
-    x1 -= padding
-    y1 -= padding
     crop_sz = (int(x1-x0 + 2*padding), int(y1-y0 + 2*padding))
     src_points = np.float32([[padding, padding], [padding, crop_sz[1] - padding],
                              [crop_sz[0] - padding, padding],
