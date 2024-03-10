@@ -952,12 +952,12 @@ def output_result(key, val, args, img, img_file):
                     out_file = img_file.replace(ext, "_fig_cells.jpg")
                     out_path = pjoin(args.out_dir, out_file)
                     visualize_cells(img, elem, out_path)
-            else:
-                out_file = img_file.replace(ext, "_{}.{}".format(idx, key))
-                with open(pjoin(args.out_dir, out_file), 'w') as f:
-                    f.write(elem)
-                if args.verbose:
-                    print(elem)
+            # else:
+            #     out_file = img_file.replace(ext, "_{}.{}".format(idx, key))
+            #     with open(pjoin(args.out_dir, out_file), 'w') as f:
+            #         f.write(elem)
+            #     if args.verbose:
+            #         print(elem)
                         
 
 def get_outdir_name(mode, dataset, dataset_mode, lang):
