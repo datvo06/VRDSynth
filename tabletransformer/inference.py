@@ -24,6 +24,9 @@ from .detr.models import build_model
 from utils.funsd_utils import load_dataset
 from typing import List
 from utils.misc import pexists, pjoin
+import cv2
+import numpy as np
+import copy
 
 def get_model(args, device):
     """
@@ -57,6 +60,25 @@ class MaxResize(object):
         resized_image = image.resize((int(round(scale*width)), int(round(scale*height))))
         
         return resized_image
+
+
+def reverse_transform_object(obj: dict, rev_transform, rotated=False):
+    obj = copy.deepcopy(obj)
+    x0, y0, x1, y1 = obj['bbox']
+    # if rotated:
+    # top-left -> top right (x0, y0) -> (x1, y0)
+    # bottom-right -> bottom-left -> (x1, y1) -> (x0, y1)
+    # rev_transforms is a cv2 matrix
+
+    if rotated:
+        x0, y0 = rev_transform.dot([x1, y0, 1])[:2]
+        x1, y1 = rev_transform.dot([x0, y1, 1])[:2]
+    else:
+        x0, y0 = rev_transform.dot([x0, y0, 1])[:2]
+        x1, y1 = rev_transform.dot([x1, y1, 1])[:2]
+    obj['bbox'] = [x0, y0, x1, y1]
+    return obj
+
 
 detection_transform = transforms.Compose([
     MaxResize(800),
@@ -263,6 +285,27 @@ def outputs_to_objects(outputs, img_size, class_idx2name):
 
     return objects
 
+
+def construct_rev_transform(bbox, padding, label):
+    x0, y0, x1, y1 = bbox
+    dst_points = np.float32([[x0, y0], [x0, y1], [x1, y0], [x1, y1]])
+    bbox_padded = [bbox[0]-padding, bbox[1]-padding, bbox[2]+padding, bbox[3]+padding]
+    x0, y0, x1, y1 = bbox_padded
+    x0 += padding
+    y0 += padding
+    x1 -= padding
+    y1 -= padding
+    src_points = np.float32([[x0, y0], [x0, y1], [x1, y0], [x1, y1]])
+    crop_sz = (int(x1-x0 + 2*padding), int(y1-y0 + 2*padding))
+    if label == 'table rotated':
+        src_points = np.float32(
+                [[crop_sz[1] - padding - 1, padding],
+                 [padding, padding],
+                 [padding, crop_sz[0] - padding - 1],
+                 [crop_sz[1] - padding - 1, crop_sz[0] - padding - 1]])
+    return cv2.getPerspectiveTransform(src_points, dst_points), label == 'table rotated'
+
+
 def objects_to_crops(img, tokens, objects, class_thresholds, padding=10):
     """
     Process the bounding boxes produced by the table detection model into
@@ -270,6 +313,8 @@ def objects_to_crops(img, tokens, objects, class_thresholds, padding=10):
     """
 
     table_crops = []
+    rev_transforms = []
+    rotated_flags = []
     for obj in objects:
         if obj['score'] < class_thresholds[obj['label']]:
             continue
@@ -278,7 +323,10 @@ def objects_to_crops(img, tokens, objects, class_thresholds, padding=10):
 
         bbox = obj['bbox']
         bbox = [bbox[0]-padding, bbox[1]-padding, bbox[2]+padding, bbox[3]+padding]
-
+        rev_transform, rotated = construct_rev_transform(bbox, padding, obj['label'])
+        rotated_flags.append(rotated)
+        rev_transforms.append(rev_transform)
+        
         cropped_img = img.crop(bbox)
 
         table_tokens = [token for token in tokens if iob(token['bbox'], bbox) >= 0.5]
@@ -304,7 +352,7 @@ def objects_to_crops(img, tokens, objects, class_thresholds, padding=10):
 
         table_crops.append(cropped_table)
 
-    return table_crops
+    return table_crops, rev_transforms, rotated_flags
 
 def objects_to_structures(objects, tokens, class_thresholds):
     """
@@ -790,9 +838,11 @@ class TableExtractionPipeline(object):
 
         # Crop image and tokens for detected table
         if out_crops:
-            tables_crops = objects_to_crops(img, tokens, objects, self.det_class_thresholds,
+            tables_crops, rev_transforms, rotated_flags = objects_to_crops(img, tokens, objects, self.det_class_thresholds,
                                             padding=crop_padding)
             out_formats['crops'] = tables_crops
+            out_formats['rotated_flags'] = rotated_flags
+            out_formats['rev_transforms'] = rev_transforms
 
         return out_formats
 
@@ -848,9 +898,11 @@ class TableExtractionPipeline(object):
         detect_out = self.detect(img, tokens=tokens, out_objects=True, out_crops=True,
                                  crop_padding=crop_padding)
         cropped_tables = detect_out['crops']
+        rotated_flags = detect_out['rotated_flags']
+        rev_transforms = detect_out['rev_transforms']
 
         extracted_tables = []
-        for table in cropped_tables:
+        for table, rflag, rtransform in zip(cropped_tables, rotated_flags, rev_transforms):
             img = table['image']
             tokens = table['tokens']
 
@@ -859,7 +911,9 @@ class TableExtractionPipeline(object):
             extracted_table['image'] = img
             extracted_table['tokens'] = tokens
             extracted_tables.append(extracted_table)
-
+            objects = copy.deepcopy(extracted_table['objects'])
+            objects = [reverse_transform_object(obj, rtransform, rflag) for obj in objects]
+            extracted_table['rev_objects'] = objects
         return detect_out, extracted_tables
 
 
@@ -980,6 +1034,8 @@ def main():
                                             crop_padding=args.crop_padding)
             if 'objects' in detect_out:
                 print("Writing table objects")
+                for table in extracted_tables:
+                    detect_out['objects'].extend(table['rev_objects'])
                 output_result('objects', detect_out['objects'], args, img, out_img_fp)
 
             for table_idx, extracted_table in enumerate(extracted_tables):
