@@ -88,6 +88,7 @@ def reverse_transform_object(obj: dict, rev_transform, rotated=False):
 
 def reverse_transform_cell(cell: dict, rev_transform, rotated=False):
     obj = copy.deepcopy(cell)
+    print(cell)
     x0, y0, x1, y1 = obj['bbox']
     # if rotated:
     # top-left -> top right (x0, y0) -> (x1, y0)
