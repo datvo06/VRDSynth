@@ -295,8 +295,10 @@ def construct_rev_transform(bbox, padding, label):
     y0 += padding
     x1 -= padding
     y1 -= padding
-    src_points = np.float32([[x0, y0], [x0, y1], [x1, y0], [x1, y1]])
     crop_sz = (int(x1-x0 + 2*padding), int(y1-y0 + 2*padding))
+    src_points = np.float32([[padding, padding], [padding, crop_sz[1] - padding],
+                             [crop_sz[0] - padding, padding],
+                             [crop_sz[0] - padding, crop_sz[1] - padding]])
     if label == 'table rotated':
         src_points = np.float32(
                 [[crop_sz[1] - padding - 1, padding],
