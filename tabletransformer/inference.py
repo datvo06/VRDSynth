@@ -86,6 +86,23 @@ def reverse_transform_object(obj: dict, rev_transform, rotated=False):
         obj['projected row header'], obj['column header'] = obj['column header'], obj['projected row header']
     return obj
 
+def reverse_transform_cell(cell: dict, rev_transform, rotated=False):
+    obj = copy.deepcopy(cell)
+    x0, y0, x1, y1 = obj['bbox']
+    # if rotated:
+    # top-left -> top right (x0, y0) -> (x1, y0)
+    # bottom-right -> bottom-left -> (x1, y1) -> (x0, y1)
+    # rev_transforms is a cv2 matrix
+
+    if rotated:
+        x0, y0 = rev_transform.dot([x1, y0, 1])[:2]
+        x1, y1 = rev_transform.dot([x0, y1, 1])[:2]
+    else:
+        x0, y0 = rev_transform.dot([x0, y0, 1])[:2]
+        x1, y1 = rev_transform.dot([x1, y1, 1])[:2]
+    obj['bbox'] = [x0, y0, x1, y1]
+    return obj
+
 
 detection_transform = transforms.Compose([
     MaxResize(800),
@@ -916,7 +933,9 @@ class TableExtractionPipeline(object):
             extracted_tables.append(extracted_table)
             objects = copy.deepcopy(extracted_table['objects'])
             objects = [reverse_transform_object(obj, rtransform, rflag) for obj in objects]
+            cells = reverse_transform_cell(extracted_table['cells'], rtransform, rflag)
             extracted_table['rev_objects'] = objects
+            extracted_table['rev_cells'] = cells
         return detect_out, extracted_tables
 
 
@@ -944,6 +963,17 @@ def output_result(key, val, args, img, img_file):
             out_file = img_file.replace(ext, "_rows_cols.jpg")
             out_path = pjoin(args.out_dir, out_file)
             visualize_detected_tables(img, rev_objects, out_path)
+    elif key == 'rev_cells':
+        if args.verbose:
+            print(val)
+        out_file = img_file.replace(ext, "_rev_cells.json")
+        with open(pjoin(args.out_dir, out_file), 'w') as f:
+            json.dump(val, f)
+        rev_objects = itertools.chain.from_iterable(val)
+        if args.visualize:
+            out_file = img_file.replace(ext, "_cells.jpg")
+            out_path = pjoin(args.out_dir, out_file)
+            visualize_cells(img, rev_objects, out_path)
     elif not key == 'image' and not key == 'tokens':
         for idx, elem in enumerate(val):
             if elem is None:
@@ -1049,11 +1079,12 @@ def main():
             if 'objects' in detect_out:
                 print("Writing table objects")
                 detect_out['rev_objects'] = []
-                detect_out['cells'] = []
+                detect_out['rev_cells'] = []
                 for table in extracted_tables:
                     detect_out['rev_objects'].append(table['rev_objects'])
-                    detect_out['cells'].append(table['cells'])
+                    detect_out['rev_cells'].append(table['rev_cells'])
                 output_result('rev_objects', detect_out['rev_objects'], args, img, out_img_fp)
+                output_result('rev_cells', detect_out['rev_cells'], args, img, out_img_fp)
 
             '''
             for table_idx, extracted_table in enumerate(extracted_tables):
