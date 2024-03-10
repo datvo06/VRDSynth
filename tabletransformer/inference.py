@@ -27,6 +27,7 @@ from utils.misc import pexists, pjoin
 import cv2
 import numpy as np
 import copy
+import itertools
 
 def get_model(args, device):
     """
@@ -77,6 +78,9 @@ def reverse_transform_object(obj: dict, rev_transform, rotated=False):
         x0, y0 = rev_transform.dot([x0, y0, 1])[:2]
         x1, y1 = rev_transform.dot([x1, y1, 1])[:2]
     obj['bbox'] = [x0, y0, x1, y1]
+    if rotated:
+        obj['projected row header'], obj['column header'] = obj['column header'], obj['projected row header']
+        obj['label'] 
     return obj
 
 
@@ -926,6 +930,17 @@ def output_result(key, val, args, img, img_file):
             out_file = img_file.replace(ext, "_fig_tables.jpg")
             out_path = pjoin(args.out_dir, out_file)
             visualize_detected_tables(img, val, out_path)
+    elif key == 'rev_objects':
+        if args.verbose:
+            print(val)
+        out_file = img_file.replace(ext, "_rev_objects.json")
+        with open(pjoin(args.out_dir, out_file), 'w') as f:
+            json.dump(val, f)
+        rev_objects = itertools.chain.from_iterable(val)
+        if args.visualize:
+            out_file = img_file.replace(ext, "_rows_cols.jpg")
+            out_path = pjoin(args.out_dir, out_file)
+            visualize_detected_tables(img, rev_objects, out_path)
     elif not key == 'image' and not key == 'tokens':
         for idx, elem in enumerate(val):
             if elem is None:
@@ -1030,9 +1045,10 @@ def main():
                                             crop_padding=args.crop_padding)
             if 'objects' in detect_out:
                 print("Writing table objects")
+                detect_out['rev_objects'] = []
                 for table in extracted_tables:
-                    detect_out['objects'].extend(table['rev_objects'])
-                output_result('objects', detect_out['objects'], args, img, out_img_fp)
+                    detect_out['rev_objects'].append(table['rev_objects'])
+                output_result('rev_objects', detect_out['rev_objects'], args, img, out_img_fp)
 
             '''
             for table_idx, extracted_table in enumerate(extracted_tables):
