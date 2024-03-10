@@ -318,8 +318,8 @@ def objects_to_crops(img, tokens, objects, class_thresholds, padding=10):
         cropped_table = {}
 
         bbox = obj['bbox']
-        bbox = [bbox[0]-padding, bbox[1]-padding, bbox[2]+padding, bbox[3]+padding]
         rev_transform, rotated = construct_rev_transform(bbox, padding, obj['label'])
+        bbox = [bbox[0]-padding, bbox[1]-padding, bbox[2]+padding, bbox[3]+padding]
         rotated_flags.append(rotated)
         rev_transforms.append(rev_transform)
         
