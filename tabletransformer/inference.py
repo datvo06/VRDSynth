@@ -1034,10 +1034,12 @@ def main():
                     detect_out['objects'].extend(table['rev_objects'])
                 output_result('objects', detect_out['objects'], args, img, out_img_fp)
 
+            '''
             for table_idx, extracted_table in enumerate(extracted_tables):
                 for key, val in extracted_table.items():
                     output_result(key, val, args, extracted_table['image'],
                                   out_img_fp.replace(ext, '_{}.jpg'.format(table_idx)))
+            '''
 
 if __name__ == "__main__":
     main()
