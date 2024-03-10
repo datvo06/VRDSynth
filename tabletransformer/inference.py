@@ -78,9 +78,8 @@ def reverse_transform_object(obj: dict, rev_transform, rotated=False):
         x0, y0 = rev_transform.dot([x0, y0, 1])[:2]
         x1, y1 = rev_transform.dot([x1, y1, 1])[:2]
     obj['bbox'] = [x0, y0, x1, y1]
-    if rotated:
-        obj['projected row header'], obj['column header'] = obj['column header'], obj['projected row header']
-        obj['label'] 
+    # if rotated:
+    #     obj['projected row header'], obj['column header'] = obj['column header'], obj['projected row header']
     return obj
 
 
