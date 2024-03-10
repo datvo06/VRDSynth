@@ -933,7 +933,7 @@ class TableExtractionPipeline(object):
             extracted_tables.append(extracted_table)
             objects = copy.deepcopy(extracted_table['objects'])
             objects = [reverse_transform_object(obj, rtransform, rflag) for obj in objects]
-            cells = reverse_transform_cell(extracted_table['cells'], rtransform, rflag)
+            cells = [reverse_transform_cell(c, rtransform, rflag) for c in extracted_table['cells']]
             extracted_table['rev_objects'] = objects
             extracted_table['rev_cells'] = cells
         return detect_out, extracted_tables
