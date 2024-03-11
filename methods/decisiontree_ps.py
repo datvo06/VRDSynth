@@ -570,7 +570,7 @@ def get_args():
     parser.add_argument('--upper_float_thres', type=float, default=0.5, help='upper float thres')
 
     # hyperparam
-    parser.add_argument('--rel_type', type=str, choices=['cluster', 'default', 'legacy', 'legacy_with_nn'], default='default')
+    parser.add_argument('--rel_type', type=str, choices=['cluster', 'default', 'legacy', 'legacy_with_nn', 'legacy_table'], default='default')
     parser.add_argument('--strategy', type=str, choices=['precision', 'decisiontree', 'precision_counter', 'precision_ordered'], default='precision')
     parser.add_argument('--grammar', type=str, choices=['default', 'extended'])
     # use sem store true
