@@ -618,6 +618,7 @@ def setup_relation(args):
             args.build_nx_g = lambda data_sample_infer, data_sample_entity: build_nx_g_legacy_sem(data_sample_infer, data_sample_entity, args.dataset, args.lang, build_nx_g_func)
         elif args.rel_type == 'legacy_table':
             args.relation_set.extend([(-1, -1), (-1, -1)])
+            args.build_nx_g = build_nx_g_func
         else:
             args.build_nx_g = build_nx_g_func
     return args
