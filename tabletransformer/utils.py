@@ -49,8 +49,8 @@ def build_nx_g_legacy_table_rc(entity_data: DataSample, table_out_dir: str):
     ic2es = defaultdict(list)
     for tidx, tab in enumerate(tabs):
         assert isinstance(tab, list)
-        tab_rs = [o for o in tab if o["type"] == "table row"]
-        tab_cs = [o for o in tab if o["type"] == "table column"]
+        tab_rs = [o for o in tab if o["label"] == "table row"]
+        tab_cs = [o for o in tab if o["label"] == "table column"]
         for eidx, bbox in enumerate(entity_data.boxes):
             ers = [i for i, o in enumerate(tab_rs) if iob(bbox, Bbox(*o["bbox"])) >= 0.3]
             ecs = [i for i, o in enumerate(tab_cs) if iob(bbox, Bbox(*o["bbox"])) >= 0.3]
