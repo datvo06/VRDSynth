@@ -24,6 +24,7 @@ from .detr.models import build_model
 from utils.funsd_utils import load_dataset
 from typing import List
 from utils.misc import pexists, pjoin
+from utils.ps_utils import construct_entity_level_data
 import cv2
 import numpy as np
 import copy
@@ -1037,6 +1038,7 @@ def main():
     for i, data in enumerate(dataset):
         if not pexists(data.img_fp):
             data.img_fp = data.img_fp.replace(".jpg", ".png")
+        data = construct_entity_level_data(data)
         ext = ".jpg" if data.img_fp.endswith(".jpg") else ".png"
         img = Image.open(data.img_fp)
         img = img.convert('RGB')
