@@ -40,6 +40,7 @@ class DataSample:
     @words.setter
     def words(self, words: List[str]):
         self._words = words
+        self._dict['words'] = words
 
     @property
     def labels(self) -> List[int]:
@@ -48,6 +49,7 @@ class DataSample:
     @labels.setter
     def labels(self, labels: List[int]):
         self._labels = labels
+        self._dict['labels'] = labels
 
     @property
     def entities(self) -> Union[
@@ -58,6 +60,8 @@ class DataSample:
     def entities(self, entities: Union[
               List[List[int]], Dict[int, List[int]]]):
          self._entities = entities
+         self._dict['entities'] = entities
+
 
     @property
     def entities_map(self) -> List[Tuple[int, int]]:
@@ -66,6 +70,7 @@ class DataSample:
     @entities_map.setter
     def entities_map(self, entities_map: List[Tuple[int, int]]):
         self._entities_map = entities_map
+        self._dict['entities_map'] = entities_map
 
     @property
     def img_fp(self) -> str:
@@ -74,6 +79,7 @@ class DataSample:
     @img_fp.setter
     def img_fp(self, img_fp: str):
         self._img_fp = img_fp
+        self._dict['img_fp'] = img_fp
 
     @property
     def boxes(self) -> List[Bbox]:
@@ -82,6 +88,7 @@ class DataSample:
     @boxes.setter
     def boxes(self, boxes: List[Bbox]):
         self._boxes = boxes
+        self._dict['boxes'] = boxes
 
     @property
     def entities_texts(self) -> Optional[List[str]]:

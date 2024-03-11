@@ -163,7 +163,6 @@ class DistinguishPropertyFilter(FilterStrategy):
     def __init__(self, mappings):
         pass
 
-
 class RemoveFilteredConstraint(FilterStrategy):
     def __init__(self, constraint_set):
         self.constraint_set = constraint_set
@@ -191,6 +190,9 @@ def get_valid_cand_find_program(version_space: VersionSpace, program: FindProgra
     out_cands = []
     for cand in candidates:
         if isinstance(cand, TrueValue) or isinstance(cand, FalseValue):
+            continue
+        # This filter the constraint by order
+        if str(cand) < program.constraint.right:
             continue
         out_cands.append(cand)
     return out_cands
