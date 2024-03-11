@@ -51,7 +51,7 @@ def build_nx_g_legacy_table_rc(entity_data: DataSample, table_out_dir: str):
         assert isinstance(tab, list)
         tab_rs = [o for o in tab if o["type"] == "table row"]
         tab_cs = [o for o in tab if o["type"] == "table column"]
-        for eidx, bbox in enumerate(entity_data.bboxes):
+        for eidx, bbox in enumerate(entity_data.boxes):
             ers = [i for i, o in enumerate(tab_rs) if iob(bbox, Bbox(*o["bbox"])) >= 0.3]
             ecs = [i for i, o in enumerate(tab_cs) if iob(bbox, Bbox(*o["bbox"])) >= 0.3]
             for r in ers:
@@ -62,7 +62,7 @@ def build_nx_g_legacy_table_rc(entity_data: DataSample, table_out_dir: str):
     # Now, build the graph
     # Same row would be index 5
     # Same column would be index 6
-    edges = from_funsd_datasample(data)
+    edges = from_funsd_datasample(entity_data)
     for (tidx, r), es in ir2es.items():
         for i in range(len(es)):
             for j in range(i+1, len(es)):
