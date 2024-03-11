@@ -1087,6 +1087,8 @@ def main():
                 detect_out['rev_cells'] = []
                 for table in extracted_tables:
                     detect_out['rev_objects'].append(table['rev_objects'])
+                    if not table['rev_cells']:
+                        continue
                     detect_out['rev_cells'].append(table['rev_cells'])
                 output_result('rev_objects', detect_out['rev_objects'], args, img, out_img_fp)
                 output_result('rev_cells', detect_out['rev_cells'], args, img, out_img_fp)
