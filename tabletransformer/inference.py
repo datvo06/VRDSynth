@@ -1086,6 +1086,8 @@ def main():
                 detect_out['rev_objects'] = []
                 detect_out['rev_cells'] = []
                 for table in extracted_tables:
+                    if not table['rev_objects']:
+                        continue
                     detect_out['rev_objects'].append(table['rev_objects'])
                     if not table['rev_cells']:
                         continue
