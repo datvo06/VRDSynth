@@ -6,6 +6,8 @@ from transformers.models import layoutlmv3
 from utils.funsd_utils import DataSample, load_dataset, build_nx_g
 from utils.relation_building_utils import calculate_relation_set, dummy_calculate_relation_set, calculate_relation
 from utils.legacy_graph_utils import build_nx_g_legacy, build_nx_g_legacy_with_nn
+from tabletransformer.utils import build_nx_g_legacy_table_rc
+from tabletransformer.inference import get_outdir_name
 import argparse
 import numpy as np
 import itertools
@@ -600,8 +602,13 @@ def setup_relation(args):
         args.build_nx_g = lambda data_sample: build_nx_g(data_sample, args.relation_set, y_threshold=10)
         args.relation_set = relation_set
     else:
+        additional_rel_set = []
         if args.rel_type == 'legacy':
             build_nx_g_func = build_nx_g_legacy
+        elif args.rel_type == 'legacy_table':
+            build_nx_g_func = lambda data: build_nx_g_legacy_table_rc(data, get_outdir_name('extract',
+                                                                                            args.dataset,
+                   'val' if args.mode == 'test' else args.mode, args.lang))
         elif args.rel_type == 'legacy_with_nn':
             build_nx_g_func = build_nx_g_legacy_with_nn
         args.relation_set = dummy_calculate_relation_set(None, None, None)
@@ -609,6 +616,8 @@ def setup_relation(args):
         if args.use_layoutlm_output:
             args.relation_set.append((-1, -1))
             args.build_nx_g = lambda data_sample_infer, data_sample_entity: build_nx_g_legacy_sem(data_sample_infer, data_sample_entity, args.dataset, args.lang, build_nx_g_func)
+        elif args.rel_type == 'legacy_table':
+            args.relation_set.extend([(-1, -1), (-1, -1)])
         else:
             args.build_nx_g = build_nx_g_func
     return args
@@ -623,6 +632,8 @@ def setup_grammar(args):
         LiteralReplacement['RelationPropertyConstant'] =  [RelationPropertyConstant('mag')]
     if args.use_layoutlm_output:
         LiteralReplacement['RelationLabelConstant'].append(RelationLabelConstant(4))
+    if 'table' in args.rel_type:
+        LiteralReplacement['RelationLabelConstant'].append(RelationLabelConstant(5), RelationLabelConstant(6))
     return args
 
 
