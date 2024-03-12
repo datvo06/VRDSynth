@@ -41,7 +41,7 @@ def build_nx_g_legacy_table_rc(entity_data: DataSample, table_out_dir: str):
     img_fname = os.path.basename(img_fp)
     ext = os.path.splitext(img_fname)[1]
     obj_fp = pjoin(table_out_dir, img_fname.replace(ext, "_rev_objects.json"))
-    if not obj_fp:    # There are no table
+    if not os.path.exists(obj_fp):    # There are no table
         return build_nx_g_legacy(entity_data)
     tabs = json.load(open(obj_fp))
     assert isinstance(tabs, list)

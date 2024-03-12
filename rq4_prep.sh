@@ -12,7 +12,7 @@ fi
 
 ######## Table model Infererence ########
 for lang in en de es fr it ja pt zh; do python -m tabletransformer.inference --lang ${lang} --dataset_mode train --mode extract -clmpoz; done
-for lang in en de es fr it ja pt zh; do python -m tabletransformer.inference --lang ${lang} --dataset_mode val --mode extract -clmpoz; done
+for lang in en de es fr it ja pt zh; do (python -m tabletransformer.inference --lang ${lang} --dataset_mode val --mode extract -clmpoz &); done
 
 
 ######## VRDSynth ########
