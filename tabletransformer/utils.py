@@ -54,9 +54,9 @@ def build_nx_g_legacy_table_rc(entity_data: DataSample, table_out_dir: str):
         tab_rs = [o for o in tab if o["label"] == "table row"]
         tab_cs = [o for o in tab if o["label"] == "table column"]
         for ridx, r in enumerate(tab_rs):
-            ir2bbox[(tidx, ridx)] = Bbox(r["x0"], r["y0"], r["x1"], r["y1"])
+            ir2bbox[(tidx, ridx)] = Bbox(*r['bbox'])
         for cidx, c in enumerate(tab_cs):
-            ic2bbox[(tidx, cidx)] = Bbox(c["x0"], c["y0"], c["x1"], c["y1"])
+            ic2bbox[(tidx, cidx)] = Bbox(*c['bbox'])
         for eidx, bbox in enumerate(entity_data.boxes):
             ers = [i for i, o in enumerate(tab_rs) if iob(bbox, Bbox(*o["bbox"])) >= 0.3]
             ecs = [i for i, o in enumerate(tab_cs) if iob(bbox, Bbox(*o["bbox"])) >= 0.3]
