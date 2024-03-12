@@ -192,7 +192,8 @@ def get_valid_cand_find_program(version_space: VersionSpace, program: FindProgra
         if isinstance(cand, TrueValue) or isinstance(cand, FalseValue):
             continue
         # This filter the constraint by order
-        if str(cand) < program.constraint.right:
+        if not (isinstance(program.constraint, LabelEqualConstraint) or 
+                isinstance(program.constraint, RelationLabelEqualConstraint))and str(cand) < program.constraint.right:
             continue
         out_cands.append(cand)
     return out_cands

@@ -270,7 +270,6 @@ class RelationConstraint(Expression):
         return self.w1 == other.w1 and self.w2 == other.w2 and self.r == other.r
 
 
-
 class FindProgram(Program):
     def __init__(self, word_variables, relation_variables, relation_constraints, constraint, return_variables):
         self.cache_hash = None
