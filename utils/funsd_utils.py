@@ -150,6 +150,8 @@ def viz_data(data, nx_g):
         else:
             color = (0, 0, 255)
         i, j = relation[:2]
+        if i >= len(data['boxes']) or j >= len(data['boxes']):
+            continue
         center_i = (int((data['boxes'][i][0] + data['boxes'][i][2]) / 2), int((data['boxes'][i][1] + data['boxes'][i][3]) / 2))
         center_j = (int((data['boxes'][j][0] + data['boxes'][j][2]) / 2), int((data['boxes'][j][1] + data['boxes'][j][3]) / 2))
         cv2.line(img, center_i, center_j, color, 2)
@@ -222,6 +224,8 @@ def viz_data_entity_mapping(data):
         cv2.rectangle(img, (box[0], box[1]), (box[2], box[3]), color_edge, 2)
     for e1, e2 in data.entities_map:
         i, j = e1, e2
+        if i >= len(data['boxes']) or j >= len(data['boxes']):
+            continue
         center_i = (int((data['boxes'][i][0] + data['boxes'][i][2]) / 2), int((data['boxes'][i][1] + data['boxes'][i][3]) / 2))
         center_j = (int((data['boxes'][j][0] + data['boxes'][j][2]) / 2), int((data['boxes'][j][1] + data['boxes'][j][3]) / 2))
         cv2.line(img, center_i, center_j, (0, 0, 255), 2)
