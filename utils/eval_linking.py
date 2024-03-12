@@ -170,6 +170,7 @@ if __name__ == '__main__':
     ps_merging = list(set(itertools.chain.from_iterable(pkl.load(open(ps_fp, 'rb')) for ps_fp in glob.glob(f"{args.cache_dir_entity_grouping}/stage3_*_pps_grouping.pkl"))))
     ps_linking = list(set(itertools.chain.from_iterable(pkl.load(open(ps_fp, 'rb')) for ps_fp in glob.glob(f"{args.cache_dir_entity_linking}/stage3_*_pps_linking.pkl") + glob.glob(f"{args.cache_dir_entity_linking}/stage3_*_perfect_ps_linking.pkl")
                                                         )))
+    print(f"{args.cache_dir_entity_linking}/stage3_*_pps_linking.pkl")
     print(f"Number of linking PPs: {len(ps_linking)}")
     fps_merging, fps_linking = set(), set() 
     print(len(ps_merging), len(ps_linking))
