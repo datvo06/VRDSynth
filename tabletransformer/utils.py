@@ -31,7 +31,7 @@ def build_nx_g_legacy_table_cells(entity_data: DataSample, table_out_dir: str):
             # Only check table row and table column
 
 
-def build_nx_g_legacy_table_rc(entity_data: DataSample, table_out_dir: str):
+def build_nx_g_legacy_table_rc(entity_data: DataSample, table_out_dir: str, sem_edges=None):
     """
     """
     # First, load all the table
@@ -68,7 +68,7 @@ def build_nx_g_legacy_table_rc(entity_data: DataSample, table_out_dir: str):
     # Now, build the graph
     # Same row would be index 5
     # Same column would be index 6
-    edges = from_funsd_datasample(entity_data)
+    edges = from_funsd_datasample(entity_data) + ([] if sem_edges is None else sem_edges)
     data = entity_data
     nx_g = nx.MultiDiGraph()
     for i, (box, label, word) in enumerate(zip(data.boxes, data.labels, data.words)):
