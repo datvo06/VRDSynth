@@ -83,7 +83,7 @@ def build_nx_g_legacy_table_rc(entity_data: DataSample, table_out_dir: str):
         nx_g.nodes[row_node].update({'label': "trow", 'x0': ir2bbox[(tidx, r)].x0, 'y0': ir2bbox[(tidx, r)].y0, 'x1': ir2bbox[(tidx, r)].x1, 'y1': ir2bbox[(tidx, r)].y1, 'word': ''})
         for i in range(len(es)):
             edges.append((row_node, es[i], 5))
-            edges.append((es[i], row_node, 5))
+            edges.append((es[i], row_node, 7))
     for (tidx, c), es in ic2es.items():
         # Create a new node for the column
         col_node = max(nx_g.nodes() if len(nx_g.nodes()) >= 0 else [-1]) + 1
@@ -92,7 +92,7 @@ def build_nx_g_legacy_table_rc(entity_data: DataSample, table_out_dir: str):
 
         for i in range(len(es)):
             edges.append((col_node, es[i], 6))
-            edges.append((es[i], col_node, 6))
+            edges.append((es[i], col_node, 8))
 
     for i, j, etype in edges:
         # label is the index of max projection

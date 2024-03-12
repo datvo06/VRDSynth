@@ -634,7 +634,7 @@ def setup_grammar(args):
     if args.use_layoutlm_output:
         LiteralReplacement['RelationLabelConstant'].append(RelationLabelConstant(4))
     if 'table' in args.rel_type:
-        LiteralReplacement['RelationLabelConstant'].extend([RelationLabelConstant(5), RelationLabelConstant(6)])
+        LiteralReplacement['RelationLabelConstant'].extend([RelationLabelConstant(5), RelationLabelConstant(6), RelationLabelConstant(7), RelationLabelConstant(8)])
         LiteralReplacement['LayoutRelationLabelConstant'].extend(LabelConstant('trow'), LabelConstant('tcol'))
     return args
 
