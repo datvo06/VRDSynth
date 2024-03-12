@@ -97,10 +97,8 @@ def build_nx_g_legacy_table_rc(entity_data: DataSample, table_out_dir: str):
     for i, j, etype in edges:
         # label is the index of max projection
         label = etype
-        center_i = [(data['boxes'][i][0] + data['boxes'][i][2]) / 2,
-                    (data['boxes'][i][1] + data['boxes'][i][3]) / 2]
-        center_j = [(data['boxes'][j][0] + data['boxes'][j][2]) / 2,
-                    (data['boxes'][j][1] + data['boxes'][j][3]) / 2]
+        center_i = [(nx_g.nodes[i]['x0'] + nx_g.nodes[i]['x1']) / 2, (nx_g.nodes[i]['y0'] + nx_g.nodes[i]['y1']) / 2]
+        center_j = [(nx_g.nodes[j]['x0'] + nx_g.nodes[j]['x1']) / 2, (nx_g.nodes[j]['y0'] + nx_g.nodes[j]['y1']) / 2]
         mag = np.sqrt((center_i[0] - center_j[0]) ** 2 + (center_i[1] - center_j[1]) ** 2)
         nx_g.add_edge(i, j, mag=mag, lbl=label)
 
