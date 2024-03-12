@@ -33,6 +33,7 @@ def get_args():
     parser.add_argument('--linking_type', type=str, choices=['kv_hk', 'kv'], default='kv_hk')
     args = parser.parse_args()
     args.dataset = 'funsd' if args.lang == 'en' else 'xfund'
+    args.mode = 'test'
     return args
 
 def compare_specs(pred_mapping, gt_linking):
