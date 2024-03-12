@@ -585,7 +585,7 @@ def build_nx_g_legacy_sem(data_sample_infer, data_sample_entity, dataset, lang, 
     tokenizer, model, collator = load_tokenizer_model_collator(dataset, lang)
     entities_map = infer(model, collator, data_sample_infer)
     entities_map = [(i, j, 5) for i, j in entities_map]
-    return build_nx_g_legacy_func(data_sample_entity, sem_edges=entities_map)
+    return build_nx_g_legacy_func(data_sample_entity, entities_map)
 
 
 def setup_relation(args):
@@ -605,22 +605,20 @@ def setup_relation(args):
         additional_rel_set = []
         if args.rel_type == 'legacy':
             build_nx_g_func = build_nx_g_legacy
-        elif args.rel_type == 'legacy_table':
-            build_nx_g_func = lambda data: build_nx_g_legacy_table_rc(data, get_outdir_name('extract',
-                                                                                            args.dataset,
-                   'val' if args.mode == 'test' else args.mode, args.lang))
+        elif args.rel_type == 'legacy_table' and not args.use_layoutlm_output:
+                build_nx_g_func = lambda data: build_nx_g_legacy_table_rc(data, get_outdir_name('extract', args.dataset, 'val' if args.mode == 'test' else args.mode, args.lang))
+        elif args.rel_type == 'legacy_table' and args.use_layoutlm_output:
+                build_nx_g_func = lambda data, sem_edges: build_nx_g_legacy_table_rc(data, get_outdir_name('extract', args.dataset, 'val' if args.mode == 'test' else args.mode, args.lang), sem_edges)
         elif args.rel_type == 'legacy_with_nn':
             build_nx_g_func = build_nx_g_legacy_with_nn
+        args.build_nx_g = build_nx_g_func
         args.relation_set = dummy_calculate_relation_set(None, None, None)
         args.relation_set = [args.relation_set[2], args.relation_set[3], args.relation_set[0], args.relation_set[1]] 
         if args.use_layoutlm_output:
             args.relation_set.append((-1, -1))
             args.build_nx_g = lambda data_sample_infer, data_sample_entity: build_nx_g_legacy_sem(data_sample_infer, data_sample_entity, args.dataset, args.lang, build_nx_g_func)
-        elif args.rel_type == 'legacy_table':
+        if args.rel_type == 'legacy_table':
             args.relation_set.extend([(-1, -1), (-1, -1)])
-            args.build_nx_g = build_nx_g_func
-        else:
-            args.build_nx_g = build_nx_g_func
     return args
 
 
