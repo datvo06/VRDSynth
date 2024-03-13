@@ -321,9 +321,9 @@ def construct_rev_transform(bbox, padding, label):
                              [crop_sz[0] - padding, crop_sz[1] - padding]])
     if label == 'table rotated':
         src_points = np.float32(
-                [[crop_sz[1] - padding - 1, padding],
+                [[padding, crop_sz[0] - padding - 1],
                  [padding, padding],
-                 [padding, crop_sz[0] - padding - 1],
+                 [crop_sz[1] - padding - 1, padding],
                  [crop_sz[1] - padding - 1, crop_sz[0] - padding - 1]])
     return cv2.getPerspectiveTransform(src_points, dst_points), label == 'table rotated'
 
