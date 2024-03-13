@@ -14,7 +14,7 @@ import itertools
 import functools
 from collections import defaultdict, namedtuple
 from networkx.algorithms import constraint, isomorphism
-from utils.ps_utils import FalseValue, LiteralReplacement, Program, EmptyProgram, GrammarReplacement, FindProgram, RelationLabelConstant, RelationLabelProperty, TrueValue, WordLabelProperty, WordVariable, RelationVariable, RelationConstraint, LabelEqualConstraint, RelationLabelEqualConstraint, construct_entity_merging_specs, SpecIterator, LabelConstant, AndConstraint, LiteralSet, Constraint, Hole, replace_hole, find_holes, SymbolicList, FilterStrategy, fill_hole, Expression, FloatConstant, RelationPropertyConstant, SemDist
+from utils.ps_utils import FalseValue, LiteralReplacement, Program, EmptyProgram, GrammarReplacement, FindProgram, RelationLabelConstant, RelationLabelProperty, TrueValue, WordLabelProperty, WordVariable, RelationVariable, RelationConstraint, LabelEqualConstraint, RelationLabelEqualConstraint, construct_entity_merging_specs, SpecIterator, LabelConstant, AndConstraint, LiteralSet, Constraint, Hole, replace_hole, find_holes, SymbolicList, FilterStrategy, fill_hole, Expression, FloatConstant, RelationPropertyConstant, SemDist, StringConstant
 from utils.ps_run_utils import batch_find_program_executor, merge_words
 from utils.visualization_script import visualize_program_with_support
 from utils.version_space import VersionSpace as VS, get_valid_cand_find_program, add_constraint_to_find_program
@@ -602,7 +602,6 @@ def setup_relation(args):
         args.build_nx_g = lambda data_sample: build_nx_g(data_sample, args.relation_set, y_threshold=10)
         args.relation_set = relation_set
     else:
-        additional_rel_set = []
         if args.rel_type == 'legacy':
             build_nx_g_func = build_nx_g_legacy
         elif args.rel_type == 'legacy_table' and not args.use_layoutlm_output:
@@ -634,6 +633,18 @@ def setup_grammar(args):
     if 'table' in args.rel_type:
         LiteralReplacement['RelationLabelConstant'].extend([RelationLabelConstant(5), RelationLabelConstant(6), RelationLabelConstant(7), RelationLabelConstant(8)])
         LiteralReplacement['LabelConstant'].extend([LabelConstant('trow'), LabelConstant('tcol')])
+    if args.lang == 'ja':
+        LiteralReplacement['StringConstant'].extend(
+                [
+                    # StringConstant('テ'), StringConstant('ー'), StringConstant('ブ'), StringConstant('ル'),
+                    #  StringConstant('セ'), StringConstant('ル'), StringConstant('ー'), StringConstant('ボ'),
+                     StringConstant('●'), StringConstant('○'), StringConstant('△'), StringConstant('□'),
+                     StringConstant('、'), StringConstant('。'), StringConstant('「'), StringConstant('」'),
+                     StringConstant('『'), StringConstant('』'), StringConstant('（'), StringConstant('）'),
+                     StringConstant('【'), StringConstant('】'), StringConstant('［'), StringConstant('］'),
+                     StringConstant("・")
+                 ]
+                )
     return args
 
 
