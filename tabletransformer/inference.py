@@ -134,18 +134,18 @@ def get_class_map(data_type):
     return class_map
 
 detection_class_thresholds = {
-    "table": 0.5,
-    "table rotated": 0.5,
+    "table": 0.8,
+    "table rotated": 0.8,
     "no object": 10
 }
 
 structure_class_thresholds = {
-    "table": 0.5,
-    "table column": 0.5,
-    "table row": 0.5,
-    "table column header": 0.5,
-    "table projected row header": 0.5,
-    "table spanning cell": 0.5,
+    "table": 0.8,
+    "table column": 0.8,
+    "table row": 0.8,
+    "table column header": 0.8,
+    "table projected row header": 0.8,
+    "table spanning cell": 0.8,
     "no object": 10
 }
 
