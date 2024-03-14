@@ -308,6 +308,8 @@ def outputs_to_objects(outputs, img_size, class_idx2name):
         if not class_label == 'no object':
             objects.append({'label': class_label, 'score': float(score),
                             'bbox': [float(elem) for elem in bbox]})
+            if objects[-1]['label'] == 'table rotated':
+                objects[-1]['label'] = 'table'
 
     return objects
 
