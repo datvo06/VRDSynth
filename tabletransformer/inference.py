@@ -934,7 +934,7 @@ class TableExtractionPipeline(object):
             extracted_table['tokens'] = tokens
             extracted_tables.append(extracted_table)
             objects = copy.deepcopy(extracted_table['objects'])
-            objects = [reverse_transform_object(obj, rtransform, rflag) for obj in objects]
+            objects = [reverse_transform_object(obj, rtransform, rflag) for obj in objects if obj['score'] >= self.str_class_thresholds[obj['label']]]
             extracted_table['rev_objects'] = objects
             if not extracted_table['cells']:
                 continue
