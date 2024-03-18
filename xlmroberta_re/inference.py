@@ -23,6 +23,7 @@ def get_cache_dir(args):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("--lang", type=str, default="en")
+    parser.add_argument('--model_type', type=str, default='xlm-roberta-base')
     args = parser.parse_args()
     if args.lang == 'en':
         args.dataset = "funsd"
