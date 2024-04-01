@@ -50,8 +50,8 @@ sh rq2.sh
 ```
 These scripts would output corresponding performance evaluation along with inference time for each language, method and settings.
 
-
-For RQ4, run:
+For extended version of RQ1 with table transformer (TATR), run:
 ```
-sh rq4.sh
+sh rq1_2.sh
+for lang in en de es fr it ja pt zh; do sh scripts/rq1_extended/eval_chunking_table_full.sh; done
 ```
