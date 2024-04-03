@@ -1,6 +1,12 @@
 This is the replication package for **VRDSynth - Synthesizing Programs for Multilingual Visually Rich Information Extraction**
 # Running
-To run VRDSynth, we need to do the following steps: (1) setting up layoutXLM environment and training LayoutXLM, (2) setup VRDSynth requirements, (3) running synthesizing algorithms (4) evaluate.
+To run VRDSynth, we need to do the following steps: (1) setting up layoutXLM environment and training LayoutXLM, InfoXLM and XLMRoberta (2) setup VRDSynth requirements, (3) running synthesizing algorithms (4) evaluate.
+
+## Choice of baselines
+We need to modify LayoutXLM because the original version focuses only on key-value linking [1, 2] but does not support full semantic linking (both header-key and key-value) in the benchmark. Therefore, to perform a fair comparison on the full semantic linking benchmark, we extend this data preprocessing step as reflected in our replication package, file `layoutlm_re/xfund/xfund.py` - Lines 225-239, the rest of the code is unchanged. 
+
+We compare our approach to the fine-tuned version of LayoutXLM instead of its original form because the original version of LayoutXLM is a pre-trained model - LayoutXLM\_Base [3]. This pre-trained model is only a language model (e.g., producing the probability of each word appearing in the document). To use it for semantic entity linking, a fine-tuning process is required. This is a common process and it is also done in the original LayoutXLM paper [1]. Note that the LayoutXLM\_Large model is not released by the original paper [1, 2, 3] and thus we use the LayoutXLM\_Base model in our fine-tuning process.
+
 
 ## Setup and train LayoutXLM, InfoXLM and XLM-Roberta
 ```sh
