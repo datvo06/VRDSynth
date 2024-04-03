@@ -7,6 +7,10 @@ We need to modify LayoutXLM because the original version focuses only on key-val
 
 We compare our approach to the fine-tuned version of LayoutXLM instead of its original form because the original version of LayoutXLM is a pre-trained model - LayoutXLM\_Base [3]. This pre-trained model is only a language model (e.g., producing the probability of each word appearing in the document). To use it for semantic entity linking, a fine-tuning process is required. This is a common process and it is also done in the original LayoutXLM paper [1]. Note that the LayoutXLM\_Large model is not released by the original paper [1, 2, 3] and thus we use the LayoutXLM\_Base model in our fine-tuning process.
 
+[1] "Layoutxlm: Multimodal pre-training for multilingual visually-rich document understanding." arXiv preprint arXiv:2104.08836 (2021).
+[2] LayoutXLM XFUN preprocessing package - https://github.com/microsoft/unilm/blob/master/layoutlmft/layoutlmft/data/datasets/xfun.py#L177-L185 - accessed 2024
+[3] https://huggingface.co/microsoft/layoutxlm-base - accessed 2024
+
 
 ## Setup and train LayoutXLM, InfoXLM and XLM-Roberta
 ```sh
