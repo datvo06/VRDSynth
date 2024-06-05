@@ -192,6 +192,10 @@ if __name__ == '__main__':
     for i, (data, nx_g) in tqdm.tqdm(enumerate(zip(entity_dataset, data_sample_set_relation_cache))):
         st = time.time()
         new_data, ent_map = link_entity(data, nx_g, ps_merging, ps_linking, fps_merging, fps_linking, ps_counter, args.use_layoutlm_output)
+        pkl.dump(ent_map, open(f"{args.cache_dir_entity_linking}/ent_map_{i}.pkl", 'wb'))
+        with open(f"{args.cache_dir_entity_linking}/new_data_{i}.pkl", 'wb') as f:
+            pkl.dump(new_data, f)
+
         times.append(time.time() - st)
         if args.eval_strategy == 'chunk':
             new_tt, new_tf, new_ft, new_ff = compare_specs_chunk_based_metrics(ent_map, dataset[i], args.linking_type)
