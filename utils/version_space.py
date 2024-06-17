@@ -78,7 +78,6 @@ class WordAndRelInBoundFilter(FilterStrategy):
         if isinstance(program, RelationVariable):
             return program in self.rel_set
         return True
-
     def __hash__(self) -> int:
         return hash((self.word_set, self.rel_set))
 
@@ -335,9 +334,13 @@ def get_intersect_rel_vs(rc: RelationConstraint, vs, data_sample_set_relation_ca
                 vs_matches.add((i, (w_bind, r_bind)))
         else:
             w_bind, r_bind = tuple2mapping((w_bind, r_bind))
+            r_bind_old = r_bind
+            r_bind = copy.deepcopy(r_bind)
             val = rc.evaluate(w_bind, nx_g)
+            # add rbind to the mapping
+            r_bind[rc.r] = nx_g.edges[rc.w1, rc.w2, 0]
             if val:
-                cache[(i, mapping2tuple((w_bind, r_bind)))] = True
+                cache[(i, mapping2tuple((w_bind, r_bind_old)))] = True
                 vs_matches.add((i, mapping2tuple((w_bind, r_bind))))
             else:
                 cache[(i, mapping2tuple((w_bind, r_bind)))] = False
