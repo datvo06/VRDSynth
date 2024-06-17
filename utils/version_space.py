@@ -269,9 +269,9 @@ def construct_rels_to_valid_version_spaces(vss):
     c2vs = defaultdict(set)
     for i, vs in enumerate(vss):
         for p in vs.programs:
-            cs = get_valid_rel_constraint_program(vs, p)
+            new_r_var, cs = get_valid_rel_constraint_program(vs, p)
             for c in cs:
-                c2vs[c].add(i)
+                c2vs[new_r_var, c].add(i)
     return c2vs
 
 
