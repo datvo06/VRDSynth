@@ -216,9 +216,8 @@ def get_valid_cand_find_program(version_space: VersionSpace, program: FindProgra
 
 
 class NoDuplicateRelationConstraintFilter(FilterStrategy):
-    def __init__(self, constraint):
-        self.constraint_set = set(NoDuplicateRelationConstraintFilter.gather_all_constraint(constraint))
-        self.rel_set = set([c for c in self.constraint_set if isinstance(c, RelationConstraint)])
+    def __init__(self, relation_constraint):
+        self.rel_set = set(relation_constraint)
 
     @staticmethod
     @lru_cache(maxsize=None)
@@ -242,7 +241,7 @@ class NoDuplicateRelationConstraintFilter(FilterStrategy):
 def NoSelfRelationFilter(FilterStrategy):
     def check_valid(self, program):
         if isinstance(program, RelationConstraint):
-            return program.lhs != program.rhs
+            return program.w1 != program.w2
         return True
 
 
@@ -257,9 +256,8 @@ def get_valid_rel_constraint_program(version_space: VersionSpace, program: FindP
     new_r_var = RelationVariable(f"r{new_r}")
     # Along with this, choose all possible constraints
     hole = Hole(RelationConstraint)
-    filterer = CompositeFilter([NoDuplicateRelationConstraintFilter(program.constraint), WordInBoundFilter(program), NoSelfRelationFilter()])
+    filterer = CompositeFilter([NoDuplicateRelationConstraintFilter(program.relation_constraint), WordInBoundFilter(program), NoSelfRelationFilter(program)])
     candidates = fill_hole(hole, 4, filterer)
-    args = program.get_args()
     return new_r_var, candidates
 
 
