@@ -221,7 +221,6 @@ class NoDuplicateRelationConstraintFilter(FilterStrategy):
 
     def check_valid(self, program):
         if isinstance(program, RelationConstraint):
-            print(program, self.rel_set, program in self.rel_set)
             return program not in self.rel_set
         return False
 
