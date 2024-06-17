@@ -266,7 +266,7 @@ def get_valid_rel_constraint_program(version_space: VersionSpace, program: FindP
     new_r_var = RelationVariable(f"r{new_r}")
     # Along with this, choose all possible constraints
     hole = Hole(RelationConstraint)
-    filterer = CompositeFilter([FixedRelationVarFilter([new_r_var])])
+    filterer = CompositeFilter([NoSelfRelationFilter(), FixedRelationVarFilter([new_r_var])])
     # filterer = CompositeFilter([NoDuplicateRelationConstraintFilter(program.relation_constraint), WordInBoundFilter(program), NoSelfRelationFilter(), FixedRelationVarFilter([new_r_var])])
     candidates = fill_hole(hole, 4, filterer)
     print(program, candidates)
