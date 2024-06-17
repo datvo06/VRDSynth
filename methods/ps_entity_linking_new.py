@@ -67,7 +67,7 @@ def precision_counter_version_space_based_entity_linking(pos_paths, dataset, spe
             new_vss, new_io_to_vs = [], {}
             has_child = [False] * len(vss)
             ## STEP 3.1. Loop through r2vs
-            big_bar = tqdm.tqdm(c2vs.items())
+            big_bar = tqdm.tqdm(r2vs.items())
             big_bar.set_description("Stage 3.2.1. - Creating New Version Spaces")
             for (rvar, rc), vs_idxs in big_bar:
                 cache, cnt, acc = {}, 0, 0 
