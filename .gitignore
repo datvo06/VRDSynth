@@ -1,0 +1,10 @@
+*.pkl
+*.zip
+table_extract*
+*__pycache__*
+cache_*
+funsd_dataset
+xfund_dataset
+inference_*
+layoutlm_re/transformers*
+viz*
