@@ -1515,7 +1515,7 @@ GrammarReplacement = {
 LiteralSet = set(['WordVariable', 'RelationVariable', 'EmptyProgram', "TrueValue", "FalseValue", "StringConstant", "FloatConstant", "LabelConstant", "BoxConstantValue", "RelationPropertyConstant", "RelationLabelConstant"])
 LiteralReplacement = {
         'WordVariable': [WordVariable(f'w{i}') for i in range(4)],
-        'RelationVariable': [RelationVariable(f'r{i}') for i in range(4)],
+        'RelationVariable': [RelationVariable(f'r{i}') for i in range(6)],
         'EmptyProgram': [EmptyProgram()],
         'TrueValue': [TrueValue()],
         'FalseValue': [FalseValue()],
