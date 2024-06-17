@@ -219,20 +219,11 @@ class NoDuplicateRelationConstraintFilter(FilterStrategy):
     def __init__(self, relation_constraint):
         self.rel_set = set(relation_constraint)
 
-    @staticmethod
-    @lru_cache(maxsize=None)
-    def gather_all_constraint(constraint):
-        if isinstance(constraint, AndConstraint):
-            lhs_constraints = NoDuplicateRelationConstraintFilter.gather_all_constraint(constraint.lhs)
-            rhs_constraints = NoDuplicateRelationConstraintFilter.gather_all_constraint(constraint.rhs)
-            return lhs_constraints + rhs_constraints
-        else:
-            return [constraint]
-
     def check_valid(self, program):
         if isinstance(program, RelationConstraint):
+            print(program, rel_set, program in rel_set)
             return program not in self.rel_set
-        return True
+        return False
 
     def __hash__(self) -> int:
         return hash(self.rel_set)
