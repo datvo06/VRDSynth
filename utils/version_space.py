@@ -338,7 +338,7 @@ def get_intersect_rel_vs(rc: RelationConstraint, vs, data_sample_set_relation_ca
             r_bind = copy.deepcopy(r_bind)
             val = rc.evaluate(w_bind, nx_g)
             # add rbind to the mapping
-            r_bind[rc.r] = nx_g.edges[w_bind[rc.w1], w_bind[rc.w2], 0]
+            r_bind[rc.r] = (w_bind[rc.w1], w_bind[rc.w2], 0)
             if val:
                 cache[(i, mapping2tuple((w_bind, r_bind_old)))] = True
                 vs_matches.add((i, mapping2tuple((w_bind, r_bind))))
