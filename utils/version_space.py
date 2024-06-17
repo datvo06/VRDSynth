@@ -237,6 +237,23 @@ class NoSelfRelationFilter(FilterStrategy):
             return program.w1 != program.w2
         return True
 
+class FixedRelationVarFilter(FilterStrategy):
+    def __init__(self, relation_vars):
+        self.relation_vars = relation_vars
+
+    def check_valid(self, program):
+        if isinstance(program, RelationVariable):
+            return program in self.relation_vars
+        return True
+
+    def __hash__(self) -> int:
+        return hash(self.relation_vars)
+
+    def __eq__(self, o: object) -> bool:
+        if not isinstance(o, FixedRelationVarFilter):
+            return False
+        return self.relation_vars == o.relation_vars
+
 
 def get_valid_rel_constraint_program(version_space: VersionSpace, program: FindProgram):
     if program.type_name() in LiteralSet:
@@ -249,8 +266,10 @@ def get_valid_rel_constraint_program(version_space: VersionSpace, program: FindP
     new_r_var = RelationVariable(f"r{new_r}")
     # Along with this, choose all possible constraints
     hole = Hole(RelationConstraint)
-    filterer = CompositeFilter([NoDuplicateRelationConstraintFilter(program.relation_constraint), WordInBoundFilter(program), NoSelfRelationFilter()])
+    filterer = CompositeFilter([NoDuplicateRelationConstraintFilter(program.relation_constraint), WordInBoundFilter(program), NoSelfRelationFilter(), FixedRelationVarFilter([new_r_var])])
     candidates = fill_hole(hole, 4, filterer)
+    print(candidates)
+    input()
     return new_r_var, candidates
 
 
