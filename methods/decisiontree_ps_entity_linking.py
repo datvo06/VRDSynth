@@ -138,7 +138,7 @@ def build_version_space(programs, specs, data_sample_set_relation_cache, logger,
     return tt, tf, ft, io_to_program, all_out_mappings
 
 
-def build_io_to_program(tt, tf, ft, all_out_mappings, programs, dataset):
+def build_io_to_program(tt, tf, ft, all_out_mappings, programs, dataset, specs):
     tt, tf, ft = [defaultdict(set) for _ in range(3)]
     w0 = WordVariable("w0")
     w2e = [defaultdict(set) for _ in range(len(dataset))]
@@ -181,7 +181,7 @@ def precision_counter_version_space_based_entity_linking(pos_paths, dataset, spe
     print("Number of programs in stage 1: ", len(programs))
     # STAGE 2: Build version space
     tt, tf, ft, io_to_program, all_out_mappings = build_version_space(programs, specs, data_sample_set_relation_cache, logger, cache_dir)
-    io_to_program = build_io_to_program(tt, tf, ft, all_out_mappings, programs, dataset)
+    io_to_program = build_io_to_program(tt, tf, ft, all_out_mappings, programs, dataset, specs)
 
     # STAGE 3: Build version space
     vss = []
