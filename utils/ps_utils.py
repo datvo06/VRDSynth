@@ -954,7 +954,7 @@ class RelationLabelProperty(RelationLabelValue):
     def __eq__(self, other):
         return isinstance(other, RelationLabelProperty) and other.relation_variable == self.relation_variable
 
-    def hash(self):
+    def __hash__(self):
         return hash(str(self))
 
 
