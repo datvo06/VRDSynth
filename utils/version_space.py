@@ -238,7 +238,10 @@ class NoDuplicateRelationConstraintFilter(FilterStrategy):
         return hash(self.rel_set)
 
 
-def NoSelfRelationFilter(FilterStrategy):
+class NoSelfRelationFilter(FilterStrategy):
+    def __init__(self):
+        super().__init__()
+
     def check_valid(self, program):
         if isinstance(program, RelationConstraint):
             return program.w1 != program.w2
@@ -256,7 +259,7 @@ def get_valid_rel_constraint_program(version_space: VersionSpace, program: FindP
     new_r_var = RelationVariable(f"r{new_r}")
     # Along with this, choose all possible constraints
     hole = Hole(RelationConstraint)
-    filterer = CompositeFilter([NoDuplicateRelationConstraintFilter(program.relation_constraint), WordInBoundFilter(program), NoSelfRelationFilter(program)])
+    filterer = CompositeFilter([NoDuplicateRelationConstraintFilter(program.relation_constraint), WordInBoundFilter(program), NoSelfRelationFilter()])
     candidates = fill_hole(hole, 4, filterer)
     return new_r_var, candidates
 
