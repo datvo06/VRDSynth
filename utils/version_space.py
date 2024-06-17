@@ -285,8 +285,8 @@ def add_constraint_to_find_program(find_program, constraint):
 def add_rel_to_find_program(find_program, rel_var, constraint):
     args = find_program.get_args()[:]
     args = copy.deepcopy(args)
-    args[2].append(rel_var)
-    args[3] = AndConstraint(args[3], constraint)
+    args[1].append(rel_var)
+    args[2] = args[2] + [constraint]
     return FindProgram(*args)
 
 
