@@ -217,11 +217,11 @@ def get_valid_cand_find_program(version_space: VersionSpace, program: FindProgra
 
 class NoDuplicateRelationConstraintFilter(FilterStrategy):
     def __init__(self, relation_constraint):
-        self.rel_set = set(relation_constraint)
+        self.rel_set = set([(r.w1, r.w2) for r in relation_constraint])
 
     def check_valid(self, program):
         if isinstance(program, RelationConstraint):
-            return program not in self.rel_set
+            return (program.w1, program.w2) not in self.rel_set
         return False
 
     def __hash__(self) -> int:
