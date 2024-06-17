@@ -1,5 +1,5 @@
 from utils.ps_utils import (
-        FalseValue, WordVariable, RelationVariable, ExcludeProgram, 
+        FalseValue, RelationConstraint, RelationLabelConstant, WordVariable, RelationVariable, ExcludeProgram, 
         FilterStrategy, AndConstraint, FindProgram, Hole, TrueValue, Constraint, LiteralSet, 
         WordLabelProperty, RelationLabelProperty,
         LabelEqualConstraint, RelationLabelEqualConstraint,
@@ -67,7 +67,7 @@ def join_version_space(vs1, vs2):
     # 2. when the set of covered positive 
     pass
 
-class WordInBoundFilter(FilterStrategy):
+class WordAndRelInBoundFilter(FilterStrategy):
     def __init__(self, find_program):
         self.word_set = find_program.word_variables
         self.rel_set = find_program.relation_variables
@@ -83,9 +83,29 @@ class WordInBoundFilter(FilterStrategy):
         return hash((self.word_set, self.rel_set))
 
     def __eq__(self, o: object) -> bool:
-        if not isinstance(o, WordInBoundFilter):
+        if not isinstance(o, WordAndRelInBoundFilter):
             return False
         return self.word_set == o.word_set and self.rel_set == o.rel_set
+
+
+
+class WordInBoundFilter(FilterStrategy):
+    def __init__(self, find_program):
+        self.word_set = find_program.word_variables
+    
+    def check_valid(self, program):
+        if isinstance(program, WordVariable):
+            return program in self.word_set
+        return True
+
+    def __hash__(self) -> int:
+        return hash((self.word_set))
+
+    def __eq__(self, o: object) -> bool:
+        if not isinstance(o, WordInBoundFilter):
+            return False
+        return self.word_set == o.word_set
+
 
 
 class NoDuplicateConstraintFilter(FilterStrategy):
@@ -184,21 +204,55 @@ def get_valid_cand_find_program(version_space: VersionSpace, program: FindProgra
     if program.type_name() in LiteralSet:
         return []
     hole = Hole(Constraint)
-    filterer = CompositeFilter([WordInBoundFilter(program), NoDuplicateConstraintFilter(program.constraint), NoDuplicateLabelConstraintFilter(program.constraint)])
+    filterer = CompositeFilter([WordAndRelInBoundFilter(program), NoDuplicateConstraintFilter(program.constraint), NoDuplicateLabelConstraintFilter(program.constraint)])
     candidates = fill_hole(hole, 4, filterer)
     args = program.get_args()
     out_cands = []
     for cand in candidates:
         if isinstance(cand, TrueValue) or isinstance(cand, FalseValue):
             continue
-        '''
-        # This filter the constraint by order
-        if not (isinstance(program.constraint, LabelEqualConstraint) or 
-                isinstance(program.constraint, RelationLabelEqualConstraint)) and str(cand) < program.constraint.rhs:
-            continue
-        '''
         out_cands.append(cand)
     return out_cands
+
+
+class NoDuplicateRelationConstraintFilter(FilterStrategy):
+    def __init__(self, constraint):
+        self.constraint_set = set(NoDuplicateRelationConstraintFilter.gather_all_constraint(constraint))
+        self.rel_set = set([c for c in self.constraint_set if isinstance(c, RelationConstraint)])
+
+    @staticmethod
+    @lru_cache(maxsize=None)
+    def gather_all_constraint(constraint):
+        if isinstance(constraint, AndConstraint):
+            lhs_constraints = NoDuplicateRelationConstraintFilter.gather_all_constraint(constraint.lhs)
+            rhs_constraints = NoDuplicateRelationConstraintFilter.gather_all_constraint(constraint.rhs)
+            return lhs_constraints + rhs_constraints
+        else:
+            return [constraint]
+
+    def check_valid(self, program):
+        if isinstance(program, RelationConstraint):
+            return program not in self.rel_set
+        return True
+
+    def __hash__(self) -> int:
+        return hash(self.rel_set)
+
+def get_valid_rel_constraint_program(version_space: VersionSpace, program: FindProgram):
+    if program.type_name() in LiteralSet:
+        return []
+    # We have to add simultaneously two thing:
+    # (1) A new relation variable and 
+    # (2) A new relation constraint.
+    rs = program.relation_variables
+    new_r = len(rs) + 1
+    new_r_var = RelationVariable(f"r{new_r}")
+    # Along with this, choose all possible constraints
+    hole = Hole(RelationConstraint)
+    filterer = CompositeFilter([NoDuplicateRelationConstraintFilter(program.constraint), WordInBoundFilter(program)])
+    candidates = fill_hole(hole, 4, filterer)
+    args = program.get_args()
+    return new_r_var, candidates
 
 
 def construct_constraints_to_valid_version_spaces(vss):
@@ -211,9 +265,27 @@ def construct_constraints_to_valid_version_spaces(vss):
     return c2vs
 
 
+def construct_rels_to_valid_version_spaces(vss):
+    c2vs = defaultdict(set)
+    for i, vs in enumerate(vss):
+        for p in vs.programs:
+            cs = get_valid_rel_constraint_program(vs, p)
+            for c in cs:
+                c2vs[c].add(i)
+    return c2vs
+
+
+
 def add_constraint_to_find_program(find_program, constraint):
     args = find_program.get_args()[:]
     args = copy.deepcopy(args)
+    args[3] = AndConstraint(args[3], constraint)
+    return FindProgram(*args)
+
+def add_rel_to_find_program(find_program, rel_var, constraint):
+    args = find_program.get_args()[:]
+    args = copy.deepcopy(args)
+    args[2].append(rel_var)
     args[3] = AndConstraint(args[3], constraint)
     return FindProgram(*args)
 
@@ -235,6 +307,23 @@ def get_intersect_constraint_vs(c, vs, data_sample_set_relation_cache, cache) ->
                 cache[(i, mapping2tuple((w_bind, r_bind)))] = False
     return vs_matches
 
+
+def get_intersect_rel_vs(rc: RelationConstraint, vs, data_sample_set_relation_cache, cache) -> Set:
+    vs_matches = set()
+    for i, (w_bind, r_bind) in vs.mappings:
+        nx_g = data_sample_set_relation_cache[i]
+        if (i, (w_bind, r_bind)) in cache:
+            if cache[(i, (w_bind, r_bind))]:
+                vs_matches.add((i, (w_bind, r_bind)))
+        else:
+            w_bind, r_bind = tuple2mapping((w_bind, r_bind))
+            val = rc.evaluate(w_bind, nx_g)
+            if val:
+                cache[(i, mapping2tuple((w_bind, r_bind)))] = True
+                vs_matches.add((i, mapping2tuple((w_bind, r_bind))))
+            else:
+                cache[(i, mapping2tuple((w_bind, r_bind)))] = False
+    return vs_matches
 
 def join_counter_vss(pps, pcps, covered_tt_perfect, new_vss, covered_tt_counter):
     u_pcs = UnionProgram(pcps[:])
