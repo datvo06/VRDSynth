@@ -634,6 +634,7 @@ def setup_grammar(args):
     if 'table' in args.rel_type:
         LiteralReplacement['RelationLabelConstant'].extend([RelationLabelConstant(5), RelationLabelConstant(6), RelationLabelConstant(7), RelationLabelConstant(8)])
         LiteralReplacement['LabelConstant'].extend([LabelConstant('trow'), LabelConstant('tcol')])
+        LiteralReplacement['RelationVariable'].extend(RelationVariable(f'r{i}') for i in range(7, 9))
     if args.lang == 'ja':
         LiteralReplacement['StringConstant'].extend(
                 [
