@@ -260,7 +260,6 @@ class RelationConstraint(Expression):
             return True
         return False
 
-
     @staticmethod
     def type_name():
         return 'RelationConstraint'

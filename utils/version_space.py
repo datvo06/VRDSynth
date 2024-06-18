@@ -346,6 +346,7 @@ def get_intersect_rel_vs(rc: RelationConstraint, vs, data_sample_set_relation_ca
                 cache[(i, mapping2tuple((w_bind, r_bind)))] = False
     return vs_matches
 
+
 def join_counter_vss(pps, pcps, covered_tt_perfect, new_vss, covered_tt_counter):
     u_pcs = UnionProgram(pcps[:])
     u_pps = UnionProgram(pps[:])
