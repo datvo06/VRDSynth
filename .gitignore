@@ -8,3 +8,5 @@ xfund_dataset
 inference_*
 layoutlm_re/transformers*
 viz*
+*.log
+*.txt
