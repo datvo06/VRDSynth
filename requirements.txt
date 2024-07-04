@@ -65,3 +65,4 @@ opencv-python==4.8.1.78
 wget==3.2
 pymupdf==1.23.26
 pybind11==2.11.1
+torch
