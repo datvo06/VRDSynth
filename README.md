@@ -68,3 +68,9 @@ For extended version of RQ1 with table transformer (TATR), run:
 sh rq1_2_prep.sh
 for lang in en de es fr it ja pt zh; do (sh scripts/rq1_extended/eval_chunking_table_full.sh $lang > eval_table_improved_${lang}.log &); done
 ```
+
+For RQ3 - efficiency, please check the log files of RQ1 and RQ2. For storage memory, these are evident from:
+- The program synthesis files (`stage_3_*.pkl`)
+- The downloaded/trained models (checkpoint-*)
+
+For inference memory footprint, please check htop from linux.

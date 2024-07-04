@@ -1,5 +1,7 @@
 FROM python:3.10-slim
 
+RUN sudo apt-get update && sudo apt install curl -y
+
 # Set the working directory
 WORKDIR /app
 
@@ -15,6 +17,6 @@ COPY . .
 python download_hf_models.py
 
 sh rq1.sh
-sh rq1_2_prep.sh
+sh rq1_extended_prep.sh
 sh rq1_extended.sh
 sh rq2.sh
