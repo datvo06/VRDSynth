@@ -8,7 +8,7 @@ repo_id = "datvo06/fine-tuned-layoutlm"
 output_dir = os.getcwd()
 
 # Get the list of files in the repository
-repo_files = hf_hub_download(repo_id=repo_id, filename=None, repo_type="model")
+repo_files = hf_hub_download(repo_id=repo_id, repo_type="model")
 
 # Download each file from the repository
 for file_path in repo_files:
