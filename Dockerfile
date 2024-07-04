@@ -12,5 +12,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy the rest of the application code into the container
 COPY . .
 
-# Specify the command to run when the container starts
-CMD ["python", "app.py"]
+python download_hf_models.py
+
+sh rq1.sh
+sh rq2.sh
+sh rq1_2_prep.sh
