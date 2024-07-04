@@ -64,6 +64,6 @@ These scripts would output corresponding performance evaluation along with infer
 
 For extended version of RQ1 with table transformer (TATR), run:
 ```
-sh rq1_2.sh
-for lang in en de es fr it ja pt zh; do sh scripts/rq1_extended/eval_chunking_table_full.sh; done
+sh rq1_2_prep.sh
+for lang in en de es fr it ja pt zh; do (sh scripts/rq1_extended/eval_chunking_table_full.sh $lang > eval_table_improved_${lang}.log &); done
 ```
