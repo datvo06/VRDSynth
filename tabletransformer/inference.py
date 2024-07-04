@@ -927,6 +927,8 @@ class TableExtractionPipeline(object):
 
         extracted_tables = []
         for table, rflag, rtransform in zip(cropped_tables, rotated_flags, rev_transforms):
+            if rflag:
+                continue
             img = table['image']
             tokens = table['tokens']
 
