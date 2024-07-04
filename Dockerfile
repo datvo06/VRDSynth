@@ -15,5 +15,6 @@ COPY . .
 python download_hf_models.py
 
 sh rq1.sh
-sh rq2.sh
 sh rq1_2_prep.sh
+sh rq1_extended.sh
+sh rq2.sh
