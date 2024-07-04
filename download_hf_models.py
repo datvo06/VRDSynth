@@ -22,6 +22,15 @@ for file_path in repo_files:
             local_dir=output_dir,
             force_download=True,
         )
+    if 'improved' not in file_path and 'stage3' in file_path:
+        # Download the file and overwrite if it already exists
+        local_file_path = hf_hub_download(
+            repo_id=repo_id,
+            filename=file_path,
+            repo_type="model",
+            local_dir=output_dir,
+            force_download=True,
+        )
         
         print(f"Downloaded {file_path} to {local_file_path}")
 

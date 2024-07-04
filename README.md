@@ -70,7 +70,7 @@ for lang in en de es fr it ja pt zh; do (sh scripts/rq1_extended/eval_chunking_t
 ```
 
 For RQ3 - efficiency, please check the log files of RQ1 and RQ2. For storage memory, these are evident from:
-- The program synthesis files (`stage_3_*.pkl`)
+- The program synthesis files (`stage_3_*.pkl`).
 - The downloaded/trained models (checkpoint-*)
 
 For inference memory footprint, please check htop from linux.
