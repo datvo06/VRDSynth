@@ -11,7 +11,7 @@ repo_id = "datvo06/fine-tuned-layoutlm"
 bin_files = []
 for root, dirs, files in os.walk("."):
     for file in files:
-        if file.endswith(".bin"):
+        if file.endswith(".bin") or file.startswith('stage3'):
             bin_files.append(os.path.join(root, file))
 
 # Upload each .bin file to the Hugging Face Hub
