@@ -1,5 +1,5 @@
 import os
-from huggingface_hub import hf_hub_download
+from huggingface_hub import hf_hub_download, list_repo_files
 
 # Repository ID
 repo_id = "datvo06/fine-tuned-layoutlm"
@@ -8,8 +8,7 @@ repo_id = "datvo06/fine-tuned-layoutlm"
 output_dir = os.getcwd()
 
 # Get the list of files in the repository
-repo_files = hf_hub_download(repo_id=repo_id, repo_type="model")
-
+repo_files = list_repo_files(repo_id=repo_id, repo_type='model')
 # Download each file from the repository
 for file_path in repo_files:
     # Check if the file has a .bin extension
