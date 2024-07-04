@@ -50,7 +50,8 @@ We need to run both two scripts, `scripts/miscs/run_synthesis.sh` and `scripts/m
 sh scripts/miscs/run_synthesis.sh en de es fr it ja pt zh
 sh scripts/miscs/run_synthesis_precision.sh en de es fr it ja pt zh
 ```
-Running synthesis would take approximately 2 hours.
+Running synthesis would take approximately 2 hours, for each language.
+
 ## Evaluation
 For RQ1, run:
 ```sh
