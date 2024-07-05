@@ -12,7 +12,7 @@ bin_files = []
 repo_files = list_repo_files(repo_id=repo_id, repo_type='model')
 for root, dirs, files in os.walk("."):
     for file in files:
-        if file.endswith(".bin"):
+        if file.endswith(".bin") or file.endswith('config.json'):
             relative_path = os.path.relpath(os.path.join(root, file), ".")
             if relative_path not in repo_files:
                 bin_files.append(os.path.join(root, file))
