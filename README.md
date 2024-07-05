@@ -57,6 +57,15 @@ For RQ1, run:
 ```sh
 sh rq1.sh
 ```
+
+The results are organized as follows:
+- The results of VRDSynth(Full) is put in `rq1_full_<lang>_chunk.log`.
+- The results of LayoutXLM is put in `rq1_layoutxlm_<lang>_chunk.log`.
+- The results of VRDSynth+LayoutXLM is put in `rq1_complement_layoutxlm_<lang>_chunk.log`.
+
+Where `lang` is either: `en, de, es, fr, it, ja, pt, zh`.
+
+
 For RQ2, run:
 ```sh
 sh rq2.sh
@@ -74,3 +83,5 @@ For RQ3 - efficiency, please check the log files of RQ1 and RQ2. For storage mem
 - The downloaded/trained models (checkpoint-*)
 
 For inference memory footprint, please check htop from linux.
+
+**Note**: Alternatively, we have compiled the `reproduce.sh`. 
