@@ -3,7 +3,7 @@ import argparse
 import time
 from utils.funsd_utils import load_dataset
 from utils.ps_utils import construct_entity_level_data
-from .train import get_model_and_tokenizer
+from .train import get_model
 from utils.funsd_utils import viz_data, viz_data_no_rel, viz_data_entity_mapping
 import tqdm
 from layoutlm_re.inference import load_tokenizer, load_collator, infer
@@ -32,7 +32,7 @@ if __name__ == '__main__':
     args.cache_dir = get_cache_dir(args)
     tokenizer = load_tokenizer(args.dataset, args.lang)
     collator = load_collator(args.dataset, args.lang)
-    model, _ = get_model_and_tokenizer(args)
+    model = get_model(args)
     # Load model
     model.load_state_dict(torch.load(glob.glob(f"{args.model_type}-finetuned-xfund-{args.lang}-re/checkpoint-*/pytorch_model.bin")[0]))
     dataset = load_dataset(args.dataset, lang=args.lang, mode='test')
