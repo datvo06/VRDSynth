@@ -44,11 +44,11 @@ if __name__ == '__main__':
     model, _ = get_model_and_tokenizer(args)
     tokenizer = AutoTokenizer.from_pretrained("microsoft/layoutxlm-base")
     feature_extractor = LayoutLMv2FeatureExtractor(apply_ocr=False)
-    output_dir=f"infoxlm-finetuned-xfund-{args.lang}-re"
+    output_dir=f"infoxlm-finetuned-xfund-{args.lang}-re" if 'base' in args.model_type else f"infoxlm-large-finetuned-xfund-{args.lang}-re"
     ckpt_path = glob.glob(f"{output_dir}/checkpoint-*/pytorch_model.bin")[0]
     model.load_state_dict(torch.load(ckpt_path))
     training_args = TrainingArguments(output_dir=output_dir,
-                                      overwrite_output_dir=True,
+                                      overwrite_output_dir=False,
                                       remove_unused_columns=False,
                                       # fp16=True, -> led to a loss of 0
                                       max_steps=40000,
