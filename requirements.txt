@@ -16,7 +16,6 @@ filelock==3.12.4
 fonttools==4.43.1
 frozenlist==1.4.0
 fsspec==2023.6.0
-huggingface-hub==0.17.3
 idna==3.4
 ipython==8.16.1
 jedi==0.19.1
