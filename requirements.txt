@@ -67,5 +67,3 @@ pymupdf==1.23.26
 pybind11==2.11.1
 torch==2.1.2
 torchvision==0.16.2
-torchaudio==2.3.1
-trasnformers==4.36.2
