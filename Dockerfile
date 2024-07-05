@@ -13,12 +13,3 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy the rest of the application code into the container
 COPY . .
-
-sh setup_layoutlm_re.sh
-
-python download_hf_models.py
-
-sh rq1.sh
-sh rq1_extended_prep.sh
-sh rq1_extended.sh
-sh rq2.sh
