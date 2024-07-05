@@ -53,6 +53,7 @@ sh scripts/miscs/run_synthesis_precision.sh en de es fr it ja pt zh
 Running synthesis would take approximately 2 hours, for each language.
 
 ## Evaluation
+
 For RQ1, run:
 ```sh
 sh rq1.sh
@@ -65,12 +66,17 @@ The results are organized as follows:
 - The results of XLMRoberta is put in `rq1_xlmroberta_<lang>_chunk.log`.
 - The results of VRDSynth+LayoutXLM is put in `rq1_complement_layoutxlm_<lang>_chunk.log`.
 
-For extended version of RQ1 with table transformer (TATR), run:
-```
-sh rq1_2_prep.sh
-for lang in en de es fr it ja pt zh; do (sh scripts/rq1_extended/eval_chunking_table_full.sh $lang > eval_table_improved_${lang}.log &); done
+For extended version of RQ1 with table transformer (TATR), XLMRoberta and InforXLM(Large), run:
+
+```sh
+sh rq1_extended_prep.sh
+sh rq1_extended.sh
 ```
 
+The results are organized as follows:
+- The results of VRDSynth(Table) is put in `rq1_table_<lang>_chunk.log`.
+- The results of InfoXLM(Large) is put in `rq1_infoxlm_large_<lang>_chunk.log`.
+- The results of XLMRoberta(Large) is put in `rq1_xlmroberta_large_<lang>_chunk.log`.
 
 Where `lang` is either: `en, de, es, fr, it, ja, pt, zh`.
 
@@ -87,4 +93,15 @@ For RQ3 - efficiency, please check the log files of RQ1 and RQ2. For storage mem
 
 For inference memory footprint, please check htop from linux.
 
-**Note**: Alternatively, we have compiled the `reproduce.sh`. 
+**Note**: Alternatively, we have compiled the dockerfile and all these into `reproduce.sh`. To run this, please run the following commands:
+
+```sh
+docker pull datvo06/vrdsynth_replication:latest
+docker run -it --name vrdsynth_replication datvo06/yvrdsynth_replication:latest /bin/bash
+```
+Inside the docker, please run the following command:
+```sh
+sh reproduce.sh
+```
+The organization of results should be the same.
+We tested this for running on an Ubuntu-22 with 64 GB of RAM. The whole running process takes at least 150 GB of storage.
