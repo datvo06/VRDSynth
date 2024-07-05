@@ -61,7 +61,16 @@ sh rq1.sh
 The results are organized as follows:
 - The results of VRDSynth(Full) is put in `rq1_full_<lang>_chunk.log`.
 - The results of LayoutXLM is put in `rq1_layoutxlm_<lang>_chunk.log`.
+- The results of InfoXLM is put in `rq1_infoxlm_<lang>_chunk.log`.
+- The results of XLMRoberta is put in `rq1_xlmroberta_<lang>_chunk.log`.
 - The results of VRDSynth+LayoutXLM is put in `rq1_complement_layoutxlm_<lang>_chunk.log`.
+
+For extended version of RQ1 with table transformer (TATR), run:
+```
+sh rq1_2_prep.sh
+for lang in en de es fr it ja pt zh; do (sh scripts/rq1_extended/eval_chunking_table_full.sh $lang > eval_table_improved_${lang}.log &); done
+```
+
 
 Where `lang` is either: `en, de, es, fr, it, ja, pt, zh`.
 
@@ -70,13 +79,7 @@ For RQ2, run:
 ```sh
 sh rq2.sh
 ```
-These scripts would output corresponding performance evaluation along with inference time for each language, method and settings.
-
-For extended version of RQ1 with table transformer (TATR), run:
-```
-sh rq1_2_prep.sh
-for lang in en de es fr it ja pt zh; do (sh scripts/rq1_extended/eval_chunking_table_full.sh $lang > eval_table_improved_${lang}.log &); done
-```
+These scripts would output corresponding performance evaluation along with inference time for each language and settings for program synthesis.
 
 For RQ3 - efficiency, please check the log files of RQ1 and RQ2. For storage memory, these are evident from:
 - The program synthesis files (`stage_3_*.pkl`).
