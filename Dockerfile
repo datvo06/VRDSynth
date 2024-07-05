@@ -1,6 +1,6 @@
 FROM python:3.10-slim
 
-RUN sudo apt-get update && sudo apt install curl -y
+RUN sudo apt-get update && sudo apt install curl zip -y
 
 # Set the working directory
 WORKDIR /app

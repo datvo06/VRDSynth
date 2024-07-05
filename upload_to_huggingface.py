@@ -12,8 +12,7 @@ bin_files = []
 repo_files = list_repo_files(repo_id=repo_id, repo_type='model')
 for root, dirs, files in os.walk("."):
     for file in files:
-        if file.endswith(".bin") or file.startswith('stage3'):
-            # Check if the relative path is already in repo_files
+        if file.endswith(".bin"):
             relative_path = os.path.relpath(os.path.join(root, file), ".")
             if relative_path not in repo_files:
                 bin_files.append(os.path.join(root, file))
@@ -30,7 +29,16 @@ for file_path in bin_files:
         repo_id=repo_id,
         repo_type="model",
     )
+
     
     print(f"Uploaded {file_path} to {repo_id}/{relative_path}")
+
+api.upload_file(
+    path_or_fileobj="synthesized_programs.zip",
+    path_in_repo="synthesized_programs.zip",
+    repo_id=repo_id,
+    repo_type="model",
+)
+
 
 print("All .bin files uploaded successfully!")
