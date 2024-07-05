@@ -99,6 +99,11 @@ For inference memory footprint, please check htop from linux.
 docker pull datvo06/vrdsynth_replication:latest
 docker run -it --name vrdsynth_replication datvo06/yvrdsynth_replication:latest /bin/bash
 ```
+Please note that you can also build the docker yourself with
+```sh
+docker build -t datvo06/vrdsynth_replication:latest .
+docker run -it --name vrdsynth_replication datvo06/yvrdsynth_replication:latest /bin/bash
+```
 Inside the docker, please run the following command:
 ```sh
 sh reproduce.sh
