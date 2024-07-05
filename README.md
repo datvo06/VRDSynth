@@ -109,4 +109,4 @@ Inside the docker, please run the following command:
 sh reproduce.sh
 ```
 The organization of results should be the same.
-We tested this for running on an Ubuntu-22 with 64 GB of RAM. The whole running process takes at least 150 GB of storage.
+We tested this for running on an Ubuntu-22 with 64 GB of RAM with internet connection (required for downloading the fine-tuned models and synthesized programs). The whole running process takes at least 150 GB of storage.
