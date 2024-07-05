@@ -1,5 +1,8 @@
 from transformers import AutoModel, AutoTokenizer
 from transformers import LayoutLMv2FeatureExtractor
+import pyarrow
+pyarrow.PyExtensionType.set_auto_load(True)
+import pyarrow_hotfix; pyarrow_hotfix.uninstall()
 import sys
 from datasets import load_dataset
 from transformers import TrainingArguments
