@@ -38,7 +38,7 @@ def load_tokenizer(dataset, lang):
 def load_model(dataset, lang):
     if (dataset, lang) not in model_dict:
         model = LayoutLMv2ForRelationExtraction.from_pretrained("microsoft/layoutxlm-base")
-        model.load_state_dict(torch.load(get_ckpt_path(dataset, lang)))
+        model.load_state_dict(torch.load(get_ckpt_path(dataset, lang) + "/pytorch_model.bin"))
         model_dict[(dataset, lang)] = model 
     return model_dict[(dataset, lang)]
 
