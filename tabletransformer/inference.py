@@ -159,8 +159,6 @@ def get_args():
     parser.add_argument('--mode',
                         help="The processing to apply to the input image and tokens",
                         choices=['detect', 'recognize', 'extract'])
-    parser.add_argument('--detection_device', default="cuda")
-    parser.add_argument('--structure_device', default="cuda")
     parser.add_argument('--crops', '-p', action='store_true',
                         help='Output cropped data from table detections')
     parser.add_argument('--objects', '-o', action='store_true',
@@ -1016,6 +1014,8 @@ def get_outdir_name(mode, dataset, dataset_mode, lang):
     return f"table_{mode}_{dataset}_{dataset_mode}_{lang}"
 def main():
     args = get_args()
+    args.detection_device = 'cuda' if torch.cuda.is_available() else 'cpu'
+    args.structure_device = args.detection_device
     print(args.__dict__)
     print('-' * 100)
 
