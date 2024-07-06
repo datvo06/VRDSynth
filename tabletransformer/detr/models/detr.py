@@ -305,6 +305,7 @@ class MLP(nn.Module):
 
 def build(args):
     num_classes=args.num_classes
+    args.device = 'cuda' if torch.cuda.is_available() else 'cpu'
     device = torch.device(args.device)
 
     backbone = build_backbone(args)
