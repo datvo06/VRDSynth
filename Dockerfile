@@ -2,6 +2,7 @@ FROM python:3.10-slim
 
 RUN apt-get update && apt install curl zip git build-essential -y
 RUN apt-get update && apt-get install ffmpeg libsm6 libxext6  -y
+RUN apt-get update && apt install wget -y
 
 # Set the working directory
 WORKDIR /app
