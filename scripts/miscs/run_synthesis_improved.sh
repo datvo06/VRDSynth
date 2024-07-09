@@ -1,0 +1,1 @@
+rel_type=legacy;thres=1.0;hops=3;for lang in $@;do python -m methods.ps_entity_linking_new --upper_float_thres 1.0 --rel_type=legacy --hops ${hops:=3} --lang ${lang} --mode train --strategy=precision_counter;done

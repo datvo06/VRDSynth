@@ -13,7 +13,3 @@ fi
 ######## Table model Infererence ########
 for lang in en de es fr it ja pt zh; do (python -m tabletransformer.inference --lang ${lang} --dataset_mode train --mode extract -clmpoz &); done
 for lang in en de es fr it ja pt zh; do (python -m tabletransformer.inference --lang ${lang} --dataset_mode val --mode extract -clmpoz &); done
-
-
-######## VRDSynth ########
-rel_type=legacy_table;thres=1.0;hops=$2;for lang in it ja pt zh;do (python -m methods.decisiontree_ps_entity_linking --upper_float_thres 1.0 --rel_type=${rel_type} --hops ${hops:=3} --lang ${lang} --mode train --strategy=precision_counter &);done

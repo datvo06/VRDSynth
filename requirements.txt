@@ -16,7 +16,6 @@ filelock==3.12.4
 fonttools==4.43.1
 frozenlist==1.4.0
 fsspec==2023.6.0
-huggingface-hub==0.17.3
 idna==3.4
 ipython==8.16.1
 jedi==0.19.1
@@ -38,7 +37,7 @@ Pillow==10.1.0
 prompt-toolkit==3.0.39
 ptyprocess==0.7.0
 pure-eval==0.2.2
-pyarrow==13.0.0
+pyarrow==16.1.0
 Pygments==2.16.1
 pyparsing==3.1.1
 python-dateutil==2.8.2
@@ -65,3 +64,5 @@ opencv-python==4.8.1.78
 wget==3.2
 pymupdf==1.23.26
 pybind11==2.11.1
+torch==2.1.2
+torchvision==0.16.2

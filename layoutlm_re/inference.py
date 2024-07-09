@@ -1,5 +1,8 @@
 from transformers import AutoTokenizer, AutoModelForTokenClassification
 from transformers import LayoutLMv2ForRelationExtraction, AutoTokenizer, LayoutLMv2FeatureExtractor 
+import pyarrow
+pyarrow.PyExtensionType.set_auto_load(True)
+import pyarrow_hotfix; pyarrow_hotfix.uninstall()
 from layoutlm_re.train import DataCollatorForKeyValueExtraction
 from layoutlm_re.xfund.xfund import load_image, simplify_bbox, normalize_bbox, merge_bbox
 from utils.funsd_utils import viz_data, viz_data_no_rel, viz_data_entity_mapping
@@ -24,6 +27,8 @@ model_dict = {}
 tokenizer_pre = AutoTokenizer.from_pretrained("xlm-roberta-base")
 collator_dict = {}
 
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
 
 def get_ckpt_path(dataset, lang):
     return (glob.glob(f"layoutlm_re/layoutxlm-finetuned-{dataset}-{lang}-re/checkpoint-*") + glob.glob(f"layoutxlm-finetuned-{dataset}-{lang}-re/checkpoint-*"))[0]
@@ -37,8 +42,9 @@ def load_tokenizer(dataset, lang):
 
 def load_model(dataset, lang):
     if (dataset, lang) not in model_dict:
-        relation_extraction_model = LayoutLMv2ForRelationExtraction.from_pretrained(get_ckpt_path(dataset, lang))
-        model_dict[(dataset, lang)] = relation_extraction_model
+        model = LayoutLMv2ForRelationExtraction.from_pretrained("microsoft/layoutxlm-base")
+        model.load_state_dict(torch.load(get_ckpt_path(dataset, lang) + "/pytorch_model.bin", map_location=device))
+        model_dict[(dataset, lang)] = model 
     return model_dict[(dataset, lang)]
 
 def load_collator(dataset, lang):

@@ -12,6 +12,7 @@ import numpy as np
 import torch
 import glob
 
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 def get_cache_dir(args):
     cache_dir = f"cache_{args.model_type}_re_entity_linking_{args.dataset}_{args.lang}"
@@ -34,7 +35,7 @@ if __name__ == '__main__':
     collator = load_collator(args.dataset, args.lang)
     model = get_model(args)
     # Load model
-    model.load_state_dict(torch.load(glob.glob(f"{args.model_type}-finetuned-xfund-{args.lang}-re/checkpoint-*/pytorch_model.bin")[0]))
+    model.load_state_dict(torch.load(glob.glob(f"{args.model_type}-finetuned-xfund-{args.lang}-re/checkpoint-*/pytorch_model.bin")[0], map_location=device))
     dataset = load_dataset(args.dataset, lang=args.lang, mode='test')
     times = []
     bar = tqdm.tqdm(dataset)

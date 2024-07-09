@@ -626,6 +626,7 @@ def setup_grammar(args):
     args = setup_relation(args)
     if args.use_sem:
         GrammarReplacement['FloatValue'].append(SemDist)
+        GrammarReplacement['RelationLabelConstant'].append(RelationLabelConstant(5))
     if args.rel_type not in {'default', 'cluster'}:
         LiteralReplacement['RelationPropertyConstant'] =  [RelationPropertyConstant('mag')]
     if args.use_layoutlm_output:
@@ -633,11 +634,10 @@ def setup_grammar(args):
     if 'table' in args.rel_type:
         LiteralReplacement['RelationLabelConstant'].extend([RelationLabelConstant(5), RelationLabelConstant(6), RelationLabelConstant(7), RelationLabelConstant(8)])
         LiteralReplacement['LabelConstant'].extend([LabelConstant('trow'), LabelConstant('tcol')])
+        LiteralReplacement['RelationVariable'].extend(RelationVariable(f'r{i}') for i in range(7, 9))
     if args.lang == 'ja':
         LiteralReplacement['StringConstant'].extend(
                 [
-                    # StringConstant('テ'), StringConstant('ー'), StringConstant('ブ'), StringConstant('ル'),
-                    #  StringConstant('セ'), StringConstant('ル'), StringConstant('ー'), StringConstant('ボ'),
                      StringConstant('●'), StringConstant('○'), StringConstant('△'), StringConstant('□'),
                      StringConstant('、'), StringConstant('。'), StringConstant('「'), StringConstant('」'),
                      StringConstant('『'), StringConstant('』'), StringConstant('（'), StringConstant('）'),

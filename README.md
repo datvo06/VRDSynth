@@ -50,20 +50,63 @@ We need to run both two scripts, `scripts/miscs/run_synthesis.sh` and `scripts/m
 sh scripts/miscs/run_synthesis.sh en de es fr it ja pt zh
 sh scripts/miscs/run_synthesis_precision.sh en de es fr it ja pt zh
 ```
-Running synthesis would take approximately 2 hours.
+Running synthesis would take approximately 2 hours, for each language.
+
 ## Evaluation
+
 For RQ1, run:
 ```sh
 sh rq1.sh
 ```
+
+The results are organized as follows:
+- The results of VRDSynth(Full) is put in `rq1_full_<lang>_chunk.log`.
+- The results of LayoutXLM is put in `rq1_layoutxlm_<lang>_chunk.log`.
+- The results of InfoXLM is put in `rq1_infoxlm_<lang>_chunk.log`.
+- The results of XLMRoberta is put in `rq1_xlmroberta_<lang>_chunk.log`.
+- The results of VRDSynth+LayoutXLM is put in `rq1_complement_layoutxlm_<lang>_chunk.log`.
+
+For extended version of RQ1 with table transformer (TATR), XLMRoberta and InforXLM(Large), run:
+
+```sh
+sh rq1_extended_prep.sh
+sh rq1_extended.sh
+```
+
+The results are organized as follows:
+- The results of VRDSynth(Table) is put in `rq1_table_<lang>_chunk.log`.
+- The results of InfoXLM(Large) is put in `rq1_infoxlm_large_<lang>_chunk.log`.
+- The results of XLMRoberta(Large) is put in `rq1_xlmroberta_large_<lang>_chunk.log`.
+
+Where `lang` is either: `en, de, es, fr, it, ja, pt, zh`.
+
+
 For RQ2, run:
 ```sh
 sh rq2.sh
 ```
-These scripts would output corresponding performance evaluation along with inference time for each language, method and settings.
+These scripts would output corresponding performance evaluation along with inference time for each language and settings for program synthesis.
 
-For extended version of RQ1 with table transformer (TATR), run:
+For RQ3 - efficiency, please check the log files of RQ1 and RQ2. For storage memory, these are evident from:
+- The program synthesis files (`stage_3_*.pkl`).
+- The downloaded/trained models (checkpoint-*)
+
+For inference memory footprint, please check htop from linux.
+
+**Note**: Alternatively, we have compiled the dockerfile and all these into `reproduce.sh`. To run this, please run the following commands:
+
+```sh
+docker pull datvo06/vrdsynth_replication:latest
+docker run -it --name vrdsynth_replication datvo06/vrdsynth_replication:latest /bin/bash
 ```
-sh rq1_2.sh
-for lang in en de es fr it ja pt zh; do sh scripts/rq1_extended/eval_chunking_table_full.sh; done
+Please note that you can also build the docker yourself with
+```sh
+docker build -t datvo06/vrdsynth_replication:latest .
+docker run -it --name vrdsynth_replication datvo06/vrdsynth_replication:latest /bin/bash
 ```
+Inside the docker, please run the following command:
+```sh
+sh reproduce.sh
+```
+The organization of results should be the same.
+We tested this for running on an Ubuntu-22 with 64 GB of RAM with internet connection (required for downloading the fine-tuned models and synthesized programs). The whole running process takes at least 150 GB of storage.

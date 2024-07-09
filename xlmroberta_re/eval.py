@@ -3,34 +3,21 @@ from transformers import LayoutLMv2FeatureExtractor
 import pyarrow
 pyarrow.PyExtensionType.set_auto_load(True)
 import pyarrow_hotfix; pyarrow_hotfix.uninstall()
-from .model import InfoXLMForRelationExtraction
 import sys
 from datasets import load_dataset
 from transformers import TrainingArguments
 from layoutlm_re.trainers import XfunReTrainer
 from layoutlm_re.train import compute_metrics, DataCollatorForKeyValueExtraction
+from .train import get_model
 import argparse
 import glob
 import torch
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-
-def get_model_and_tokenizer(args):
-    if args.model_type == 'infoxlm-base':
-        model = AutoModel.from_pretrained("microsoft/infoxlm-base")
-        tokenizer = AutoTokenizer.from_pretrained("microsoft/infoxlm-base")
-    elif args.model_type == 'infoxlm-large':
-        model = AutoModel.from_pretrained("microsoft/infoxlm-large")
-        tokenizer = AutoTokenizer.from_pretrained("microsoft/infoxlm-large")
-
-    model = InfoXLMForRelationExtraction(model)
-
-    return model, tokenizer
-
 def get_argparser():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--model_type', type=str, default='infoxlm-base')
+    parser.add_argument('--model_type', type=str, default='xlm-roberta-base')
     parser.add_argument('--lang', type=str, default='en')
     return parser
 
@@ -45,10 +32,10 @@ if __name__ == '__main__':
     train_dataset = dataset['train']
     test_dataset = dataset['validation']
 
-    model, _ = get_model_and_tokenizer(args)
+    model = get_model(args)
     tokenizer = AutoTokenizer.from_pretrained("microsoft/layoutxlm-base")
     feature_extractor = LayoutLMv2FeatureExtractor(apply_ocr=False)
-    output_dir=f"infoxlm-finetuned-xfund-{args.lang}-re" if 'base' in args.model_type else f"infoxlm-large-finetuned-xfund-{args.lang}-re"
+    output_dir=f"{args.model_type}-finetuned-xfund-{args.lang}-re"
     ckpt_path = glob.glob(f"{output_dir}/checkpoint-*/pytorch_model.bin")[0]
     model.load_state_dict(torch.load(ckpt_path, map_location=device))
     training_args = TrainingArguments(output_dir=output_dir,

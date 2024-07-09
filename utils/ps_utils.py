@@ -250,6 +250,16 @@ class RelationConstraint(Expression):
     def get_args(self):
         return [self.w1, self.w2, self.r]
 
+
+    def evaluate(self, w_bind, nx_g):
+        if self.w1 not in w_bind or self.w2 not in w_bind:
+            return False
+        w1 = w_bind[self.w1]
+        w2 = w_bind[self.w2]
+        if nx_g.has_edge(w1, w2):
+            return True
+        return False
+
     @staticmethod
     def type_name():
         return 'RelationConstraint'
@@ -943,7 +953,7 @@ class RelationLabelProperty(RelationLabelValue):
     def __eq__(self, other):
         return isinstance(other, RelationLabelProperty) and other.relation_variable == self.relation_variable
 
-    def hash(self):
+    def __hash__(self):
         return hash(str(self))
 
 
@@ -1504,7 +1514,7 @@ GrammarReplacement = {
 LiteralSet = set(['WordVariable', 'RelationVariable', 'EmptyProgram', "TrueValue", "FalseValue", "StringConstant", "FloatConstant", "LabelConstant", "BoxConstantValue", "RelationPropertyConstant", "RelationLabelConstant"])
 LiteralReplacement = {
         'WordVariable': [WordVariable(f'w{i}') for i in range(4)],
-        'RelationVariable': [RelationVariable(f'r{i}') for i in range(4)],
+        'RelationVariable': [RelationVariable(f'r{i}') for i in range(6)],
         'EmptyProgram': [EmptyProgram()],
         'TrueValue': [TrueValue()],
         'FalseValue': [FalseValue()],
