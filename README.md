@@ -1,4 +1,7 @@
 This is the replication package for **VRDSynth - Synthesizing Programs for Multilingual Visually Rich Information Extraction**
+![VRDSynth Example](./assets/VRDSynth_Animation.gif)
+
+
 # Running
 To run VRDSynth, we need to do the following steps: (1) setting up layoutXLM environment and training LayoutXLM, InfoXLM and XLMRoberta (2) setup VRDSynth requirements, (3) running synthesizing algorithms (4) evaluate.
 
