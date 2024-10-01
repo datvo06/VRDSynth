@@ -117,13 +117,19 @@ We tested this for running on an Ubuntu-22 with 64 GB of RAM with internet conne
 # Citation
 Please cite our work if it is helpful towards your project.
 ```bibtex
-@misc{nguyen2024vrdsynthsynthesizingprogramsmultilingual,
-      title={VRDSynth: Synthesizing Programs for Multilingual Visually Rich Document Information Extraction}, 
-      author={Thanh-Dat Nguyen and Tung Do-Viet and Hung Nguyen-Duy and Tuan-Hai Luu and Hung Le and Bach Le and Patanamon and Thongtanunam},
-      year={2024},
-      eprint={2407.06826},
-      archivePrefix={arXiv},
-      primaryClass={cs.AI},
-      url={https://arxiv.org/abs/2407.06826}, 
+@inproceedings{nguyen2024vrdsynth,
+author = {Nguyen, Thanh-Dat and Do-Viet, Tung and Nguyen-Duy, Hung and Luu, Tuan-Hai and Le, Hung and Le, Bach and Thongtanunam, Patanamon},
+title = {VRDSynth: Synthesizing Programs for Multilingual Visually Rich Document Information Extraction},
+year = {2024},
+isbn = {9798400706127},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+url = {https://doi.org/10.1145/3650212.3680314},
+doi = {10.1145/3650212.3680314},
+pages = {704–716},
+numpages = {13},
+keywords = {Automatic Programming, Information Extraction, Program Synthesis, Programming By Example, Visually-Rich Document},
+location = {Vienna, Austria},
+series = {ISSTA 2024}
 }
 ```
