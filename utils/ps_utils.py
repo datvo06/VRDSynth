@@ -1,6 +1,6 @@
 from utils.funsd_utils import DataSample, Bbox
 from utils.algorithms import UnionFind
-from typing import List, Tuple, Dict
+from typing import List, Tuple, Dict, Any
 from collections import namedtuple, defaultdict
 import itertools
 import networkx as nx
@@ -12,7 +12,7 @@ from scipy.spatial.distance import cosine
 
 
 def construct_entity_merging_specs(dataset: List[DataSample]):
-    # Construct the following pairs 
+    # Construct the following pairs
     specs = []
     for i, datasample in enumerate(dataset):
         specs.append((i, list(datasample.entities)))
@@ -27,7 +27,7 @@ def construct_entity_level_data(data) -> DataSample:
     words = []
     labels = []
     entities = []
-    entities_map = data['entities_map']
+    entities_map = data["entities_map"]
     boxes = []
     if isinstance(data.entities, list):
         itor = enumerate(data.entities)
@@ -41,23 +41,25 @@ def construct_entity_level_data(data) -> DataSample:
             entity_words.append(data.words[word_idx])
             entity_labels.append(data.labels[word_idx])
             entity_boxes.append(data.boxes[word_idx])
-        words.append(' '.join(entity_words))
+        words.append(" ".join(entity_words))
         labels.append(entity_labels[0])
         entities.append([i])
         bbox = Bbox(
-                min([box.x0 for box in entity_boxes]),
-                min([box.y0 for box in entity_boxes]),
-                max([box.x1 for box in entity_boxes]),
-                max([box.y1 for box in entity_boxes])
+            min([box.x0 for box in entity_boxes]),
+            min([box.y0 for box in entity_boxes]),
+            max([box.x1 for box in entity_boxes]),
+            max([box.y1 for box in entity_boxes]),
         )
         boxes.append(bbox)
 
-    return DataSample(words, labels, entities, entities_map, boxes, data.img_fp, data.entities_texts)
+    return DataSample(
+        words, labels, entities, entities_map, boxes, data.img_fp, data.entities_texts
+    )
 
 
 def construct_entity_linking_specs(dataset: List[DataSample]):
-    # Construct the following pairs 
-    specs = []
+    # Construct the following pairs
+    specs: List[Any] = []
     entity_dataset = []
     for i, datasample in enumerate(dataset):
         entity_datasample = construct_entity_level_data(datasample)
@@ -102,7 +104,6 @@ class SpecIterator:
             self._index += 1
             return self._specs[self._index_outer][0], word, entity
 
-
     def __len__(self):
         return self.len
 
@@ -136,7 +137,6 @@ class Hole:
         return hash(self.__str__())
 
 
-
 class Expression:
 
     @staticmethod
@@ -163,10 +163,10 @@ class Expression:
 class Program(Expression):
     def __init__(self):
         pass
-    
+
     @staticmethod
     def type_name():
-        return 'Program'
+        return "Program"
 
     def evaluate(self, nx_g_data) -> List[Tuple[int, int]]:
         raise NotImplementedError
@@ -178,7 +178,6 @@ class Program(Expression):
         raise NotImplementedError
 
 
-
 class Literal(Expression):
     @staticmethod
     def get_arg_type():
@@ -186,21 +185,23 @@ class Literal(Expression):
 
     @staticmethod
     def type_name():
-        return 'Literal'
+        return "Literal"
 
     def get_args(self):
         return []
+
 
 class WordVariable(Literal):
 
     def __init__(self, name):
         self.name = name
-        assert isinstance(self.name, str), f"Name of WordVariable must be a string, but got {self.name}"
+        assert isinstance(
+            self.name, str
+        ), f"Name of WordVariable must be a string, but got {self.name}"
 
     @staticmethod
     def type_name():
-        return 'WordVariable'
-
+        return "WordVariable"
 
     def __str__(self):
         return self.name
@@ -221,7 +222,7 @@ class RelationVariable(Literal):
 
     @staticmethod
     def type_name():
-        return 'RelationVariable'
+        return "RelationVariable"
 
     def __str__(self):
         assert isinstance(self.name, str)
@@ -250,7 +251,6 @@ class RelationConstraint(Expression):
     def get_args(self):
         return [self.w1, self.w2, self.r]
 
-
     def evaluate(self, w_bind, nx_g):
         if self.w1 not in w_bind or self.w2 not in w_bind:
             return False
@@ -262,10 +262,10 @@ class RelationConstraint(Expression):
 
     @staticmethod
     def type_name():
-        return 'RelationConstraint'
+        return "RelationConstraint"
 
     def __str__(self):
-        return f'rel({self.w1}, {self.r}, {self.w2})'
+        return f"rel({self.w1}, {self.r}, {self.w2})"
 
     def __iter__(self):
         return iter([self.w1, self.w2, self.r])
@@ -281,14 +281,21 @@ class RelationConstraint(Expression):
 
 
 class FindProgram(Program):
-    def __init__(self, word_variables, relation_variables, relation_constraints, constraint, return_variables):
+    def __init__(
+        self,
+        word_variables,
+        relation_variables,
+        relation_constraints,
+        constraint,
+        return_variables,
+    ):
         self.cache_hash = None
         self.word_variables = word_variables
         # assert that all word variables are unique
         assert len(self.word_variables) == len(set(self.word_variables))
         self.relation_variables = relation_variables
         self.relation_constraint = relation_constraints
-        # assert that a relation variable is not used more than once 
+        # assert that a relation variable is not used more than once
         assert len(self.relation_variables) == len(set(self.relation_variables))
         rcount = defaultdict(int)
         for _, _, r in self.relation_constraint:
@@ -301,12 +308,17 @@ class FindProgram(Program):
 
     @staticmethod
     def get_arg_type():
-        return [[WordVariable], [RelationVariable], [RelationConstraint], Constraint, [WordVariable]]
+        return [
+            [WordVariable],
+            [RelationVariable],
+            [RelationConstraint],
+            Constraint,
+            [WordVariable],
+        ]
 
     @staticmethod
     def type_name():
-        return 'FindProgram'
-
+        return "FindProgram"
 
     def collect_find_programs(self):
         return [self]
@@ -315,8 +327,13 @@ class FindProgram(Program):
         return FixedSetProgram(eval_mapping[self])
 
     def get_args(self):
-        return [self.word_variables, self.relation_variables, self.relation_constraint, self.constraint, self.return_variables]
-
+        return [
+            self.word_variables,
+            self.relation_variables,
+            self.relation_constraint,
+            self.constraint,
+            self.return_variables,
+        ]
 
     def evaluate(self, nx_g_data) -> List[Tuple[int, int]]:
         # construct a smaller graph
@@ -331,17 +348,24 @@ class FindProgram(Program):
         gm = isomorphism.MultiDiGraphMatcher(nx_g_data, nx_graph_query)
         # iterate over all subgraphs
         out_words = []
-        w0 = WordVariable('w0')
+        w0 = WordVariable("w0")
         for subgraph in gm.subgraph_monomorphisms_iter():
             subgraph = {v: k for k, v in subgraph.items()}
             # get the corresponding binding for word_variables and relation_variables
             word_binding = {w: subgraph[w] for w in self.word_variables}
-            relation_binding = {r: (subgraph[w1], subgraph[w2], 0) for w1, w2, r in self.relation_constraint}
+            relation_binding = {
+                r: (subgraph[w1], subgraph[w2], 0)
+                for w1, w2, r in self.relation_constraint
+            }
             # check if the binding satisfies the constraints
             if self.constraint.evaluate(word_binding, relation_binding, nx_g_data):
                 if self.return_variables:
                     out_words.extend(
-                       [(word_binding[w0], word_binding[w]) for w in self.return_variables])
+                        [
+                            (word_binding[w0], word_binding[w])
+                            for w in self.return_variables
+                        ]
+                    )
                 else:
                     out_words.append(word_binding)
         if self.return_variables:
@@ -356,7 +380,7 @@ class FindProgram(Program):
         return f'find(({", ".join([str(w) for w in self.word_variables])}), ({", ".join([str(r) for r in self.relation_variables])}), ({", ".join([str(c) for c in self.relation_constraint])}, {str(self.constraint)}, {", ".join([str(w) for w in self.return_variables])})'
 
     def __hash__(self):
-        if not hasattr(self, 'cache_hash'):
+        if not hasattr(self, "cache_hash"):
             self.cache_hash = None
         if self.cache_hash is None:
             self.cache_hash = hash(str(self))
@@ -372,7 +396,7 @@ class StringValue(Expression):
 
     @staticmethod
     def type_name():
-        return 'StringValue'
+        return "StringValue"
 
 
 class FixedSetProgram(Program):
@@ -381,7 +405,7 @@ class FixedSetProgram(Program):
 
     @staticmethod
     def type_name():
-        return 'FixedSetProgram'
+        return "FixedSetProgram"
 
     @staticmethod
     def get_arg_type():
@@ -415,7 +439,7 @@ class EmptyProgram(FixedSetProgram):
 
     @staticmethod
     def type_name():
-        return 'EmptyProgram'
+        return "EmptyProgram"
 
     @staticmethod
     def get_arg_type():
@@ -434,11 +458,10 @@ class EmptyProgram(FixedSetProgram):
         return self
 
     def __str__(self):
-        return '{}'
+        return "{}"
 
     def __eq__(self, other):
         return isinstance(other, EmptyProgram)
-
 
     def __hash__(self):
         return hash(str(self))
@@ -457,7 +480,7 @@ class UnionProgram(Program):
 
     @staticmethod
     def type_name():
-        return 'UnionProgram'
+        return "UnionProgram"
 
     def get_args(self):
         return [self.programs]
@@ -473,14 +496,16 @@ class UnionProgram(Program):
 
     def replace_find_programs_with_values(self, values):
         if self not in values:
-            up = UnionProgram([p.replace_find_programs_with_values(values) for p in self.programs])
+            up = UnionProgram(
+                [p.replace_find_programs_with_values(values) for p in self.programs]
+            )
             up = FixedSetProgram(up.evaluate(None))
             values[self] = up
         return values[self]
 
     def __str__(self):
-        if 'cache_str' not in self.__dict__ or not self.cache_str:
-            self.cache_str = '{' + ' | '.join([str(p) for p in self.programs]) + '}'
+        if "cache_str" not in self.__dict__ or not self.cache_str:
+            self.cache_str = "{" + " | ".join([str(p) for p in self.programs]) + "}"
         return self.cache_str
 
     def __eq__(self, other):
@@ -488,7 +513,7 @@ class UnionProgram(Program):
         return hash(self) == hash(other)
 
     def __hash__(self):
-        if not hasattr(self, 'cache_hash'):
+        if not hasattr(self, "cache_hash"):
             self.cache_hash = None
         if self.cache_hash is None:
             self.cache_hash = hash(str(self))
@@ -510,13 +535,20 @@ class ExcludeProgram(Program):
 
     @staticmethod
     def type_name():
-        return 'ExcludeProgram'
+        return "ExcludeProgram"
 
     def evaluate(self, nx_g_data) -> List[Tuple[int, int]]:
-        return list(set(self.ref_program.evaluate(nx_g_data)) - set.union(*[set(p.evaluate(nx_g_data)) for p in self.excl_programs]))
+        return list(
+            set(self.ref_program.evaluate(nx_g_data))
+            - set.union(*[set(p.evaluate(nx_g_data)) for p in self.excl_programs])
+        )
 
     def __str__(self):
-        return f'{{{self.ref_program} - ' + ' | '.join([str(p) for p in self.excl_programs]) + '}}'
+        return (
+            f"{{{self.ref_program} - "
+            + " | ".join([str(p) for p in self.excl_programs])
+            + "}}"
+        )
 
     def collect_find_programs(self):
         fps = []
@@ -536,8 +568,17 @@ class ExcludeProgram(Program):
             ref_program = self.ref_program
             if isinstance(self.ref_program, FindProgram):
                 ref_program = FixedSetProgram(eval_mapping[self.ref_program])
-            excl_programs = [FixedSetProgram(eval_mapping[p]) if isinstance(p, FindProgram) else p.replace_find_programs_with_values(eval_mapping) for p in self.excl_programs]
-            eval_mapping[self] = FixedSetProgram(ExcludeProgram(ref_program, excl_programs).evaluate(None))
+            excl_programs = [
+                (
+                    FixedSetProgram(eval_mapping[p])
+                    if isinstance(p, FindProgram)
+                    else p.replace_find_programs_with_values(eval_mapping)
+                )
+                for p in self.excl_programs
+            ]
+            eval_mapping[self] = FixedSetProgram(
+                ExcludeProgram(ref_program, excl_programs).evaluate(None)
+            )
         return eval_mapping[self]
 
     def reduce(self):
@@ -557,17 +598,17 @@ class ExcludeProgram(Program):
         self.excl_programs = new_excl_programs
         return ret_reducible, self
 
-
     def __eq__(self, other):
         # compare list of programs
         return hash(self) == hash(other)
 
     def __hash__(self):
-        if not hasattr(self, 'cache_hash'):
+        if not hasattr(self, "cache_hash"):
             self.cache_hash = None
         if self.cache_hash is None:
             self.cache_hash = hash(str(self))
         return self.cache_hash
+
 
 class FloatValue(Expression):
     def evaluate(self, word_binding, relation_binding, nx_g_data) -> float:
@@ -579,7 +620,7 @@ class FloatValue(Expression):
 
     @staticmethod
     def type_name():
-        return 'FloatValue'
+        return "FloatValue"
 
 
 class BoolValue(Expression):
@@ -592,7 +633,7 @@ class BoolValue(Expression):
 
     @staticmethod
     def type_name():
-        return 'BoolValue'
+        return "BoolValue"
 
 
 class StringConstant(StringValue, Literal):
@@ -604,7 +645,7 @@ class StringConstant(StringValue, Literal):
 
     @staticmethod
     def type_name():
-        return 'StringConstant'
+        return "StringConstant"
 
     def __str__(self):
         return f'"{self.value}"'
@@ -619,7 +660,7 @@ class FloatConstant(FloatValue, Literal):
 
     @staticmethod
     def type_name():
-        return 'FloatConstant'
+        return "FloatConstant"
 
     def __str__(self):
         return str(self.value)
@@ -630,22 +671,22 @@ class SemDist(FloatValue):
         self.w1 = w1
         self.w2 = w2
 
-
     @staticmethod
     def get_arg_type():
         return [WordVariable, WordVariable]
 
     @staticmethod
     def type_name():
-        return 'SemDist'
+        return "SemDist"
 
     def get_args(self):
         return [self.w1, self.w2]
 
-
     def __eq__(self, other):
-        return isinstance(other, SemDist) and ((self.w1 == other.w1 and self.w2 == other.w2) or
-                                               (self.w2 == other.w1 and self.w1 == other.w2))
+        return isinstance(other, SemDist) and (
+            (self.w1 == other.w1 and self.w2 == other.w2)
+            or (self.w2 == other.w1 and self.w1 == other.w2)
+        )
 
     def __str__(self):
         return f"SemDist({self.w1}, {self.w2})"
@@ -654,8 +695,8 @@ class SemDist(FloatValue):
         return hash(str(self))
 
     def evaluate(self, word_binding, relation_binding, nx_g):
-        emb1 = nx_g.nodes[word_binding[self.w1]]['emb']
-        emb2 = nx_g.nodes[word_binding[self.w2]]['emb']
+        emb1 = nx_g.nodes[word_binding[self.w1]]["emb"]
+        emb2 = nx_g.nodes[word_binding[self.w2]]["emb"]
         # If both emb1 and emb2 is not zero vector
         if np.linalg.norm(emb1) > 0 and np.linalg.norm(emb2) > 0:
             return 1 - cosine(emb1, emb2)
@@ -671,16 +712,16 @@ class SemDist(FloatValue):
             return False, self
 
 
-
 class FalseValue(BoolValue, Literal):
     def evaluate(self, word_binding, relation_binding, nx_g_data):
         return False
 
     @staticmethod
     def type_name():
-        return 'FalseValue'
+        return "FalseValue"
 
-    def __str__(self): return "False"
+    def __str__(self):
+        return "False"
 
     def __hash__(self):
         return hash(str(self))
@@ -688,15 +729,17 @@ class FalseValue(BoolValue, Literal):
     def __eq__(self, other):
         return str(self) == str(other)
 
+
 class TrueValue(BoolValue, Literal):
     def evaluate(self, word_binding, relation_binding, nx_g_data):
         return True
 
     @staticmethod
     def type_name():
-        return 'TrueValue'
+        return "TrueValue"
 
-    def __str__(self): return "True"
+    def __str__(self):
+        return "True"
 
     def __hash__(self):
         return hash(str(self))
@@ -718,17 +761,22 @@ class WordTextProperty(StringValue):
 
     @staticmethod
     def type_name():
-        return 'WordTextProperty'
+        return "WordTextProperty"
 
     def __eq__(self, other):
-        return isinstance(other, WordTextProperty) and self.word_variable == other.word_variable
+        return (
+            isinstance(other, WordTextProperty)
+            and self.word_variable == other.word_variable
+        )
 
     def evaluate(self, word_binding, relation_binding, nx_g_data):
-        return nx_g_data.nodes[word_binding[self.word_variable]]['word']
+        return nx_g_data.nodes[word_binding[self.word_variable]]["word"]
 
-    def __str__(self): return f'{self.word_variable}.text'
+    def __str__(self):
+        return f"{self.word_variable}.text"
 
-    def __hash__(self): return hash(str(self))
+    def __hash__(self):
+        return hash(str(self))
 
 
 class LabelValue(Expression):
@@ -741,7 +789,7 @@ class LabelValue(Expression):
 
     @staticmethod
     def type_name():
-        return 'LabelValue'
+        return "LabelValue"
 
 
 class LabelConstant(LabelValue, Literal):
@@ -753,7 +801,7 @@ class LabelConstant(LabelValue, Literal):
 
     @staticmethod
     def type_name():
-        return 'LabelConstant'
+        return "LabelConstant"
 
     def __str__(self):
         return f'"L_{self.value}"'
@@ -778,13 +826,13 @@ class WordLabelProperty(LabelValue):
 
     @staticmethod
     def type_name():
-        return 'WordLabelProperty'
+        return "WordLabelProperty"
 
     def evaluate(self, word_binding, relation_binding, nx_g_data):
-        return nx_g_data.nodes[word_binding[self.word_variable]]['label']
+        return nx_g_data.nodes[word_binding[self.word_variable]]["label"]
 
     def __str__(self):
-        return f'{self.word_variable}.label'
+        return f"{self.word_variable}.label"
 
     def __eq__(self, other):
         return self.word_variable == other.word_variable
@@ -802,8 +850,7 @@ class BoxConstantValue(Literal):
 
     @staticmethod
     def type_name():
-        return 'BoxConstantValue'
-
+        return "BoxConstantValue"
 
     def __eq__(self, other):
         return isinstance(other, BoxConstantValue) and self.value == other.value
@@ -811,9 +858,9 @@ class BoxConstantValue(Literal):
     def __hash__(self):
         return hash(str(self))
 
-
     def __str__(self):
-        return f'{self.value}'
+        return f"{self.value}"
+
 
 class WordBoxProperty(FloatValue):
     def __init__(self, word_var, prop):
@@ -829,25 +876,35 @@ class WordBoxProperty(FloatValue):
 
     @staticmethod
     def type_name():
-        return 'WordBoxProperty'
+        return "WordBoxProperty"
 
     def evaluate(self, word_binding, relation_binding, nx_g_data):
         prop = self.prop.evaluate()
-        if prop == 'w':
-            return nx_g_data.nodes[word_binding[self.word_var]]['x1'] - nx_g_data.nodes[word_binding[self.word_var]]['x0']
-        elif prop == 'h':
-            return nx_g_data.nodes[word_binding[self.word_var]]['y1'] - nx_g_data.nodes[word_binding[self.word_var]]['y0']
+        if prop == "w":
+            return (
+                nx_g_data.nodes[word_binding[self.word_var]]["x1"]
+                - nx_g_data.nodes[word_binding[self.word_var]]["x0"]
+            )
+        elif prop == "h":
+            return (
+                nx_g_data.nodes[word_binding[self.word_var]]["y1"]
+                - nx_g_data.nodes[word_binding[self.word_var]]["y0"]
+            )
         else:
             return nx_g_data.nodes[word_binding[self.word_var]][prop]
 
     def __str__(self):
-        return f'{self.word_var}.{self.prop}'
-    
+        return f"{self.word_var}.{self.prop}"
+
     def __hash__(self):
         return hash(str(self))
 
     def __eq__(self, other):
-        return isinstance(other, WordBoxProperty) and self.word_var == other.word_var and self.prop == other.prop
+        return (
+            isinstance(other, WordBoxProperty)
+            and self.word_var == other.word_var
+            and self.prop == other.prop
+        )
 
 
 class RelationPropertyConstant(Literal):
@@ -859,10 +916,10 @@ class RelationPropertyConstant(Literal):
 
     @staticmethod
     def type_name():
-        return 'RelationPropertyConstant'
+        return "RelationPropertyConstant"
 
     def __str__(self):
-        return f'{self.prop}'
+        return f"{self.prop}"
 
     def __eq__(self, other):
         return self.prop == other.prop
@@ -885,19 +942,25 @@ class RelationProperty(FloatValue):
 
     @staticmethod
     def type_name():
-        return 'RelationProperty'
+        return "RelationProperty"
 
     def evaluate(self, word_binding, relation_binding, nx_g_data):
         prop = self.prop.evaluate()
-        if 'proj' in prop:
-            return nx_g_data.edges[relation_binding[self.relation_variable]]['projs'][int(prop[-1])]
+        if "proj" in prop:
+            return nx_g_data.edges[relation_binding[self.relation_variable]]["projs"][
+                int(prop[-1])
+            ]
         return nx_g_data.edges[relation_binding[self.relation_variable]][prop]
 
     def __str__(self):
-        return f'{self.relation_variable}.{self.prop}'
+        return f"{self.relation_variable}.{self.prop}"
 
     def __eq__(self, other):
-        return isinstance(other, RelationProperty) and self.relation_variable == other.relation_variable and self.prop == other.prop
+        return (
+            isinstance(other, RelationProperty)
+            and self.relation_variable == other.relation_variable
+            and self.prop == other.prop
+        )
 
     def __hash__(self):
         return hash((self.relation_variable, self.prop))
@@ -909,7 +972,7 @@ class RelationLabelValue(Expression):
 
     @staticmethod
     def type_name():
-        return 'RelationLabelValue'
+        return "RelationLabelValue"
 
 
 class RelationLabelConstant(RelationLabelValue, Literal):
@@ -921,11 +984,10 @@ class RelationLabelConstant(RelationLabelValue, Literal):
 
     @staticmethod
     def type_name():
-        return 'RelationLabelConstant'
+        return "RelationLabelConstant"
 
     def __str__(self):
         return f'"L_{self.label}"'
-
 
 
 class RelationLabelProperty(RelationLabelValue):
@@ -938,24 +1000,25 @@ class RelationLabelProperty(RelationLabelValue):
 
     @staticmethod
     def type_name():
-        return 'RelationLabelProperty'
+        return "RelationLabelProperty"
 
     def get_args(self):
         return [self.relation_variable]
 
-
     def evaluate(self, word_binding, relation_binding, nx_g_data):
-        return nx_g_data.edges[relation_binding[self.relation_variable]]['lbl']
+        return nx_g_data.edges[relation_binding[self.relation_variable]]["lbl"]
 
     def __str__(self):
-        return f'{self.relation_variable}.lbl'
+        return f"{self.relation_variable}.lbl"
 
     def __eq__(self, other):
-        return isinstance(other, RelationLabelProperty) and other.relation_variable == self.relation_variable
+        return (
+            isinstance(other, RelationLabelProperty)
+            and other.relation_variable == self.relation_variable
+        )
 
     def __hash__(self):
         return hash(str(self))
-
 
 
 class Constraint(BoolValue):
@@ -964,7 +1027,7 @@ class Constraint(BoolValue):
 
     @staticmethod
     def type_name():
-        return 'Constraint'
+        return "Constraint"
 
 
 class WordTargetProperty(Constraint):
@@ -979,20 +1042,24 @@ class WordTargetProperty(Constraint):
         return [self.word_variable]
 
     def evaluate(self, word_binding, relation_binding, nx_g_data):
-        return bool(nx_g_data.nodes[word_binding[self.word_variable]].get('target', 0))
+        return bool(nx_g_data.nodes[word_binding[self.word_variable]].get("target", 0))
 
     @staticmethod
     def type_name():
-        return 'WordTargetProperty'
+        return "WordTargetProperty"
 
     def __str__(self):
-        return f'{self.word_variable}.is_target'
+        return f"{self.word_variable}.is_target"
 
 
 class BooleanEqualConstraint(Constraint):
     def __init__(self, lhs, rhs):
-        assert isinstance(lhs, BoolValue) or (isinstance(lhs, Hole) and issubclass(lhs.cls, BoolValue))
-        assert isinstance(rhs, BoolValue) or (isinstance(rhs, Hole) and issubclass(rhs.cls, BoolValue))
+        assert isinstance(lhs, BoolValue) or (
+            isinstance(lhs, Hole) and issubclass(lhs.cls, BoolValue)
+        )
+        assert isinstance(rhs, BoolValue) or (
+            isinstance(rhs, Hole) and issubclass(rhs.cls, BoolValue)
+        )
         self.lhs = lhs
         self.rhs = rhs
 
@@ -1002,7 +1069,7 @@ class BooleanEqualConstraint(Constraint):
 
     @staticmethod
     def type_name():
-        return 'BooleanEqualConstraint'
+        return "BooleanEqualConstraint"
 
     def reduce(self):
         if isinstance(self.lhs, TrueValue) and isinstance(self.rhs, TrueValue):
@@ -1027,7 +1094,7 @@ class BooleanEqualConstraint(Constraint):
         return self.lhs.evaluate(*values) == self.rhs.evaluate(*values)
 
     def __str__(self):
-        return f'{self.lhs} == {self.rhs}'
+        return f"{self.lhs} == {self.rhs}"
 
     def __eq__(self, other):
         return self.lhs == other.lhs and self.rhs == other.rhs
@@ -1035,8 +1102,12 @@ class BooleanEqualConstraint(Constraint):
 
 class StringEqualConstraint(Constraint):
     def __init__(self, lhs: StringValue, rhs: StringValue):
-        assert isinstance(lhs, StringValue) or (isinstance(lhs, Hole) and issubclass(lhs.cls, StringValue))
-        assert isinstance(rhs, StringValue) or (isinstance(rhs, Hole) and issubclass(rhs.cls, StringValue))
+        assert isinstance(lhs, StringValue) or (
+            isinstance(lhs, Hole) and issubclass(lhs.cls, StringValue)
+        )
+        assert isinstance(rhs, StringValue) or (
+            isinstance(rhs, Hole) and issubclass(rhs.cls, StringValue)
+        )
         self.lhs = lhs
         self.rhs = rhs
 
@@ -1046,17 +1117,27 @@ class StringEqualConstraint(Constraint):
 
     @staticmethod
     def type_name():
-        return 'StringEqualConstraint'
+        return "StringEqualConstraint"
 
     def evaluate(self, *values):
         assert not isinstance(self.lhs, Hole), "Incomplete constraint"
         assert not isinstance(self.rhs, Hole), "Incomplete constraint"
-        lhs_eval = self.lhs.evaluate(*values) if not isinstance(self.lhs, StringConstant) else self.lhs.evaluate()
-        rhs_eval = self.rhs.evaluate(*values) if not isinstance(self.rhs, StringConstant) else self.rhs.evaluate()
+        lhs_eval = (
+            self.lhs.evaluate(*values)
+            if not isinstance(self.lhs, StringConstant)
+            else self.lhs.evaluate()
+        )
+        rhs_eval = (
+            self.rhs.evaluate(*values)
+            if not isinstance(self.rhs, StringConstant)
+            else self.rhs.evaluate()
+        )
         return lhs_eval == rhs_eval
 
     def reduce(self):
-        if isinstance(self.lhs, StringConstant) and isinstance(self.rhs, StringConstant):
+        if isinstance(self.lhs, StringConstant) and isinstance(
+            self.rhs, StringConstant
+        ):
             if self.lhs.evaluate() == self.rhs.evaluate():
                 return True, TrueValue()
             else:
@@ -1069,10 +1150,14 @@ class StringEqualConstraint(Constraint):
         return [self.lhs, self.rhs]
 
     def __str__(self):
-        return f'{self.lhs} == {self.rhs}'
+        return f"{self.lhs} == {self.rhs}"
 
     def __eq__(self, other):
-        return isinstance(other, StringEqualConstraint) and (self.lhs == other.lhs and self.rhs == other.rhs) or (self.rhs == other.lhs and self.lhs == other.rhs)
+        return (
+            isinstance(other, StringEqualConstraint)
+            and (self.lhs == other.lhs and self.rhs == other.rhs)
+            or (self.rhs == other.lhs and self.lhs == other.rhs)
+        )
 
     def __hash__(self):
         return hash(str(self))
@@ -1080,8 +1165,12 @@ class StringEqualConstraint(Constraint):
 
 class StringContainsConstraint(Constraint):
     def __init__(self, lhs: StringValue, rhs: StringValue):
-        assert isinstance(lhs, StringValue) or (isinstance(lhs, Hole) and issubclass(lhs.cls, StringValue))
-        assert isinstance(rhs, StringValue) or (isinstance(rhs, Hole) and issubclass(rhs.cls, StringValue))
+        assert isinstance(lhs, StringValue) or (
+            isinstance(lhs, Hole) and issubclass(lhs.cls, StringValue)
+        )
+        assert isinstance(rhs, StringValue) or (
+            isinstance(rhs, Hole) and issubclass(rhs.cls, StringValue)
+        )
         self.lhs = lhs
         self.rhs = rhs
 
@@ -1091,7 +1180,7 @@ class StringContainsConstraint(Constraint):
 
     @staticmethod
     def type_name():
-        return 'StringContainsConstraint'
+        return "StringContainsConstraint"
 
     def get_args(self) -> list:
         return [self.lhs, self.rhs]
@@ -1099,8 +1188,16 @@ class StringContainsConstraint(Constraint):
     def evaluate(self, *values):
         assert not isinstance(self.lhs, Hole), "Incomplete constraint"
         assert not isinstance(self.rhs, Hole), "Incomplete constraint"
-        lhs_eval = self.lhs.evaluate(*values) if not isinstance(self.lhs, StringConstant) else self.lhs.evaluate()
-        rhs_eval = self.rhs.evaluate(*values) if not isinstance(self.rhs, StringConstant) else self.rhs.evaluate()
+        lhs_eval = (
+            self.lhs.evaluate(*values)
+            if not isinstance(self.lhs, StringConstant)
+            else self.lhs.evaluate()
+        )
+        rhs_eval = (
+            self.rhs.evaluate(*values)
+            if not isinstance(self.rhs, StringConstant)
+            else self.rhs.evaluate()
+        )
         return rhs_eval in lhs_eval
 
     def reduce(self):
@@ -1108,7 +1205,9 @@ class StringContainsConstraint(Constraint):
             return True, TrueValue()
         elif self.lhs == self.rhs:
             return True, TrueValue()
-        elif isinstance(self.lhs, StringConstant) and isinstance(self.rhs, StringConstant):
+        elif isinstance(self.lhs, StringConstant) and isinstance(
+            self.rhs, StringConstant
+        ):
             if self.rhs.evaluate() in self.lhs.evaluate():
                 return True, TrueValue()
             else:
@@ -1116,10 +1215,14 @@ class StringContainsConstraint(Constraint):
         return False, self
 
     def __eq__(self, other):
-        return isinstance(other, StringContainsConstraint) and self.lhs == other.lhs and self.rhs == other.rhs
+        return (
+            isinstance(other, StringContainsConstraint)
+            and self.lhs == other.lhs
+            and self.rhs == other.rhs
+        )
 
     def __str__(self):
-        return f'contains({self.lhs}, {self.rhs})'
+        return f"contains({self.lhs}, {self.rhs})"
 
     def __hash__(self):
         return hash(str(self))
@@ -1127,8 +1230,12 @@ class StringContainsConstraint(Constraint):
 
 class LabelEqualConstraint(Constraint):
     def __init__(self, lhs: LabelValue, rhs: LabelValue):
-        assert isinstance(lhs, LabelValue) or (isinstance(lhs, Hole) and issubclass(lhs.cls, LabelValue))
-        assert isinstance(rhs, LabelValue) or (isinstance(rhs, Hole) and issubclass(rhs.cls, LabelValue))
+        assert isinstance(lhs, LabelValue) or (
+            isinstance(lhs, Hole) and issubclass(lhs.cls, LabelValue)
+        )
+        assert isinstance(rhs, LabelValue) or (
+            isinstance(rhs, Hole) and issubclass(rhs.cls, LabelValue)
+        )
         self.lhs = lhs
         self.rhs = rhs
 
@@ -1138,18 +1245,25 @@ class LabelEqualConstraint(Constraint):
 
     @staticmethod
     def type_name():
-        return 'LabelEqualConstraint'
+        return "LabelEqualConstraint"
 
     def get_args(self) -> list:
         return [self.lhs, self.rhs]
 
     def __str__(self):
-        return f'{self.lhs} == {self.rhs}'
-
+        return f"{self.lhs} == {self.rhs}"
 
     def evaluate(self, *values):
-        lhs_eval = self.lhs.evaluate(*values) if not isinstance(self.lhs, LabelConstant) else self.lhs.evaluate()
-        rhs_eval = self.rhs.evaluate(*values) if not isinstance(self.rhs, LabelConstant) else self.rhs.evaluate()
+        lhs_eval = (
+            self.lhs.evaluate(*values)
+            if not isinstance(self.lhs, LabelConstant)
+            else self.lhs.evaluate()
+        )
+        rhs_eval = (
+            self.rhs.evaluate(*values)
+            if not isinstance(self.rhs, LabelConstant)
+            else self.rhs.evaluate()
+        )
         return lhs_eval == rhs_eval
 
     def reduce(self):
@@ -1158,15 +1272,23 @@ class LabelEqualConstraint(Constraint):
                 return True, TrueValue()
             else:
                 return True, FalseValue()
-        if isinstance(self.lhs, WordLabelProperty) and isinstance(self.rhs, WordLabelProperty) and self.lhs.word_variable.name > self.rhs.word_variable.name:
+        if (
+            isinstance(self.lhs, WordLabelProperty)
+            and isinstance(self.rhs, WordLabelProperty)
+            and self.lhs.word_variable.name > self.rhs.word_variable.name
+        ):
             return True, LabelEqualConstraint(self.rhs, self.lhs)
         return False, self
 
 
 class RelationLabelEqualConstraint(Constraint):
     def __init__(self, lhs: RelationLabelValue, rhs: RelationLabelValue):
-        assert isinstance(lhs, RelationLabelValue) or (isinstance(lhs, Hole) and issubclass(lhs.cls, RelationLabelValue))
-        assert isinstance(rhs, RelationLabelValue) or (isinstance(rhs, Hole) and issubclass(rhs.cls, RelationLabelValue))
+        assert isinstance(lhs, RelationLabelValue) or (
+            isinstance(lhs, Hole) and issubclass(lhs.cls, RelationLabelValue)
+        )
+        assert isinstance(rhs, RelationLabelValue) or (
+            isinstance(rhs, Hole) and issubclass(rhs.cls, RelationLabelValue)
+        )
         self.lhs = lhs
         self.rhs = rhs
 
@@ -1176,32 +1298,53 @@ class RelationLabelEqualConstraint(Constraint):
 
     @staticmethod
     def type_name():
-        return 'RelationLabelEqualConstraint'
+        return "RelationLabelEqualConstraint"
 
     def get_args(self) -> list:
         return [self.lhs, self.rhs]
 
     def evaluate(self, *values):
-        lhs_evaluate = self.lhs.evaluate(*values) if not isinstance(self.lhs, RelationLabelConstant) else self.lhs.evaluate()
-        rhs_evaluate = self.rhs.evaluate(*values) if not isinstance(self.rhs, RelationLabelConstant) else self.rhs.evaluate()
+        lhs_evaluate = (
+            self.lhs.evaluate(*values)
+            if not isinstance(self.lhs, RelationLabelConstant)
+            else self.lhs.evaluate()
+        )
+        rhs_evaluate = (
+            self.rhs.evaluate(*values)
+            if not isinstance(self.rhs, RelationLabelConstant)
+            else self.rhs.evaluate()
+        )
         return lhs_evaluate == rhs_evaluate
 
     def reduce(self):
-        if isinstance(self.lhs, RelationLabelConstant) and isinstance(self.rhs, RelationLabelConstant):
+        if isinstance(self.lhs, RelationLabelConstant) and isinstance(
+            self.rhs, RelationLabelConstant
+        ):
             if self.lhs.evaluate() == self.rhs.evaluate():
                 return True, TrueValue()
             else:
                 return True, FalseValue()
-        if isinstance(self.lhs, RelationLabelProperty) and isinstance(self.rhs, RelationLabelProperty) and self.lhs.relation_variable.name > self.rhs.relation_variable.name:
+        if (
+            isinstance(self.lhs, RelationLabelProperty)
+            and isinstance(self.rhs, RelationLabelProperty)
+            and self.lhs.relation_variable.name > self.rhs.relation_variable.name
+        ):
             return True, RelationLabelEqualConstraint(self.rhs, self.lhs)
         return False, self
 
     def __str__(self):
-        return f'{self.lhs} == {self.rhs}'
+        return f"{self.lhs} == {self.rhs}"
 
     def __eq__(self, other):
-        return (isinstance(other, RelationLabelEqualConstraint) and self.lhs == other.lhs and self.rhs == other.rhs) or \
-                (isinstance(other, RelationLabelEqualConstraint) and self.lhs == other.rhs and self.rhs == other.lhs)
+        return (
+            isinstance(other, RelationLabelEqualConstraint)
+            and self.lhs == other.lhs
+            and self.rhs == other.rhs
+        ) or (
+            isinstance(other, RelationLabelEqualConstraint)
+            and self.lhs == other.rhs
+            and self.rhs == other.lhs
+        )
 
     def __hash__(self):
         return hash(str(self))
@@ -1209,8 +1352,12 @@ class RelationLabelEqualConstraint(Constraint):
 
 class FloatEqualConstraint(Constraint):
     def __init__(self, lhs, rhs):
-        assert isinstance(lhs, FloatValue) or (isinstance(lhs, Hole) and issubclass(lhs.cls, FloatValue))
-        assert isinstance(rhs, FloatValue) or (isinstance(rhs, Hole) and issubclass(rhs.cls, FloatValue))
+        assert isinstance(lhs, FloatValue) or (
+            isinstance(lhs, Hole) and issubclass(lhs.cls, FloatValue)
+        )
+        assert isinstance(rhs, FloatValue) or (
+            isinstance(rhs, Hole) and issubclass(rhs.cls, FloatValue)
+        )
         self.lhs = lhs
         self.rhs = rhs
 
@@ -1223,22 +1370,31 @@ class FloatEqualConstraint(Constraint):
 
     @staticmethod
     def type_name():
-        return 'FloatEqualConstraint'
+        return "FloatEqualConstraint"
 
     def evaluate(self, *values):
         assert isinstance(self.lhs, FloatValue)
         assert isinstance(self.rhs, FloatValue)
-        lhs_eval = self.lhs.evaluate(*values) if not isinstance(self.lhs, FloatConstant) else self.lhs.evaluate()
-        rhs_eval = self.rhs.evaluate(*values) if not isinstance(self.rhs, FloatConstant) else self.rhs.evaluate()
+        lhs_eval = (
+            self.lhs.evaluate(*values)
+            if not isinstance(self.lhs, FloatConstant)
+            else self.lhs.evaluate()
+        )
+        rhs_eval = (
+            self.rhs.evaluate(*values)
+            if not isinstance(self.rhs, FloatConstant)
+            else self.rhs.evaluate()
+        )
         return lhs_eval == rhs_eval
 
     def __str__(self):
-        return f'{self.lhs} == {self.rhs}'
-
+        return f"{self.lhs} == {self.rhs}"
 
     def __eq__(self, other):
-        return isinstance(other, FloatEqualConstraint) and ((self.lhs == other.lhs and self.rhs == other.rhs) or
-                                                            (self.lhs == other.rhs and self.rhs == other.lhs))
+        return isinstance(other, FloatEqualConstraint) and (
+            (self.lhs == other.lhs and self.rhs == other.rhs)
+            or (self.lhs == other.rhs and self.rhs == other.lhs)
+        )
 
     def reduce(self):
         if not isinstance(self.lhs, Hole):
@@ -1262,8 +1418,12 @@ class FloatEqualConstraint(Constraint):
 
 class FloatLessConstraint(Constraint):
     def __init__(self, lhs, rhs):
-        assert isinstance(lhs, FloatValue) or (isinstance(lhs, Hole) and issubclass(lhs.cls, FloatValue))
-        assert isinstance(rhs, FloatValue) or (isinstance(rhs, Hole) and issubclass(rhs.cls, FloatValue))
+        assert isinstance(lhs, FloatValue) or (
+            isinstance(lhs, Hole) and issubclass(lhs.cls, FloatValue)
+        )
+        assert isinstance(rhs, FloatValue) or (
+            isinstance(rhs, Hole) and issubclass(rhs.cls, FloatValue)
+        )
         self.lhs = lhs
         self.rhs = rhs
 
@@ -1273,7 +1433,7 @@ class FloatLessConstraint(Constraint):
 
     @staticmethod
     def type_name():
-        return 'FloatLessConstraint'
+        return "FloatLessConstraint"
 
     def get_args(self) -> list:
         return [self.lhs, self.rhs]
@@ -1281,16 +1441,31 @@ class FloatLessConstraint(Constraint):
     def evaluate(self, *values):
         assert isinstance(self.lhs, FloatValue)
         assert isinstance(self.rhs, FloatValue)
-        lhs_value = self.lhs.evaluate(*values) if not isinstance(self.lhs, FloatConstant) else self.lhs.evaluate()
-        rhs_value = self.rhs.evaluate(*values) if not isinstance(self.rhs, FloatConstant) else self.rhs.evaluate()
+        lhs_value = (
+            self.lhs.evaluate(*values)
+            if not isinstance(self.lhs, FloatConstant)
+            else self.lhs.evaluate()
+        )
+        rhs_value = (
+            self.rhs.evaluate(*values)
+            if not isinstance(self.rhs, FloatConstant)
+            else self.rhs.evaluate()
+        )
         return lhs_value < rhs_value
 
     def __str__(self):
-        return f'{self.lhs} < {self.rhs}'
+        return f"{self.lhs} < {self.rhs}"
 
     def __eq__(self, other):
-        return (isinstance(other, FloatLessConstraint) and self.lhs == other.lhs and self.rhs == other.rhs) or \
-                (isinstance(other, FloatGreaterConstraint) and self.lhs == other.rhs and self.rhs == other.lhs)
+        return (
+            isinstance(other, FloatLessConstraint)
+            and self.lhs == other.lhs
+            and self.rhs == other.rhs
+        ) or (
+            isinstance(other, FloatGreaterConstraint)
+            and self.lhs == other.rhs
+            and self.rhs == other.lhs
+        )
 
     def reduce(self):
         if isinstance(self.lhs, FloatConstant) and isinstance(self.rhs, FloatConstant):
@@ -1300,14 +1475,26 @@ class FloatLessConstraint(Constraint):
                 return True, FalseValue()
         elif self.lhs == self.rhs:
             return True, FalseValue()
-        elif isinstance(self.lhs, WordBoxProperty) and isinstance(self.rhs, WordBoxProperty) and self.lhs.word_var == self.rhs.word_var:
-            if self.lhs.prop == BoxConstantValue("x0") and self.rhs.prop == BoxConstantValue("x1"):
+        elif (
+            isinstance(self.lhs, WordBoxProperty)
+            and isinstance(self.rhs, WordBoxProperty)
+            and self.lhs.word_var == self.rhs.word_var
+        ):
+            if self.lhs.prop == BoxConstantValue(
+                "x0"
+            ) and self.rhs.prop == BoxConstantValue("x1"):
                 return True, TrueValue()
-            elif self.lhs.prop == BoxConstantValue("y0") and self.rhs.prop == BoxConstantValue("y1"):
+            elif self.lhs.prop == BoxConstantValue(
+                "y0"
+            ) and self.rhs.prop == BoxConstantValue("y1"):
                 return True, TrueValue()
-            elif self.lhs.prop == BoxConstantValue("x1") and self.rhs.prop == BoxConstantValue("x0"):
+            elif self.lhs.prop == BoxConstantValue(
+                "x1"
+            ) and self.rhs.prop == BoxConstantValue("x0"):
                 return True, FalseValue()
-            elif self.lhs.prop == BoxConstantValue("y1") and self.rhs.prop == BoxConstantValue("y0"):
+            elif self.lhs.prop == BoxConstantValue(
+                "y1"
+            ) and self.rhs.prop == BoxConstantValue("y0"):
                 return True, FalseValue()
         return False, self
 
@@ -1317,8 +1504,12 @@ class FloatLessConstraint(Constraint):
 
 class FloatGreaterConstraint(Constraint):
     def __init__(self, lhs, rhs):
-        assert isinstance(lhs, FloatValue) or (isinstance(lhs, Hole) and issubclass(lhs.cls, FloatValue))
-        assert isinstance(rhs, FloatValue) or (isinstance(rhs, Hole) and issubclass(rhs.cls, FloatValue))
+        assert isinstance(lhs, FloatValue) or (
+            isinstance(lhs, Hole) and issubclass(lhs.cls, FloatValue)
+        )
+        assert isinstance(rhs, FloatValue) or (
+            isinstance(rhs, Hole) and issubclass(rhs.cls, FloatValue)
+        )
         self.lhs = lhs
         self.rhs = rhs
 
@@ -1331,15 +1522,22 @@ class FloatGreaterConstraint(Constraint):
 
     @staticmethod
     def type_name():
-        return 'FloatGreaterConstraint'
+        return "FloatGreaterConstraint"
 
     def evaluate(self, *values):
         assert isinstance(self.lhs, FloatValue)
         assert isinstance(self.rhs, FloatValue)
-        lhs_value = self.lhs.evaluate(*values) if not isinstance(self.lhs, FloatConstant) else self.lhs.evaluate()
-        rhs_value = self.rhs.evaluate(*values) if not isinstance(self.rhs, FloatConstant) else self.rhs.evaluate()
+        lhs_value = (
+            self.lhs.evaluate(*values)
+            if not isinstance(self.lhs, FloatConstant)
+            else self.lhs.evaluate()
+        )
+        rhs_value = (
+            self.rhs.evaluate(*values)
+            if not isinstance(self.rhs, FloatConstant)
+            else self.rhs.evaluate()
+        )
         return lhs_value > rhs_value
-
 
     def reduce(self):
         if isinstance(self.lhs, FloatConstant) and isinstance(self.rhs, FloatConstant):
@@ -1349,25 +1547,44 @@ class FloatGreaterConstraint(Constraint):
                 return True, FalseValue()
         elif self.lhs == self.rhs:
             return True, FalseValue()
-        elif isinstance(self.lhs, WordBoxProperty) and isinstance(self.rhs, WordBoxProperty) and self.lhs.word_var == self.rhs.word_var:
-            if self.lhs.prop == BoxConstantValue("x0") and self.rhs.prop == BoxConstantValue("x1"):
+        elif (
+            isinstance(self.lhs, WordBoxProperty)
+            and isinstance(self.rhs, WordBoxProperty)
+            and self.lhs.word_var == self.rhs.word_var
+        ):
+            if self.lhs.prop == BoxConstantValue(
+                "x0"
+            ) and self.rhs.prop == BoxConstantValue("x1"):
                 return True, FalseValue()
-            elif self.lhs.prop == BoxConstantValue("y0") and self.rhs.prop == BoxConstantValue("y1"):
+            elif self.lhs.prop == BoxConstantValue(
+                "y0"
+            ) and self.rhs.prop == BoxConstantValue("y1"):
                 return True, FalseValue()
-            elif self.lhs.prop == BoxConstantValue("x1") and self.rhs.prop == BoxConstantValue("x0"):
+            elif self.lhs.prop == BoxConstantValue(
+                "x1"
+            ) and self.rhs.prop == BoxConstantValue("x0"):
                 return True, TrueValue()
-            elif self.lhs.prop == BoxConstantValue("y1") and self.rhs.prop == BoxConstantValue("y0"):
+            elif self.lhs.prop == BoxConstantValue(
+                "y1"
+            ) and self.rhs.prop == BoxConstantValue("y0"):
                 return True, TrueValue()
         elif str(self.lhs) > str(self.rhs):
             return True, FloatLessConstraint(self.rhs, self.lhs)
         return False, self
 
     def __str__(self):
-        return f'{self.lhs} > {self.rhs}'
+        return f"{self.lhs} > {self.rhs}"
 
     def __eq__(self, other):
-        return (isinstance(other, FloatGreaterConstraint) and self.lhs == other.lhs and self.rhs == other.rhs) or \
-                (isinstance(other, FloatLessConstraint) and self.lhs == other.rhs and self.rhs == other.lhs)
+        return (
+            isinstance(other, FloatGreaterConstraint)
+            and self.lhs == other.lhs
+            and self.rhs == other.rhs
+        ) or (
+            isinstance(other, FloatLessConstraint)
+            and self.lhs == other.rhs
+            and self.rhs == other.lhs
+        )
 
     def __hash__(self):
         return hash(str(self))
@@ -1375,8 +1592,12 @@ class FloatGreaterConstraint(Constraint):
 
 class AndConstraint(Constraint):
     def __init__(self, lhs, rhs):
-        assert isinstance(lhs, BoolValue) or (isinstance(lhs, Hole) and issubclass(lhs.cls, Constraint)), lhs
-        assert isinstance(rhs, BoolValue) or (isinstance(rhs, Hole) and issubclass(rhs.cls, Constraint)), rhs
+        assert isinstance(lhs, BoolValue) or (
+            isinstance(lhs, Hole) and issubclass(lhs.cls, Constraint)
+        ), lhs
+        assert isinstance(rhs, BoolValue) or (
+            isinstance(rhs, Hole) and issubclass(rhs.cls, Constraint)
+        ), rhs
         self.lhs = lhs
         self.rhs = rhs
         self.cache_hash = None
@@ -1387,7 +1608,7 @@ class AndConstraint(Constraint):
 
     @staticmethod
     def type_name():
-        return 'AndConstraint'
+        return "AndConstraint"
 
     def get_args(self) -> list:
         return [self.lhs, self.rhs]
@@ -1417,9 +1638,9 @@ class AndConstraint(Constraint):
         if str(self.lhs) > str(self.rhs):
             return True, AndConstraint(self.rhs, self.lhs)
         return False, self
-        
+
     def __str__(self):
-        return f'({self.lhs} and {self.rhs})'
+        return f"({self.lhs} and {self.rhs})"
 
     def __hash__(self):
         if not self.cache_hash:
@@ -1429,8 +1650,12 @@ class AndConstraint(Constraint):
 
 class OrConstraint(Constraint):
     def __init__(self, lhs, rhs):
-        assert isinstance(lhs, BoolValue) or (isinstance(lhs, Hole) and issubclass(lhs.cls, Constraint)), lhs
-        assert isinstance(rhs, BoolValue) or (isinstance(rhs, Hole) and issubclass(rhs.cls, Constraint)), rhs
+        assert isinstance(lhs, BoolValue) or (
+            isinstance(lhs, Hole) and issubclass(lhs.cls, Constraint)
+        ), lhs
+        assert isinstance(rhs, BoolValue) or (
+            isinstance(rhs, Hole) and issubclass(rhs.cls, Constraint)
+        ), rhs
         self.lhs = lhs
         self.rhs = rhs
 
@@ -1440,7 +1665,7 @@ class OrConstraint(Constraint):
 
     @staticmethod
     def type_name():
-        return 'OrConstraint'
+        return "OrConstraint"
 
     def get_args(self) -> list:
         return super().get_args()
@@ -1466,7 +1691,7 @@ class OrConstraint(Constraint):
         return False, self
 
     def __str__(self):
-        return f'({self.lhs} or {self.rhs})'
+        return f"({self.lhs} or {self.rhs})"
 
 
 class NotConstraint(Constraint):
@@ -1480,7 +1705,7 @@ class NotConstraint(Constraint):
 
     @staticmethod
     def type_name():
-        return 'NotConstraint'
+        return "NotConstraint"
 
     def get_args(self) -> list:
         return [self.constraint]
@@ -1498,7 +1723,7 @@ class NotConstraint(Constraint):
         return False, self
 
     def __str__(self):
-        return f'not ({self.constraint})'
+        return f"not ({self.constraint})"
 
 
 GrammarReplacement = {
@@ -1508,28 +1733,83 @@ GrammarReplacement = {
     BoolValue.type_name(): [TrueValue, FalseValue, Constraint],
     LabelValue.type_name(): [LabelConstant, WordLabelProperty],
     RelationLabelValue.type_name(): [RelationLabelConstant, RelationLabelProperty],
-    Constraint.type_name(): [BooleanEqualConstraint, StringEqualConstraint, StringContainsConstraint, OrConstraint, NotConstraint, LabelEqualConstraint, RelationLabelEqualConstraint, FloatGreaterConstraint, FloatLessConstraint] # removed float equal constraint
+    Constraint.type_name(): [
+        BooleanEqualConstraint,
+        StringEqualConstraint,
+        StringContainsConstraint,
+        OrConstraint,
+        NotConstraint,
+        LabelEqualConstraint,
+        RelationLabelEqualConstraint,
+        FloatGreaterConstraint,
+        FloatLessConstraint,
+    ],  # removed float equal constraint
 }
 
-LiteralSet = set(['WordVariable', 'RelationVariable', 'EmptyProgram', "TrueValue", "FalseValue", "StringConstant", "FloatConstant", "LabelConstant", "BoxConstantValue", "RelationPropertyConstant", "RelationLabelConstant"])
+LiteralSet = set(
+    [
+        "WordVariable",
+        "RelationVariable",
+        "EmptyProgram",
+        "TrueValue",
+        "FalseValue",
+        "StringConstant",
+        "FloatConstant",
+        "LabelConstant",
+        "BoxConstantValue",
+        "RelationPropertyConstant",
+        "RelationLabelConstant",
+    ]
+)
 LiteralReplacement = {
-        'WordVariable': [WordVariable(f'w{i}') for i in range(4)],
-        'RelationVariable': [RelationVariable(f'r{i}') for i in range(6)],
-        'EmptyProgram': [EmptyProgram()],
-        'TrueValue': [TrueValue()],
-        'FalseValue': [FalseValue()],
-        'StringConstant': [StringConstant(''), StringConstant('.'), StringConstant('-'), StringConstant('%'), StringConstant("/"), StringConstant(":")],
-        'FloatConstant': [FloatConstant(0.1), FloatConstant(0.2), FloatConstant(0.3), FloatConstant(0.4)], # this should reflect our normalization method.
-        'LabelConstant': [LabelConstant('header'), LabelConstant('key'), LabelConstant('value')],
-        'BoxConstantValue': [BoxConstantValue('x0'), BoxConstantValue('y0'), BoxConstantValue('x1'), BoxConstantValue('y1')],
-        'RelationPropertyConstant': [RelationPropertyConstant('mag'), *[RelationPropertyConstant(f'proj{i}') for i in range(4)]],
-        'RelationLabelConstant': [RelationLabelConstant(i) for i in range(4)]
+    "WordVariable": [WordVariable(f"w{i}") for i in range(4)],
+    "RelationVariable": [RelationVariable(f"r{i}") for i in range(6)],
+    "EmptyProgram": [EmptyProgram()],
+    "TrueValue": [TrueValue()],
+    "FalseValue": [FalseValue()],
+    "StringConstant": [
+        StringConstant(""),
+        StringConstant("."),
+        StringConstant("-"),
+        StringConstant("%"),
+        StringConstant("/"),
+        StringConstant(":"),
+    ],
+    "FloatConstant": [
+        FloatConstant(0.1),
+        FloatConstant(0.2),
+        FloatConstant(0.3),
+        FloatConstant(0.4),
+    ],  # this should reflect our normalization method.
+    "LabelConstant": [
+        LabelConstant("header"),
+        LabelConstant("key"),
+        LabelConstant("value"),
+    ],
+    "BoxConstantValue": [
+        BoxConstantValue("x0"),
+        BoxConstantValue("y0"),
+        BoxConstantValue("x1"),
+        BoxConstantValue("y1"),
+    ],
+    "RelationPropertyConstant": [
+        RelationPropertyConstant("mag"),
+        *[RelationPropertyConstant(f"proj{i}") for i in range(4)],
+    ],
+    "RelationLabelConstant": [RelationLabelConstant(i) for i in range(4)],
 }
 
 
 ExtendedLiteralReplacement = {
-        **LiteralReplacement,
-        'BoxConstantValue': [BoxConstantValue('x0'), BoxConstantValue('y0'), BoxConstantValue('x1'), BoxConstantValue('y1'), BoxConstantValue('w'), BoxConstantValue('h')],
+    **LiteralReplacement,
+    "BoxConstantValue": [
+        BoxConstantValue("x0"),
+        BoxConstantValue("y0"),
+        BoxConstantValue("x1"),
+        BoxConstantValue("y1"),
+        BoxConstantValue("w"),
+        BoxConstantValue("h"),
+    ],
 }
 
 
@@ -1542,15 +1822,17 @@ def find_holes(program):
         if isinstance(arg, list):
             for j, a in enumerate(arg):
                 if isinstance(a, Hole):
-                    all_holes.append(((i, (j, )), a))
+                    all_holes.append(((i, (j,)), a))
                 else:
                     # Travel deeper to find holes
                     for hole in find_holes(a):
-                        all_holes.append(((i, (j, hole[0]) if hole[0] != () else (j, )), hole[1]))
+                        all_holes.append(
+                            ((i, (j, hole[0]) if hole[0] != () else (j,)), hole[1])
+                        )
         else:
             holes = find_holes(arg)
             for hole in holes:
-                all_holes.append(((i, hole[0]) if hole[0] != () else (i, ), hole[1]))
+                all_holes.append(((i, hole[0]) if hole[0] != () else (i,), hole[1]))
     return all_holes
 
 
@@ -1585,16 +1867,14 @@ class FilterStrategy:
         raise NotImplementedError
 
 
-
-
 @lru_cache(maxsize=100000)
-def fill_list_hole(hole, max_depth=3, filter_strategy: FilterStrategy=None) -> list:
+def fill_list_hole(hole, max_depth=3, filter_strategy: FilterStrategy = None) -> list:
     all_programs_set = set()
     real_cls = hole.cls.cls
     if max_depth == 0:
         return [[]]
-    fill_head = fill_hole(Hole(real_cls), max_depth-1, filter_strategy)
-    fill_tail = fill_hole(Hole(SymbolicList(real_cls)), max_depth-1, filter_strategy)
+    fill_head = fill_hole(Hole(real_cls), max_depth - 1, filter_strategy)
+    fill_tail = fill_hole(Hole(SymbolicList(real_cls)), max_depth - 1, filter_strategy)
     for head in fill_head:
         # Tail with head and tail without head
         for tail in fill_tail:
@@ -1603,8 +1883,9 @@ def fill_list_hole(hole, max_depth=3, filter_strategy: FilterStrategy=None) -> l
         all_programs_set.add(tuple(tail))
     return list(list(p) for p in all_programs_set)
 
+
 @lru_cache(maxsize=100000)
-def fill_hole(hole, max_depth=3, filter_strategy: FilterStrategy=None) -> list:
+def fill_hole(hole, max_depth=3, filter_strategy: FilterStrategy = None) -> list:
     # TODO: specific version that add context to filter candidates
     all_programs = []
     if hole.cls.type_name() in LiteralSet:
@@ -1627,21 +1908,31 @@ def fill_hole(hole, max_depth=3, filter_strategy: FilterStrategy=None) -> list:
         list_possible_fillings = []
         for ptype_arg in ptype_args:
             if isinstance(ptype_arg, list):
-                list_possible_fillings.append(fill_hole(Hole(SymbolicList(ptype_arg[0])), max_depth-1, filter_strategy))
+                list_possible_fillings.append(
+                    fill_hole(
+                        Hole(SymbolicList(ptype_arg[0])), max_depth - 1, filter_strategy
+                    )
+                )
             else:
-                list_possible_fillings.append(fill_hole(Hole(ptype_arg), max_depth-1, filter_strategy))
+                list_possible_fillings.append(
+                    fill_hole(Hole(ptype_arg), max_depth - 1, filter_strategy)
+                )
             if list_possible_fillings[-1] == []:
                 return []
         # Add combinations of all possible fillings
         for fillings in itertools.product(*list_possible_fillings):
             try:
                 all_programs.append(hole.cls(*fillings))
-            except: # Invalid program
+            except:  # Invalid program
                 pass
     for i in range(len(all_programs)):
         if not isinstance(all_programs[i], list) and all_programs[i].reduce()[0]:
             all_programs[i] = all_programs[i].reduce()[1]
-    if filter_strategy is not None and all_programs and not isinstance(all_programs[0], list):
+    if (
+        filter_strategy is not None
+        and all_programs
+        and not isinstance(all_programs[0], list)
+    ):
         all_programs = [p for p in all_programs if filter_strategy.check_valid(p)]
         return list(set(all_programs))
     else:
@@ -1649,15 +1940,20 @@ def fill_hole(hole, max_depth=3, filter_strategy: FilterStrategy=None) -> list:
 
 
 def test_find_hole():
-    program = UnionProgram([EmptyProgram(), ExcludeProgram([EmptyProgram(), Hole(Program)])])
+    program = UnionProgram(
+        [EmptyProgram(), ExcludeProgram([EmptyProgram(), Hole(Program)])]
+    )
     holes = list(find_holes(program))
     print("List holes: ", holes)
 
 
 def test_replace_hole():
-    program = UnionProgram([EmptyProgram(), ExcludeProgram([EmptyProgram(), Hole(Program)])])
+    program = UnionProgram(
+        [EmptyProgram(), ExcludeProgram([EmptyProgram(), Hole(Program)])]
+    )
     print(program)
-    print(replace_hole(program, (0, (1, (0, (1, )))), EmptyProgram()))
+    print(replace_hole(program, (0, (1, (0, (1,)))), EmptyProgram()))
+
 
 def test_fill_hole1():
     program = Hole(StringValue)
@@ -1683,7 +1979,6 @@ def test_fill_hole4():
     print(programs)
 
 
-
 def test_fill_hole5():
     program = Hole(SymbolicList(RelationConstraint))
     programs = fill_hole(program, max_depth=3)
@@ -1707,6 +2002,7 @@ def test_fill_hole8():
     programs = fill_hole(program, max_depth=5)
     print(programs)
 
+
 def test_fill_hole9():
     program = Hole(Constraint)
     programs = fill_hole(program, max_depth=5)
@@ -1718,7 +2014,8 @@ def test_fill_hole10():
     programs = fill_hole(program, max_depth=3)
     print(programs)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     print("Test find hole: ")
     test_find_hole()
     # print("Test replace hole")
@@ -1746,5 +2043,3 @@ if __name__ == '__main__':
     # input()
     # print("Test fill hole 8:")
     # test_fill_hole8()
-
-
